@@ -3,15 +3,22 @@ import { useMemo, useState } from "react";
 import type { StandModule } from "../models/ModuleModel";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import { useEditorStore } from "../store/editorStore";
-import { createArtworkInfo } from "../utils/artwork";
-import { getActiveFabricArtwork, getActiveFabricPrintDimensions } from "../utils/fabrics";
+import {
+    createArtworkAssignmentsForSides,
+    formatFabricSidesLabel
+} from "../utils/applyFabricArtwork";
+import { getActiveFabricArtwork } from "../utils/fabrics";
 
 function formatArtworkMessage(
     fileName: string,
     effectiveDpi: number,
-    rasterCount: number
+    rasterCount: number,
+    fabricCount: number
 ) {
-    const wholeFileSummary = `${fileName}: ${Math.floor(effectiveDpi)} DPI on fabric`;
+    const targetSummary = fabricCount > 1
+        ? `${fabricCount} fabrics`
+        : "fabric";
+    const wholeFileSummary = `${fileName}: ${Math.floor(effectiveDpi)} DPI on ${targetSummary}`;
 
     if (rasterCount <= 1) {
         return wholeFileSummary;
@@ -28,13 +35,13 @@ function isStandModule(module: StandModule | undefined): module is StandModule {
 
 export function ArtworkDropZone() {
     const selectedId = useEditorStore(state => state.selectedId);
-    const activeFabricSide = useEditorStore(state => state.activeFabricSide);
+    const activeFabricSides = useEditorStore(state => state.activeFabricSides);
     const moduleIds = useEditorStore(state => state.moduleIds);
     const modulesById = useEditorStore(state => state.modulesById);
     const selectedModule = useEditorStore(state =>
         selectedId ? state.modulesById[selectedId] : undefined
     );
-    const setModuleArtwork = useEditorStore(state => state.setModuleArtwork);
+    const setModuleArtworkForSides = useEditorStore(state => state.setModuleArtworkForSides);
     const [isDragging, setIsDragging] = useState(false);
     const [transientMessage, setTransientMessage] = useState<string | null>(null);
 
@@ -42,6 +49,7 @@ export function ArtworkDropZone() {
         () => moduleIds.map(id => modulesById[id]).filter(isStandModule),
         [moduleIds, modulesById]
     );
+    const primaryFabricSide = activeFabricSides[0] ?? "front";
     const mergedArtwork = useMemo(() => {
         if (!selectedModule) {
             return null;
@@ -51,11 +59,11 @@ export function ArtworkDropZone() {
 
         return getActiveFabricArtwork(
             selectedModule,
-            activeFabricSide,
+            primaryFabricSide,
             connectionLayout.fabric.members,
             connectionLayout.fabric.width
         );
-    }, [activeFabricSide, modules, selectedModule]);
+    }, [activeFabricSides, modules, primaryFabricSide, selectedModule]);
     const artworkMessage = useMemo(() => {
         if (!mergedArtwork) {
             return null;
@@ -64,10 +72,33 @@ export function ArtworkDropZone() {
         return formatArtworkMessage(
             mergedArtwork.fileName,
             mergedArtwork.effectiveDpi,
-            mergedArtwork.rasters.length
+            mergedArtwork.rasters.length,
+            activeFabricSides.length
         );
-    }, [mergedArtwork]);
+    }, [activeFabricSides.length, mergedArtwork]);
     const displayMessage = transientMessage ?? artworkMessage;
+    const selectionLabel = formatFabricSidesLabel(activeFabricSides);
+
+    const applyArtworkFile = async (file: File) => {
+        if (!selectedModule || activeFabricSides.length === 0) {
+            setTransientMessage("Select a module and at least one fabric face.");
+            return;
+        }
+
+        try {
+            setTransientMessage("Analyzing artwork...");
+            const assignments = await createArtworkAssignmentsForSides(
+                file,
+                selectedModule,
+                activeFabricSides,
+                modules
+            );
+            setModuleArtworkForSides(selectedModule.id, assignments);
+            setTransientMessage(null);
+        } catch (error) {
+            setTransientMessage(error instanceof Error ? error.message : "Unable to load artwork.");
+        }
+    };
 
     const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
         event.preventDefault();
@@ -84,24 +115,7 @@ export function ArtworkDropZone() {
             return;
         }
 
-        try {
-            setTransientMessage("Analyzing artwork...");
-            const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
-            const printDimensions = getActiveFabricPrintDimensions(
-                selectedModule,
-                activeFabricSide,
-                connectionLayout.fabric.width
-            );
-            const artwork = await createArtworkInfo(
-                file,
-                printDimensions.width,
-                printDimensions.height
-            );
-            setModuleArtwork(selectedModule.id, activeFabricSide, artwork);
-            setTransientMessage(null);
-        } catch (error) {
-            setTransientMessage(error instanceof Error ? error.message : "Unable to load artwork.");
-        }
+        await applyArtworkFile(file);
     };
 
     return (
@@ -133,36 +147,18 @@ export function ArtworkDropZone() {
                 onChange={async event => {
                     const file = event.target.files?.item(0);
 
-                    if (!file || !selectedModule) {
+                    if (!file) {
                         return;
                     }
 
-                    try {
-                        setTransientMessage("Analyzing artwork...");
-                        const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
-                        const printDimensions = getActiveFabricPrintDimensions(
-                            selectedModule,
-                            activeFabricSide,
-                            connectionLayout.fabric.width
-                        );
-                        const artwork = await createArtworkInfo(
-                            file,
-                            printDimensions.width,
-                            printDimensions.height
-                        );
-                        setModuleArtwork(selectedModule.id, activeFabricSide, artwork);
-                        setTransientMessage(null);
-                    } catch (error) {
-                        setTransientMessage(error instanceof Error ? error.message : "Unable to load artwork.");
-                    } finally {
-                        event.target.value = "";
-                    }
+                    await applyArtworkFile(file);
+                    event.target.value = "";
                 }}
             />
             <strong style={styles.title}>Artwork</strong>
             <span style={styles.text}>
                 {selectedModule
-                    ? `Drop PDF, TIFF, JPG, or PNG onto the ${activeFabricSide} fabric.`
+                    ? `Drop PDF, TIFF, JPG, or PNG onto ${selectionLabel}.`
                     : "Select a module to upload artwork."}
             </span>
             {displayMessage && <span style={styles.message}>{displayMessage}</span>}
@@ -182,8 +178,9 @@ export function ArtworkDropZone() {
 const styles = {
     dropZone: {
         position: "absolute",
-        left: 20,
-        bottom: 20,
+        top: 20,
+        left: "50%",
+        transform: "translateX(-50%)",
         width: 280,
         minHeight: 88,
         display: "grid",

@@ -9,6 +9,20 @@ import type {
     RasterArtworkInfo,
     StandModule
 } from "../models/ModuleModel";
+import {
+    createDefaultBannerFabrics,
+    getBannerFabricSides,
+    isBannerFabricSide,
+    parseBannerFabricSide,
+    resizeBannerFabrics
+} from "./bannerFabrics";
+import {
+    DEFAULT_BANNER_SEGMENT_COUNT,
+    getBannerMidRadius,
+    getBannerSegmentAngle,
+    getBannerSegmentArcWidth,
+    getBannerSegmentCount
+} from "./bannerGeometry";
 
 export const METERS_PER_INCH = 0.0254;
 export const CENTIMETERS_PER_METER = 100;
@@ -17,6 +31,9 @@ export const FRAME_FABRIC_SIDES = ["front", "back"] as const;
 export const CUBE_FABRIC_SIDES = ["front", "back", "left", "right", "top"] as const;
 
 export const FABRIC_SIDES: FabricSide[] = [...FRAME_FABRIC_SIDES];
+
+export const BLOCKOUT_FABRIC_COLOR = "#6a6a6a";
+export const BLOCKOUT_ARTWORK_TINT = "#e5e0d2";
 
 /** One in-app dimension unit equals one meter (100 cm) in real life. */
 export function appUnitsToMeters(units: number): number {
@@ -32,8 +49,17 @@ export function metersToInches(meters: number): number {
 }
 
 export function getRailThickness(
-    module: Pick<StandModule, "type" | "width" | "height" | "depth">
+    module: Pick<StandModule, "type" | "width" | "height" | "depth" | "segmentCount">
 ): number {
+    if (module.type === "circularBanner") {
+        return Math.min(
+            0.08,
+            getBannerMidRadius(module) * getBannerSegmentAngle(module) * 0.12,
+            module.height * 0.08,
+            module.depth * 0.5
+        );
+    }
+
     if (module.type === "cube") {
         return Math.min(
             0.05,
@@ -51,6 +77,10 @@ export function getRailThickness(
 }
 
 export function getFabricSidesForModule(module: StandModule): FabricSide[] {
+    if (module.type === "circularBanner") {
+        return getBannerFabricSides(getBannerSegmentCount(module));
+    }
+
     return module.type === "cube"
         ? [...CUBE_FABRIC_SIDES]
         : [...FRAME_FABRIC_SIDES];
@@ -71,7 +101,14 @@ function createDefaultFabricInfo(): FabricInfo {
     };
 }
 
-export function createDefaultFabrics(moduleType: ModuleType = "wall"): ModuleFabrics {
+export function createDefaultFabrics(
+    moduleType: ModuleType = "wall",
+    segmentCount = DEFAULT_BANNER_SEGMENT_COUNT
+): ModuleFabrics {
+    if (moduleType === "circularBanner") {
+        return createDefaultBannerFabrics(segmentCount);
+    }
+
     const sides = moduleType === "cube" ? CUBE_FABRIC_SIDES : FRAME_FABRIC_SIDES;
 
     return Object.fromEntries(
@@ -121,7 +158,10 @@ export function setModuleFabric(
     fabric: FabricInfo
 ): ModuleFabrics {
     return {
-        ...createDefaultFabrics(module.type),
+        ...createDefaultFabrics(
+            module.type,
+            getBannerSegmentCount(module)
+        ),
         ...module.fabrics,
         [side]: fabric
     };
@@ -131,6 +171,17 @@ export function getFabricDimensions(
     module: StandModule,
     side: FabricSide
 ): FabricDimensions {
+    if (module.type === "circularBanner" && isBannerFabricSide(side)) {
+        const parsed = parseBannerFabricSide(side);
+
+        if (parsed) {
+            return {
+                width: getBannerSegmentArcWidth(module, parsed.layer),
+                height: module.height
+            };
+        }
+    }
+
     if (module.type === "cube") {
         switch (side) {
             case "front":
@@ -297,11 +348,23 @@ export function getActiveFabricArtwork(
     members: StandModule[],
     mergedWidth: number
 ): ArtworkInfo | null {
-    if (module.type === "cube") {
+    if (module.type === "cube" || module.type === "circularBanner") {
         return getModuleFabricArtwork(module, side);
     }
 
     return getMergedFabricArtwork(side, module, members, mergedWidth);
+}
+
+export function getActiveFabric(
+    module: StandModule,
+    side: FabricSide,
+    members: StandModule[]
+): FabricInfo {
+    if (module.type === "cube" || module.type === "circularBanner") {
+        return getModuleFabric(module, side);
+    }
+
+    return getMergedFabric(side, members);
 }
 
 export function getActiveFabricPrintDimensions(
@@ -309,7 +372,7 @@ export function getActiveFabricPrintDimensions(
     side: FabricSide,
     mergedWidth: number
 ): FabricDimensions {
-    if (module.type === "cube") {
+    if (module.type === "cube" || module.type === "circularBanner") {
         return getFabricDimensions(module, side);
     }
 
@@ -318,6 +381,19 @@ export function getActiveFabricPrintDimensions(
         height: module.height
     };
 }
+
+export function resizeModuleFabricsForSegmentCount(
+    module: StandModule,
+    segmentCount: number
+): ModuleFabrics {
+    if (module.type !== "circularBanner") {
+        return module.fabrics ?? createDefaultFabrics(module.type);
+    }
+
+    return resizeBannerFabrics(module.fabrics, segmentCount);
+}
+
+export { createBannerFabricSide, formatBannerFabricLabel, isBannerFabricSide, parseBannerFabricSide } from "./bannerFabrics";
 
 export function buildArtworkInfo(
     base: Omit<
@@ -359,6 +435,31 @@ export function recalculateModuleFabrics(
     _members: StandModule[],
     mergedWidth: number
 ): ModuleFabrics {
+    if (module.type === "circularBanner") {
+        const segmentCount = getBannerSegmentCount(module);
+
+        return Object.fromEntries(
+            getBannerFabricSides(segmentCount).map(side => {
+                const fabric = getModuleFabric(module, side);
+                const dimensions = getFabricDimensions(module, side);
+
+                return [
+                    side,
+                    {
+                        ...fabric,
+                        artwork: fabric.artwork
+                            ? recalculateArtworkDpi(
+                                fabric.artwork,
+                                dimensions.width,
+                                dimensions.height
+                            )
+                            : null
+                    }
+                ];
+            })
+        );
+    }
+
     if (module.type === "cube") {
         return Object.fromEntries(
             CUBE_FABRIC_SIDES.map(side => {

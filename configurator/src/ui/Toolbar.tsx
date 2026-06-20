@@ -1,5 +1,6 @@
 import { useEditorStore } from "../store/editorStore";
 import { createDefaultFabrics } from "../utils/fabrics";
+import { DEFAULT_BANNER_SEGMENT_COUNT } from "../utils/bannerGeometry";
 
 
 export function Toolbar() {
@@ -10,14 +11,13 @@ export function Toolbar() {
     return (
         <div
             style={{
-                position: "absolute",
-                top: 20,
-                left: 20,
-                background: "#222",
+                background: "#20242b",
                 padding: 15,
                 borderRadius: 8,
-                color: "white",
-                zIndex: 10,
+                color: "#f7f7f2",
+                border: "1px solid #3b414a",
+                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+                fontFamily: "system-ui, sans-serif",
                 display: "grid",
                 gap: 8
             }}
@@ -28,6 +28,7 @@ export function Toolbar() {
 
             <button
                 type="button"
+                style={styles.button}
                 onClick={() => {
                     const count = useEditorStore.getState().moduleIds.length;
 
@@ -52,6 +53,7 @@ export function Toolbar() {
 
             <button
                 type="button"
+                style={styles.button}
                 onClick={() => {
                     const count = useEditorStore.getState().moduleIds.length;
 
@@ -76,15 +78,58 @@ export function Toolbar() {
 
             <button
                 type="button"
-                disabled={!canUndo}
-                onClick={undo}
+                style={styles.button}
+                onClick={() => {
+                    const count = useEditorStore.getState().moduleIds.length;
+
+                    addModule({
+                        id: `banner-${crypto.randomUUID()}`,
+                        type: "circularBanner",
+                        position: {
+                            x: count * 0.9,
+                            y: 0,
+                            z: 0.9
+                        },
+                        rotation: 0,
+                        width: 1.2,
+                        height: 2,
+                        depth: 0.08,
+                        segmentCount: DEFAULT_BANNER_SEGMENT_COUNT,
+                        fabrics: createDefaultFabrics(
+                            "circularBanner",
+                            DEFAULT_BANNER_SEGMENT_COUNT
+                        )
+                    });
+                }}
+            >
+                Add Hanging Banner (Circular)
+            </button>
+
+            <button
+                type="button"
                 style={{
+                    ...styles.button,
                     opacity: canUndo ? 1 : 0.45,
                     cursor: canUndo ? "pointer" : "not-allowed"
                 }}
+                disabled={!canUndo}
+                onClick={undo}
             >
                 Undo
             </button>
         </div>
     );
 }
+
+const styles = {
+    button: {
+        border: "1px solid #4b5562",
+        background: "#2d3440",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "8px 10px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 13
+    }
+} satisfies Record<string, import("react").CSSProperties>;

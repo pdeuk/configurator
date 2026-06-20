@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
     ArtworkInfo,
     FabricSide,
+    ModuleFabrics,
     Position3,
     StandModule
 } from "../models/ModuleModel";
@@ -10,8 +11,12 @@ import {
     getFabricSidesForModule,
     getModuleFabric,
     recalculateModuleFabrics,
+    resizeModuleFabricsForSegmentCount,
     setModuleFabric
 } from "../utils/fabrics";
+import { clampBannerSegmentCount } from "../utils/bannerFabrics";
+import { DEFAULT_BANNER_SEGMENT_COUNT } from "../utils/bannerGeometry";
+import { sanitizeActiveFabricSides } from "../utils/applyFabricArtwork";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 
 export type ModuleId = StandModule["id"];
@@ -31,7 +36,7 @@ interface EditorState {
     moduleIds: ModuleId[];
     modulesById: Record<ModuleId, StandModule>;
     selectedId: ModuleId | null;
-    activeFabricSide: FabricSide;
+    activeFabricSides: FabricSide[];
     drag: DragState | null;
     snapPosition: Position3 | null;
     history: EditorSnapshot[];
@@ -40,14 +45,25 @@ interface EditorState {
     duplicateModule: (id: ModuleId) => void;
     removeModule: (id: ModuleId) => void;
     undo: () => void;
-    setActiveFabricSide: (side: FabricSide) => void;
+    toggleFabricSideSelection: (side: FabricSide, additive: boolean) => void;
     beginDrag: (id: ModuleId, offset: Position3) => void;
     endDrag: () => void;
     updateModule: (id: ModuleId, data: Partial<StandModule>) => void;
     updateModulePosition: (id: ModuleId, position: Position3) => void;
-    setModuleArtwork: (id: ModuleId, side: FabricSide, artwork: ArtworkInfo) => void;
-    setModuleFabricBlockout: (id: ModuleId, side: FabricSide, isBlockout: boolean) => void;
-    setModuleFabricLuminous: (id: ModuleId, side: FabricSide, isLuminous: boolean) => void;
+    setModuleArtworkForSides: (
+        id: ModuleId,
+        assignments: Array<{ side: FabricSide; artwork: ArtworkInfo }>
+    ) => void;
+    setModuleFabricBlockoutForSides: (
+        id: ModuleId,
+        sides: FabricSide[],
+        isBlockout: boolean
+    ) => void;
+    setModuleFabricLuminousForSides: (
+        id: ModuleId,
+        sides: FabricSide[],
+        isLuminous: boolean
+    ) => void;
     setSnapPosition: (position: Position3 | null) => void;
 }
 
@@ -59,7 +75,7 @@ const initialWall: StandModule = {
         y: 0,
         z: 0
     },
-    rotation: 0,
+    rotation: Math.PI,
     width: 1,
     height: 2,
     depth: 0.05,
@@ -78,13 +94,28 @@ function createSnapshot(state: EditorState): EditorSnapshot {
     };
 }
 
+function applyFabricUpdates(
+    module: StandModule,
+    updates: Array<{ side: FabricSide; fabric: ReturnType<typeof getModuleFabric> }>
+): ModuleFabrics {
+    const nextModule = updates.reduce((moduleState, update) => ({
+        ...moduleState,
+        fabrics: setModuleFabric(moduleState, update.side, update.fabric)
+    }), module);
+
+    return nextModule.fabrics ?? createDefaultFabrics(
+        module.type,
+        module.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+    );
+}
+
 export const useEditorStore = create<EditorState>((set) => ({
     moduleIds: [initialWall.id],
     modulesById: {
         [initialWall.id]: initialWall
     },
     selectedId: null,
-    activeFabricSide: "front",
+    activeFabricSides: ["front"],
     drag: null,
     snapPosition: null,
     history: [],
@@ -93,13 +124,13 @@ export const useEditorStore = create<EditorState>((set) => ({
         set(state => {
             const module = id ? state.modulesById[id] : undefined;
             const validSides = module ? getFabricSidesForModule(module) : ["front" as const];
-            const activeFabricSide: FabricSide = validSides.includes(state.activeFabricSide)
-                ? state.activeFabricSide
-                : (validSides[0] ?? "front");
 
             return {
                 selectedId: id,
-                activeFabricSide
+                activeFabricSides: sanitizeActiveFabricSides(
+                    state.activeFabricSides,
+                    validSides
+                )
             };
         }),
 
@@ -130,7 +161,10 @@ export const useEditorStore = create<EditorState>((set) => ({
                     z: source.position.z + 0.35
                 },
                 fabrics: {
-                    ...createDefaultFabrics(source.type),
+                    ...createDefaultFabrics(
+                        source.type,
+                        source.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                    ),
                     ...source.fabrics
                 },
                 snappedTo: null
@@ -178,14 +212,41 @@ export const useEditorStore = create<EditorState>((set) => ({
                 moduleIds: snapshot.moduleIds,
                 modulesById: snapshot.modulesById,
                 selectedId: snapshot.selectedId,
-                activeFabricSide: state.activeFabricSide,
+                activeFabricSides: state.activeFabricSides,
                 drag: null,
                 snapPosition: null,
                 history: state.history.slice(0, -1)
             };
         }),
 
-    setActiveFabricSide: side => set({ activeFabricSide: side }),
+    toggleFabricSideSelection: (side, additive) =>
+        set(state => {
+            const module = state.selectedId
+                ? state.modulesById[state.selectedId]
+                : undefined;
+            const validSides = module ? getFabricSidesForModule(module) : [];
+
+            if (!validSides.includes(side)) {
+                return state;
+            }
+
+            if (additive) {
+                const isSelected = state.activeFabricSides.includes(side);
+                const nextSelection = isSelected
+                    ? state.activeFabricSides.filter(selectedSide => selectedSide !== side)
+                    : [...state.activeFabricSides, side];
+
+                return {
+                    activeFabricSides: nextSelection.length > 0
+                        ? nextSelection
+                        : [side]
+                };
+            }
+
+            return {
+                activeFabricSides: [side]
+            };
+        }),
 
     beginDrag: (id, offset) =>
         set(state => {
@@ -221,32 +282,60 @@ export const useEditorStore = create<EditorState>((set) => ({
                 ...current,
                 ...data
             };
+            const segmentCountChanged =
+                updatedModule.type === "circularBanner" &&
+                data.segmentCount !== undefined &&
+                clampBannerSegmentCount(data.segmentCount) !==
+                    clampBannerSegmentCount(
+                        current.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                    );
+            const moduleWithFabrics = segmentCountChanged
+                ? {
+                    ...updatedModule,
+                    segmentCount: clampBannerSegmentCount(
+                        updatedModule.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                    ),
+                    fabrics: resizeModuleFabricsForSegmentCount(
+                        current,
+                        clampBannerSegmentCount(
+                            updatedModule.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                        )
+                    )
+                }
+                : updatedModule;
             const dimensionsChanged =
                 (data.width !== undefined && data.width !== current.width) ||
                 (data.height !== undefined && data.height !== current.height) ||
-                (data.depth !== undefined && data.depth !== current.depth);
+                (data.depth !== undefined && data.depth !== current.depth) ||
+                segmentCountChanged;
             const modules = state.moduleIds
                 .map(moduleId => state.modulesById[moduleId])
                 .filter(isStandModule)
-                .map(module => module.id === id ? updatedModule : module);
-            const layout = getFrameConnectionLayout(updatedModule, modules);
+                .map(module => module.id === id ? moduleWithFabrics : module);
+            const layout = getFrameConnectionLayout(moduleWithFabrics, modules);
             const nextModule = dimensionsChanged
                 ? {
-                    ...updatedModule,
+                    ...moduleWithFabrics,
                     fabrics: recalculateModuleFabrics(
-                        updatedModule,
+                        moduleWithFabrics,
                         modules,
                         layout.fabric.width
                     )
                 }
-                : updatedModule;
+                : moduleWithFabrics;
+            const validSides = getFabricSidesForModule(nextModule);
+            const activeFabricSides = sanitizeActiveFabricSides(
+                state.activeFabricSides,
+                validSides
+            );
 
             return {
                 history: [...state.history, createSnapshot(state)],
                 modulesById: {
                     ...state.modulesById,
                     [id]: nextModule
-                }
+                },
+                activeFabricSides
             };
         }),
 
@@ -277,73 +366,69 @@ export const useEditorStore = create<EditorState>((set) => ({
             };
         }),
 
-    setModuleArtwork: (id, side, artwork) =>
+    setModuleArtworkForSides: (id, assignments) =>
         set(state => {
             const current = state.modulesById[id];
 
-            if (!current) {
+            if (!current || assignments.length === 0) {
                 return state;
             }
 
-            const fabric = getModuleFabric(current, side);
+            const fabrics = applyFabricUpdates(
+                current,
+                assignments.map(({ side, artwork }) => ({
+                    side,
+                    fabric: {
+                        ...getModuleFabric(current, side),
+                        artwork
+                    }
+                }))
+            );
+
+            const primaryArtwork = assignments[0]!.artwork;
+            const nextModule: StandModule = {
+                ...current,
+                fabrics,
+                artwork: primaryArtwork
+            };
 
             return {
                 history: [...state.history, createSnapshot(state)],
                 modulesById: {
                     ...state.modulesById,
-                    [id]: {
-                        ...current,
-                        fabrics: setModuleFabric(current, side, {
-                            ...fabric,
-                            artwork
-                        }),
-                        artwork
-                    }
+                    [id]: nextModule
                 }
             };
         }),
 
-    setModuleFabricBlockout: (id, side, isBlockout) =>
+    setModuleFabricBlockoutForSides: (id, sides, isBlockout) =>
         set(state => {
             const current = state.modulesById[id];
 
-            if (!current) {
+            if (!current || sides.length === 0) {
                 return state;
             }
 
-            const fabric = getModuleFabric(current, side);
+            const updates = sides
+                .map(side => {
+                    const fabric = getModuleFabric(current, side);
 
-            if (fabric.isBlockout === isBlockout) {
-                return state;
-            }
+                    if (fabric.isBlockout === isBlockout) {
+                        return null;
+                    }
 
-            return {
-                history: [...state.history, createSnapshot(state)],
-                modulesById: {
-                    ...state.modulesById,
-                    [id]: {
-                        ...current,
-                        fabrics: setModuleFabric(current, side, {
+                    return {
+                        side,
+                        fabric: {
                             ...fabric,
                             isBlockout,
                             isLuminous: isBlockout ? false : fabric.isLuminous
-                        })
-                    }
-                }
-            };
-        }),
+                        }
+                    };
+                })
+                .filter((update): update is NonNullable<typeof update> => update !== null);
 
-    setModuleFabricLuminous: (id, side, isLuminous) =>
-        set(state => {
-            const current = state.modulesById[id];
-
-            if (!current) {
-                return state;
-            }
-
-            const fabric = getModuleFabric(current, side);
-
-            if (fabric.isBlockout || fabric.isLuminous === isLuminous) {
+            if (updates.length === 0) {
                 return state;
             }
 
@@ -353,10 +438,49 @@ export const useEditorStore = create<EditorState>((set) => ({
                     ...state.modulesById,
                     [id]: {
                         ...current,
-                        fabrics: setModuleFabric(current, side, {
+                        fabrics: applyFabricUpdates(current, updates)
+                    }
+                }
+            };
+        }),
+
+    setModuleFabricLuminousForSides: (id, sides, isLuminous) =>
+        set(state => {
+            const current = state.modulesById[id];
+
+            if (!current || sides.length === 0) {
+                return state;
+            }
+
+            const updates = sides
+                .map(side => {
+                    const fabric = getModuleFabric(current, side);
+
+                    if (fabric.isBlockout || fabric.isLuminous === isLuminous) {
+                        return null;
+                    }
+
+                    return {
+                        side,
+                        fabric: {
                             ...fabric,
                             isLuminous
-                        })
+                        }
+                    };
+                })
+                .filter((update): update is NonNullable<typeof update> => update !== null);
+
+            if (updates.length === 0) {
+                return state;
+            }
+
+            return {
+                history: [...state.history, createSnapshot(state)],
+                modulesById: {
+                    ...state.modulesById,
+                    [id]: {
+                        ...current,
+                        fabrics: applyFabricUpdates(current, updates)
                     }
                 }
             };

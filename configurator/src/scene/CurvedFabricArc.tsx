@@ -2,7 +2,9 @@ import { useLoader } from "@react-three/fiber";
 import { useMemo } from "react";
 import {
     AdditiveBlending,
+    BackSide,
     CanvasTexture,
+    DoubleSide,
     FrontSide,
     TextureLoader
 } from "three";
@@ -11,13 +13,10 @@ import { BLOCKOUT_FABRIC_COLOR } from "../utils/fabrics";
 import { ignoreRaycast } from "./raycast";
 
 const PLAIN_FABRIC_COLOR = "#d8d2c4";
-const BACKLIGHT_COLOR = "#fff3df";
-const BACKLIGHT_INTENSITY = 8.5;
-const LUMINOUS_EMISSIVE_INTENSITY = 0.28;
-const LUMINOUS_TRANSMISSION = 0.32;
 const GLOW_COLOR = "#ffe9c8";
 const GLOW_OPACITY = 0.26;
-const GLOW_SCALE = 1.12;
+const LUMINOUS_EMISSIVE_INTENSITY = 0.28;
+const LUMINOUS_TRANSMISSION = 0.32;
 
 let fabricGlowTexture: CanvasTexture | null = null;
 
@@ -51,9 +50,15 @@ interface ArtworkMaterialProps {
     imageUrl: string;
     isBlockout: boolean;
     isLuminous: boolean;
+    side?: typeof FrontSide | typeof BackSide | typeof DoubleSide;
 }
 
-function ArtworkMaterial({ imageUrl, isBlockout, isLuminous }: ArtworkMaterialProps) {
+function ArtworkMaterial({
+    imageUrl,
+    isBlockout,
+    isLuminous,
+    side = FrontSide
+}: ArtworkMaterialProps) {
     const texture = useLoader(TextureLoader, imageUrl);
 
     if (isLuminous && !isBlockout) {
@@ -71,7 +76,7 @@ function ArtworkMaterial({ imageUrl, isBlockout, isLuminous }: ArtworkMaterialPr
                 attenuationDistance={1.2}
                 roughness={0.78}
                 metalness={0}
-                side={FrontSide}
+                side={side}
             />
         );
     }
@@ -82,82 +87,83 @@ function ArtworkMaterial({ imageUrl, isBlockout, isLuminous }: ArtworkMaterialPr
             map={texture}
             roughness={0.95}
             metalness={0}
-            side={FrontSide}
+            side={side}
         />
     );
 }
 
-export interface FabricPanelProps {
+export interface CurvedFabricArcProps {
     fabric: FabricInfo;
     artwork: ArtworkInfo | null;
-    panelWidth: number;
-    panelHeight: number;
-    position: [number, number, number];
-    rotation: [number, number, number];
-    backlightPosition: [number, number, number];
-    backlightRotation: [number, number, number];
-    glowPosition: [number, number, number];
-    glowRotation: [number, number, number];
+    radius: number;
+    height: number;
+    thetaStart: number;
+    thetaLength: number;
+    inward?: boolean;
 }
 
-export function FabricPanel({
+export function CurvedFabricArc({
     fabric,
     artwork,
-    panelWidth,
-    panelHeight,
-    position,
-    rotation,
-    backlightPosition,
-    backlightRotation,
-    glowPosition,
-    glowRotation
-}: FabricPanelProps) {
+    radius,
+    height,
+    thetaStart,
+    thetaLength,
+    inward = false
+}: CurvedFabricArcProps) {
     const glowTexture = useMemo(() => getFabricGlowTexture(), []);
     const plainFabricColor = fabric.isBlockout ? BLOCKOUT_FABRIC_COLOR : PLAIN_FABRIC_COLOR;
     const isLuminous = fabric.isLuminous && !fabric.isBlockout;
+    const radialSegments = Math.max(12, Math.ceil(thetaLength * 32));
+    const materialSide = inward ? BackSide : FrontSide;
 
     return (
         <>
             {isLuminous && (
-                <>
-                    <rectAreaLight
-                        width={panelWidth * 0.96}
-                        height={panelHeight * 0.96}
-                        intensity={BACKLIGHT_INTENSITY}
-                        color={BACKLIGHT_COLOR}
-                        position={backlightPosition}
-                        rotation={backlightRotation}
+                <mesh raycast={ignoreRaycast}>
+                    <cylinderGeometry
+                        args={[
+                            radius * 1.01,
+                            radius * 1.01,
+                            height * 0.98,
+                            radialSegments,
+                            1,
+                            true,
+                            thetaStart,
+                            thetaLength
+                        ]}
                     />
-                    <mesh
-                        position={glowPosition}
-                        rotation={glowRotation}
-                        raycast={ignoreRaycast}
-                    >
-                        <planeGeometry args={[panelWidth * GLOW_SCALE, panelHeight * GLOW_SCALE]} />
-                        <meshBasicMaterial
-                            map={glowTexture}
-                            color={GLOW_COLOR}
-                            transparent
-                            opacity={GLOW_OPACITY}
-                            blending={AdditiveBlending}
-                            depthWrite={false}
-                            toneMapped={false}
-                            side={FrontSide}
-                        />
-                    </mesh>
-                </>
+                    <meshBasicMaterial
+                        map={glowTexture}
+                        color={GLOW_COLOR}
+                        transparent
+                        opacity={GLOW_OPACITY}
+                        blending={AdditiveBlending}
+                        depthWrite={false}
+                        toneMapped={false}
+                        side={DoubleSide}
+                    />
+                </mesh>
             )}
-            <mesh
-                position={position}
-                rotation={rotation}
-                raycast={ignoreRaycast}
-            >
-                <planeGeometry args={[panelWidth, panelHeight]} />
+            <mesh raycast={ignoreRaycast}>
+                <cylinderGeometry
+                    args={[
+                        radius,
+                        radius,
+                        height,
+                        radialSegments,
+                        1,
+                        true,
+                        thetaStart,
+                        thetaLength
+                    ]}
+                />
                 {artwork ? (
                     <ArtworkMaterial
                         imageUrl={artwork.imageUrl}
                         isBlockout={fabric.isBlockout}
                         isLuminous={isLuminous}
+                        side={materialSide}
                     />
                 ) : isLuminous ? (
                     <meshPhysicalMaterial
@@ -171,14 +177,14 @@ export function FabricPanel({
                         attenuationDistance={1.2}
                         roughness={0.82}
                         metalness={0}
-                        side={FrontSide}
+                        side={materialSide}
                     />
                 ) : (
                     <meshStandardMaterial
                         color={plainFabricColor}
                         roughness={0.95}
                         metalness={0}
-                        side={FrontSide}
+                        side={materialSide}
                     />
                 )}
             </mesh>

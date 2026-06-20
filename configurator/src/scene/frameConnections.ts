@@ -20,7 +20,7 @@ export function getFrameConnectionLayout(
     module: StandModule,
     modules: StandModule[]
 ): FrameConnectionLayout {
-    if (module.type === "cube") {
+    if (module.type === "cube" || module.type === "circularBanner") {
         return {
             hiddenSides: {},
             fabric: {

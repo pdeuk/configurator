@@ -1,5 +1,6 @@
 import type { StandModule } from "../models/ModuleModel";
 import { getRailThickness } from "../utils/fabrics";
+import { ignoreRaycast } from "./raycast";
 
 interface CubeFrameProps {
     module: StandModule;
@@ -14,7 +15,7 @@ interface RailProps {
 
 function Rail({ size, position, color }: RailProps) {
     return (
-        <mesh position={position}>
+        <mesh position={position} raycast={ignoreRaycast}>
             <boxGeometry args={size} />
             <meshStandardMaterial color={color} />
         </mesh>

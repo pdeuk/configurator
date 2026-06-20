@@ -1,7 +1,7 @@
 import { StandCanvas } from "../scene/StandCanvas";
 import { ArtworkDropZone } from "../ui/ArtworkDropZone";
 import { Inspector } from "../ui/Inspector";
-import { Toolbar } from "../ui/Toolbar";
+import { LeftSidebar } from "../ui/LeftSidebar";
 
 export function Configurator() {
     return (
@@ -11,7 +11,7 @@ export function Configurator() {
                 height: "100vh"
             }}
         >
-            <Toolbar />
+            <LeftSidebar />
             <Inspector />
             <ArtworkDropZone />
             <StandCanvas />

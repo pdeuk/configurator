@@ -1,7 +1,8 @@
 export type ModuleType =
     | "wall"
     | "cube"
-    | "corner";
+    | "corner"
+    | "circularBanner";
 
 export interface Position3 {
     x: number;
@@ -53,7 +54,13 @@ export type CubeFabricSide =
     | "right"
     | "top";
 
-export type FabricSide = FrameFabricSide | CubeFabricSide;
+export type BannerFabricLayer = "outside" | "inside";
+
+export type BannerFabricSide =
+    | `outside-${number}`
+    | `inside-${number}`;
+
+export type FabricSide = FrameFabricSide | CubeFabricSide | BannerFabricSide;
 
 export interface FabricInfo {
     isBlockout: boolean;
@@ -71,6 +78,7 @@ export interface StandModule {
     width: number;
     height: number;
     depth: number;
+    segmentCount?: number;
     snappedTo?: string | null;
     fabrics?: ModuleFabrics;
     artwork?: ArtworkInfo | null;

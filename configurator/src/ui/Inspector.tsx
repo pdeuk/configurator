@@ -3,11 +3,22 @@ import type { Position3, StandModule } from "../models/ModuleModel";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import { useEditorStore } from "../store/editorStore";
 import {
+    formatFabricSidesLabel
+} from "../utils/applyFabricArtwork";
+import {
+    formatBannerFabricLabel,
     getActiveFabricArtwork,
     getActiveFabricPrintDimensions,
     getFabricSidesForModule,
-    getModuleFabric
+    getModuleFabric,
+    isBannerFabricSide
 } from "../utils/fabrics";
+import { clampBannerSegmentCount } from "../utils/bannerFabrics";
+import {
+    DEFAULT_BANNER_SEGMENT_COUNT,
+    MAX_BANNER_SEGMENT_COUNT,
+    MIN_BANNER_SEGMENT_COUNT
+} from "../utils/bannerGeometry";
 
 function formatDpi(value: number) {
     return Number.isFinite(value) ? value.toFixed(1) : "0.0";
@@ -25,6 +36,7 @@ interface NumberFieldProps {
     value: number;
     step?: number;
     min?: number;
+    max?: number;
     onChange: (value: number) => void;
 }
 
@@ -33,6 +45,7 @@ function NumberField({
     value,
     step = 0.1,
     min,
+    max,
     onChange
 }: NumberFieldProps) {
     return (
@@ -43,6 +56,7 @@ function NumberField({
                 value={Number(value.toFixed(3))}
                 step={step}
                 min={min}
+                max={max}
                 onChange={(event: ChangeEvent<HTMLInputElement>) => {
                     const next = Number(event.target.value);
 
@@ -62,7 +76,7 @@ function isStandModule(module: StandModule | undefined): module is StandModule {
 
 export function Inspector() {
     const selectedId = useEditorStore(state => state.selectedId);
-    const activeFabricSide = useEditorStore(state => state.activeFabricSide);
+    const activeFabricSides = useEditorStore(state => state.activeFabricSides);
     const moduleIds = useEditorStore(state => state.moduleIds);
     const modulesById = useEditorStore(state => state.modulesById);
     const selectedModule = useEditorStore(state =>
@@ -71,9 +85,13 @@ export function Inspector() {
     const updateModule = useEditorStore(state => state.updateModule);
     const duplicateModule = useEditorStore(state => state.duplicateModule);
     const removeModule = useEditorStore(state => state.removeModule);
-    const setActiveFabricSide = useEditorStore(state => state.setActiveFabricSide);
-    const setModuleFabricBlockout = useEditorStore(state => state.setModuleFabricBlockout);
-    const setModuleFabricLuminous = useEditorStore(state => state.setModuleFabricLuminous);
+    const toggleFabricSideSelection = useEditorStore(state => state.toggleFabricSideSelection);
+    const setModuleFabricBlockoutForSides = useEditorStore(
+        state => state.setModuleFabricBlockoutForSides
+    );
+    const setModuleFabricLuminousForSides = useEditorStore(
+        state => state.setModuleFabricLuminousForSides
+    );
 
     if (!selectedModule) {
         return (
@@ -98,19 +116,27 @@ export function Inspector() {
     };
     const modules = moduleIds.map(id => modulesById[id]).filter(isStandModule);
     const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
+    const isCircularBanner = selectedModule.type === "circularBanner";
     const fabricSides = getFabricSidesForModule(selectedModule);
-    const activeFabric = getModuleFabric(selectedModule, activeFabricSide);
+    const selectedFabrics = activeFabricSides.map(side => getModuleFabric(selectedModule, side));
+    const allSelectedBlockout = selectedFabrics.every(fabric => fabric.isBlockout);
+    const anySelectedBlockout = selectedFabrics.some(fabric => fabric.isBlockout);
+    const allSelectedLuminous = selectedFabrics.every(
+        fabric => fabric.isLuminous && !fabric.isBlockout
+    );
+    const primaryFabricSide = activeFabricSides[0] ?? fabricSides[0] ?? "front";
     const printDimensions = getActiveFabricPrintDimensions(
         selectedModule,
-        activeFabricSide,
+        primaryFabricSide,
         connectionLayout.fabric.width
     );
     const mergedArtwork = getActiveFabricArtwork(
         selectedModule,
-        activeFabricSide,
+        primaryFabricSide,
         connectionLayout.fabric.members,
         connectionLayout.fabric.width
     );
+    const selectionLabel = formatFabricSidesLabel(activeFabricSides);
 
     return (
         <aside style={styles.panel}>
@@ -140,32 +166,81 @@ export function Inspector() {
             <section style={styles.section}>
                 <h3 style={styles.sectionTitle}>Dimensions</h3>
                 <div style={styles.grid}>
-                    <NumberField
-                        label="W"
-                        value={selectedModule.width}
-                        min={MIN_DIMENSION}
-                        onChange={width => updateDimensions({ width: Math.max(width, MIN_DIMENSION) })}
-                    />
-                    <NumberField
-                        label="H"
-                        value={selectedModule.height}
-                        min={MIN_DIMENSION}
-                        onChange={height => updateDimensions({ height: Math.max(height, MIN_DIMENSION) })}
-                    />
-                    <NumberField
-                        label="D"
-                        value={selectedModule.depth}
-                        min={MIN_DIMENSION}
-                        onChange={depth => updateDimensions({ depth: Math.max(depth, MIN_DIMENSION) })}
-                    />
+                    {isCircularBanner ? (
+                        <>
+                            <NumberField
+                                label="Ring ø"
+                                value={selectedModule.width}
+                                min={MIN_DIMENSION}
+                                onChange={width => updateDimensions({
+                                    width: Math.max(width, MIN_DIMENSION)
+                                })}
+                            />
+                            <NumberField
+                                label="H"
+                                value={selectedModule.height}
+                                min={MIN_DIMENSION}
+                                onChange={height => updateDimensions({
+                                    height: Math.max(height, MIN_DIMENSION)
+                                })}
+                            />
+                            <NumberField
+                                label="Ring depth"
+                                value={selectedModule.depth}
+                                min={MIN_DIMENSION}
+                                onChange={depth => updateDimensions({
+                                    depth: Math.max(depth, MIN_DIMENSION)
+                                })}
+                            />
+                            <NumberField
+                                label="Faces"
+                                value={selectedModule.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT}
+                                step={1}
+                                min={MIN_BANNER_SEGMENT_COUNT}
+                                max={MAX_BANNER_SEGMENT_COUNT}
+                                onChange={segmentCount => updateDimensions({
+                                    segmentCount: clampBannerSegmentCount(segmentCount)
+                                })}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <NumberField
+                                label="W"
+                                value={selectedModule.width}
+                                min={MIN_DIMENSION}
+                                onChange={width => updateDimensions({
+                                    width: Math.max(width, MIN_DIMENSION)
+                                })}
+                            />
+                            <NumberField
+                                label="H"
+                                value={selectedModule.height}
+                                min={MIN_DIMENSION}
+                                onChange={height => updateDimensions({
+                                    height: Math.max(height, MIN_DIMENSION)
+                                })}
+                            />
+                            <NumberField
+                                label="D"
+                                value={selectedModule.depth}
+                                min={MIN_DIMENSION}
+                                onChange={depth => updateDimensions({
+                                    depth: Math.max(depth, MIN_DIMENSION)
+                                })}
+                            />
+                        </>
+                    )}
                 </div>
             </section>
 
             <section style={styles.section}>
                 <h3 style={styles.sectionTitle}>Fabric</h3>
+                <p style={styles.fabricHint}>Ctrl+click to select multiple faces.</p>
                 <div style={{
                     ...styles.segmented,
-                    ...(fabricSides.length > 2 ? styles.cubeSegmented : undefined)
+                    ...(fabricSides.length > 2 ? styles.cubeSegmented : undefined),
+                    ...(fabricSides.length > 6 ? styles.bannerSegmented : undefined)
                 }}>
                     {fabricSides.map(side => (
                         <button
@@ -173,22 +248,38 @@ export function Inspector() {
                             type="button"
                             style={{
                                 ...styles.segmentButton,
-                                ...(activeFabricSide === side ? styles.activeSegmentButton : undefined)
+                                ...(activeFabricSides.includes(side)
+                                    ? styles.activeSegmentButton
+                                    : undefined)
                             }}
-                            onClick={() => setActiveFabricSide(side)}
+                            onClick={event => toggleFabricSideSelection(
+                                side,
+                                event.ctrlKey || event.metaKey
+                            )}
                         >
-                            {side}
+                            {isBannerFabricSide(side)
+                                ? formatBannerFabricLabel(side)
+                                : side}
                         </button>
                     ))}
                 </div>
                 <div style={styles.readout}>
+                    <div style={styles.selectionSummary}>
+                        Selected: {selectionLabel}
+                    </div>
                     <label style={styles.checkboxRow}>
                         <input
                             type="checkbox"
-                            checked={activeFabric.isBlockout}
-                            onChange={event => setModuleFabricBlockout(
+                            checked={allSelectedBlockout}
+                            ref={element => {
+                                if (element) {
+                                    element.indeterminate =
+                                        anySelectedBlockout && !allSelectedBlockout;
+                                }
+                            }}
+                            onChange={event => setModuleFabricBlockoutForSides(
                                 selectedModule.id,
-                                activeFabricSide,
+                                activeFabricSides,
                                 event.target.checked
                             )}
                         />
@@ -197,11 +288,19 @@ export function Inspector() {
                     <label style={styles.checkboxRow}>
                         <input
                             type="checkbox"
-                            checked={activeFabric.isLuminous}
-                            disabled={activeFabric.isBlockout}
-                            onChange={event => setModuleFabricLuminous(
+                            checked={allSelectedLuminous}
+                            disabled={anySelectedBlockout}
+                            ref={element => {
+                                if (element) {
+                                    element.indeterminate =
+                                        !anySelectedBlockout &&
+                                        selectedFabrics.some(fabric => fabric.isLuminous) &&
+                                        !allSelectedLuminous;
+                                }
+                            }}
+                            onChange={event => setModuleFabricLuminousForSides(
                                 selectedModule.id,
-                                activeFabricSide,
+                                activeFabricSides,
                                 event.target.checked
                             )}
                         />
@@ -263,7 +362,7 @@ export function Inspector() {
                             ) : null}
                         </>
                     ) : (
-                        <div>Drop artwork to calculate DPI for the {activeFabricSide} fabric.</div>
+                        <div>Drop artwork to apply to {selectionLabel}.</div>
                     )}
                 </div>
             </section>
@@ -399,6 +498,18 @@ const styles = {
     },
     cubeSegmented: {
         gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
+    },
+    bannerSegmented: {
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))"
+    },
+    fabricHint: {
+        margin: "0 0 8px",
+        color: "#707987",
+        fontSize: 11
+    },
+    selectionSummary: {
+        color: "#cbd3dc",
+        fontWeight: 700
     },
     segmentButton: {
         border: "1px solid #4b5562",
