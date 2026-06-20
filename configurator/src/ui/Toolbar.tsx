@@ -45,7 +45,7 @@ export function Toolbar() {
                     });
                 }}
             >
-                Add Wall
+                Add Frame (100x200)
             </button>
 
             <button

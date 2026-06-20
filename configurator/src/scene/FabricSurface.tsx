@@ -15,6 +15,14 @@ import {
 } from "../utils/fabrics";
 import type { FabricMergeLayout } from "./frameConnections";
 
+const PLAIN_FABRIC_COLOR = "#d8d2c4";
+const BLOCKOUT_FABRIC_COLOR = "#6a6a6a";
+const BACKLIGHT_COLOR = "#fff3df";
+const BACKLIGHT_INTENSITY = 6;
+const BACKLIGHT_OFFSET = 0.045;
+const LUMINOUS_EMISSIVE_INTENSITY = 0.22;
+const LUMINOUS_TRANSMISSION = 0.32;
+
 interface FabricSurfaceProps {
     module: StandModule;
     connectionLayout: FabricMergeLayout;
@@ -29,10 +37,65 @@ interface FabricFaceProps {
 interface ArtworkMaterialProps {
     imageUrl: string;
     isBlockout: boolean;
+    isLuminous: boolean;
 }
 
-function ArtworkMaterial({ imageUrl, isBlockout }: ArtworkMaterialProps) {
+interface FabricBacklightProps {
+    side: FabricSide;
+    width: number;
+    height: number;
+    centerOffsetX: number;
+    zOffset: number;
+}
+
+function FabricBacklight({
+    side,
+    width,
+    height,
+    centerOffsetX,
+    zOffset
+}: FabricBacklightProps) {
+    const positionZ = side === "front"
+        ? zOffset + BACKLIGHT_OFFSET
+        : zOffset - BACKLIGHT_OFFSET;
+    const rotation: [number, number, number] = side === "front"
+        ? [0, 0, 0]
+        : [0, Math.PI, 0];
+
+    return (
+        <rectAreaLight
+            width={width * 0.96}
+            height={height * 0.96}
+            intensity={BACKLIGHT_INTENSITY}
+            color={BACKLIGHT_COLOR}
+            position={[centerOffsetX, 0, positionZ]}
+            rotation={rotation}
+        />
+    );
+}
+
+function ArtworkMaterial({ imageUrl, isBlockout, isLuminous }: ArtworkMaterialProps) {
     const texture = useLoader(TextureLoader, imageUrl);
+
+    if (isLuminous && !isBlockout) {
+        return (
+            <meshPhysicalMaterial
+                map={texture}
+                color="#ffffff"
+                emissiveMap={texture}
+                emissive="#ffffff"
+                emissiveIntensity={LUMINOUS_EMISSIVE_INTENSITY}
+                transmission={LUMINOUS_TRANSMISSION}
+                thickness={0.02}
+                ior={1.35}
+                attenuationColor="#fff8ec"
+                attenuationDistance={1.2}
+                roughness={0.78}
+                metalness={0}
+                side={FrontSide}
+            />
+        );
+    }
 
     return (
         <meshStandardMaterial
@@ -86,27 +149,55 @@ function FabricFace({
         layout.members,
         layout.width
     );
+    const plainFabricColor = fabric.isBlockout ? BLOCKOUT_FABRIC_COLOR : PLAIN_FABRIC_COLOR;
+    const isLuminous = fabric.isLuminous && !fabric.isBlockout;
 
     return (
-        <mesh
-            position={[layout.centerOffsetX, 0, zOffset]}
-            rotation={[0, side === "front" ? Math.PI : 0, 0]}
-            onPointerDown={stopFabricPointerPropagation}
-        >
-            <planeGeometry args={[layout.width, module.height]} />
-            {artwork ? (
-                <ArtworkMaterial
-                    imageUrl={artwork.imageUrl}
-                    isBlockout={fabric.isBlockout}
-                />
-            ) : (
-                <meshStandardMaterial
-                    color={fabric.isBlockout ? "#6a6a6a" : "#d8d2c4"}
-                    roughness={0.95}
-                    metalness={0}
-                    side={FrontSide}
+        <>
+            {isLuminous && (
+                <FabricBacklight
+                    side={side}
+                    width={layout.width}
+                    height={module.height}
+                    centerOffsetX={layout.centerOffsetX}
+                    zOffset={zOffset}
                 />
             )}
-        </mesh>
+            <mesh
+                position={[layout.centerOffsetX, 0, zOffset]}
+                rotation={[0, side === "front" ? Math.PI : 0, 0]}
+                onPointerDown={stopFabricPointerPropagation}
+            >
+                <planeGeometry args={[layout.width, module.height]} />
+                {artwork ? (
+                    <ArtworkMaterial
+                        imageUrl={artwork.imageUrl}
+                        isBlockout={fabric.isBlockout}
+                        isLuminous={isLuminous}
+                    />
+                ) : isLuminous ? (
+                    <meshPhysicalMaterial
+                        color={plainFabricColor}
+                        emissive={plainFabricColor}
+                        emissiveIntensity={0.35}
+                        transmission={0.4}
+                        thickness={0.02}
+                        ior={1.35}
+                        attenuationColor="#fff8ec"
+                        attenuationDistance={1.2}
+                        roughness={0.82}
+                        metalness={0}
+                        side={FrontSide}
+                    />
+                ) : (
+                    <meshStandardMaterial
+                        color={plainFabricColor}
+                        roughness={0.95}
+                        metalness={0}
+                        side={FrontSide}
+                    />
+                )}
+            </mesh>
+        </>
     );
 }

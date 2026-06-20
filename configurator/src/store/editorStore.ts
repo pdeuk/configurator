@@ -47,6 +47,7 @@ interface EditorState {
     updateModulePosition: (id: ModuleId, position: Position3) => void;
     setModuleArtwork: (id: ModuleId, side: FabricSide, artwork: ArtworkInfo) => void;
     setModuleFabricBlockout: (id: ModuleId, side: FabricSide, isBlockout: boolean) => void;
+    setModuleFabricLuminous: (id: ModuleId, side: FabricSide, isLuminous: boolean) => void;
     setSnapPosition: (position: Position3 | null) => void;
 }
 
@@ -340,7 +341,37 @@ export const useEditorStore = create<EditorState>((set) => ({
                         ...current,
                         fabrics: setModuleFabric(current, side, {
                             ...fabric,
-                            isBlockout
+                            isBlockout,
+                            isLuminous: isBlockout ? false : fabric.isLuminous
+                        })
+                    }
+                }
+            };
+        }),
+
+    setModuleFabricLuminous: (id, side, isLuminous) =>
+        set(state => {
+            const current = state.modulesById[id];
+
+            if (!current) {
+                return state;
+            }
+
+            const fabric = getModuleFabric(current, side);
+
+            if (fabric.isBlockout || fabric.isLuminous === isLuminous) {
+                return state;
+            }
+
+            return {
+                history: [...state.history, createSnapshot(state)],
+                modulesById: {
+                    ...state.modulesById,
+                    [id]: {
+                        ...current,
+                        fabrics: setModuleFabric(current, side, {
+                            ...fabric,
+                            isLuminous
                         })
                     }
                 }

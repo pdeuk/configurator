@@ -56,10 +56,12 @@ export function createDefaultFabrics(): ModuleFabrics {
     return {
         front: {
             isBlockout: false,
+            isLuminous: false,
             artwork: null
         },
         back: {
             isBlockout: false,
+            isLuminous: false,
             artwork: null
         }
     };
@@ -69,7 +71,10 @@ export function getModuleFabric(
     module: StandModule,
     side: FabricSide
 ): FabricInfo {
-    return module.fabrics?.[side] ?? createDefaultFabrics()[side];
+    return {
+        ...createDefaultFabrics()[side],
+        ...module.fabrics?.[side]
+    };
 }
 
 export function setModuleFabric(
@@ -153,9 +158,11 @@ export function getMergedFabric(
         .map(member => getModuleFabric(member, side))
         .find(fabric => fabric.artwork);
     const anyBlockout = members.some(member => getModuleFabric(member, side).isBlockout);
+    const anyLuminous = members.some(member => getModuleFabric(member, side).isLuminous);
 
     return {
         isBlockout: anyBlockout,
+        isLuminous: !anyBlockout && anyLuminous,
         artwork: fabricWithArtwork?.artwork ?? null
     };
 }

@@ -47,6 +47,7 @@ export type FabricSide =
 
 export interface FabricInfo {
     isBlockout: boolean;
+    isLuminous: boolean;
     artwork?: ArtworkInfo | null;
 }
 

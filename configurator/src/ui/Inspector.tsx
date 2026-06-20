@@ -72,6 +72,7 @@ export function Inspector() {
     const removeModule = useEditorStore(state => state.removeModule);
     const setActiveFabricSide = useEditorStore(state => state.setActiveFabricSide);
     const setModuleFabricBlockout = useEditorStore(state => state.setModuleFabricBlockout);
+    const setModuleFabricLuminous = useEditorStore(state => state.setModuleFabricLuminous);
 
     if (!selectedModule) {
         return (
@@ -182,6 +183,19 @@ export function Inspector() {
                             )}
                         />
                         Block-out fabric
+                    </label>
+                    <label style={styles.checkboxRow}>
+                        <input
+                            type="checkbox"
+                            checked={activeFabric.isLuminous}
+                            disabled={activeFabric.isBlockout}
+                            onChange={event => setModuleFabricLuminous(
+                                selectedModule.id,
+                                activeFabricSide,
+                                event.target.checked
+                            )}
+                        />
+                        Luminous fabric
                     </label>
                     <div>
                         Print size: {Math.round(connectionLayout.fabric.width * 100)}cm x{" "}

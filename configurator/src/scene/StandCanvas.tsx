@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { DragController } from "./DragController";
 import { useEditorStore } from "../store/editorStore";
 import { SnapPreview } from "./SnapPreview";
@@ -12,6 +13,10 @@ function isStandModule(module: StandModule | undefined): module is StandModule {
 }
 
 export function StandCanvas() {
+    useEffect(() => {
+        RectAreaLightUniformsLib.init();
+    }, []);
+
     const moduleIds = useEditorStore(state => state.moduleIds);
     const modulesById = useEditorStore(state => state.modulesById);
     const isDragging = useEditorStore(state => state.drag !== null);
