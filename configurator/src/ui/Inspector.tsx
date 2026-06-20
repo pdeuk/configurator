@@ -8,9 +8,16 @@ import {
     getModuleFabric
 } from "../utils/fabrics";
 
+function formatDpi(value: number) {
+    return Number.isFinite(value) ? value.toFixed(1) : "0.0";
+}
+
+function formatEffectiveDpi(value: number) {
+    return Number.isFinite(value) ? Math.floor(value).toString() : "0";
+}
+
 const ROTATION_STEP = Math.PI / 2;
 const MIN_DIMENSION = 0.05;
-const CENTIMETERS_PER_METER = 100;
 
 interface NumberFieldProps {
     label: string;
@@ -177,23 +184,59 @@ export function Inspector() {
                         Block-out fabric
                     </label>
                     <div>
-                        Size: {Math.round(connectionLayout.fabric.width * CENTIMETERS_PER_METER)}cm x{" "}
-                        {Math.round(selectedModule.height * CENTIMETERS_PER_METER)}cm
+                        Print size: {Math.round(connectionLayout.fabric.width * 100)}cm x{" "}
+                        {Math.round(selectedModule.height * 100)}cm
                     </div>
                     {mergedArtwork ? (
                         <>
                             <div>File: {mergedArtwork.fileName}</div>
                             <div>
-                                Pixels: {mergedArtwork.pixelWidth} x{" "}
+                                File pixels: {mergedArtwork.pixelWidth} x{" "}
                                 {mergedArtwork.pixelHeight}
                             </div>
-                            <div>
-                                DPI: {mergedArtwork.dpiX.toFixed(1)} x{" "}
-                                {mergedArtwork.dpiY.toFixed(1)}
+                            <div style={styles.dpiGroup}>
+                                <strong>Whole file on fabric</strong>
+                                <div>
+                                    Print area: {Math.round(mergedArtwork.printWidthCm)}cm x{" "}
+                                    {Math.round(mergedArtwork.printHeightCm)}cm
+                                </div>
+                                <div>
+                                    DPI: {formatDpi(mergedArtwork.dpiX)} x{" "}
+                                    {formatDpi(mergedArtwork.dpiY)}
+                                </div>
+                                <div>
+                                    Effective DPI: {formatEffectiveDpi(mergedArtwork.effectiveDpi)}
+                                </div>
                             </div>
-                            <strong>
-                                Effective DPI: {Math.floor(mergedArtwork.effectiveDpi)}
-                            </strong>
+                            {mergedArtwork.rasters.some(
+                                raster =>
+                                    raster.fabricWidthRatio < 0.999 ||
+                                    raster.fabricHeightRatio < 0.999
+                            ) || mergedArtwork.rasters.length > 1 ? (
+                                <div style={styles.dpiGroup}>
+                                    <strong>Embedded rasters</strong>
+                                    {mergedArtwork.rasters.map(raster => (
+                                        <div key={raster.label} style={styles.rasterBlock}>
+                                            <div>{raster.label}</div>
+                                            <div>
+                                                Pixels: {raster.pixelWidth} x {raster.pixelHeight}
+                                            </div>
+                                            <div>
+                                                Print area: {Math.round(raster.printWidthCm)}cm x{" "}
+                                                {Math.round(raster.printHeightCm)}cm
+                                            </div>
+                                            <div>
+                                                DPI: {formatDpi(raster.dpiX)} x{" "}
+                                                {formatDpi(raster.dpiY)}
+                                            </div>
+                                            <div>
+                                                Effective DPI:{" "}
+                                                {formatEffectiveDpi(raster.effectiveDpi)}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
                         </>
                     ) : (
                         <div>Drop artwork to calculate DPI for the {activeFabricSide} fabric.</div>
@@ -350,6 +393,19 @@ const styles = {
         display: "flex",
         alignItems: "center",
         gap: 8
+    },
+    dpiGroup: {
+        display: "grid",
+        gap: 4,
+        paddingTop: 4,
+        borderTop: "1px solid #3b414a"
+    },
+    rasterBlock: {
+        display: "grid",
+        gap: 2,
+        padding: 8,
+        borderRadius: 4,
+        background: "#11151a"
     },
     button: {
         border: "1px solid #4b5562",

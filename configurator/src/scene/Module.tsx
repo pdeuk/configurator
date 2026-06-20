@@ -36,6 +36,12 @@ function ModuleComponent({ module, modules }: Props) {
         });
     }, [beginDrag, module.id, module.position.x, module.position.z, select]);
 
+    const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {
+        if (event.target instanceof Element && event.target.hasPointerCapture(event.pointerId)) {
+            event.target.releasePointerCapture(event.pointerId);
+        }
+    }, []);
+
     return (
         <group
             position={[
@@ -49,6 +55,8 @@ function ModuleComponent({ module, modules }: Props) {
                 0
             ]}
             onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
         >
             <FabricSurface
                 module={module}

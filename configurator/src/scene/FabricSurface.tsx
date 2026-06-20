@@ -1,6 +1,7 @@
 import { useLoader } from "@react-three/fiber";
+import type { ThreeEvent } from "@react-three/fiber";
 import {
-    DoubleSide,
+    FrontSide,
     TextureLoader
 } from "three";
 import type {
@@ -39,9 +40,13 @@ function ArtworkMaterial({ imageUrl, isBlockout }: ArtworkMaterialProps) {
             map={texture}
             roughness={0.95}
             metalness={0}
-            side={DoubleSide}
+            side={FrontSide}
         />
     );
+}
+
+function stopFabricPointerPropagation(event: ThreeEvent<PointerEvent>) {
+    event.stopPropagation();
 }
 
 export function FabricSurface({
@@ -85,7 +90,8 @@ function FabricFace({
     return (
         <mesh
             position={[layout.centerOffsetX, 0, zOffset]}
-            rotation={[0, side === "front" ? 0 : Math.PI, 0]}
+            rotation={[0, side === "front" ? Math.PI : 0, 0]}
+            onPointerDown={stopFabricPointerPropagation}
         >
             <planeGeometry args={[layout.width, module.height]} />
             {artwork ? (
@@ -98,7 +104,7 @@ function FabricFace({
                     color={fabric.isBlockout ? "#6a6a6a" : "#d8d2c4"}
                     roughness={0.95}
                     metalness={0}
-                    side={DoubleSide}
+                    side={FrontSide}
                 />
             )}
         </mesh>

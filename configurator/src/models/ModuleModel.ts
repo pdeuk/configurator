@@ -14,15 +14,31 @@ export type ArtworkFileType =
     | "jpg"
     | "png";
 
-export interface ArtworkInfo {
+export interface ArtworkDpi {
+    dpiX: number;
+    dpiY: number;
+    effectiveDpi: number;
+}
+
+export interface RasterArtworkInfo extends ArtworkDpi {
+    label: string;
+    pixelWidth: number;
+    pixelHeight: number;
+    printWidthCm: number;
+    printHeightCm: number;
+    fabricWidthRatio: number;
+    fabricHeightRatio: number;
+}
+
+export interface ArtworkInfo extends ArtworkDpi {
     fileName: string;
     fileType: ArtworkFileType;
     imageUrl: string;
     pixelWidth: number;
     pixelHeight: number;
-    dpiX: number;
-    dpiY: number;
-    effectiveDpi: number;
+    printWidthCm: number;
+    printHeightCm: number;
+    rasters: RasterArtworkInfo[];
 }
 
 export type FabricSide =

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Position3, StandModule } from "../models/ModuleModel";
 import { findSnap } from "../snapping/SnapEngine";
@@ -17,7 +17,6 @@ export function DragController() {
     const endDrag = useEditorStore(state => state.endDrag);
     const snapPosition = useEditorStore(state => state.snapPosition);
     const setSnapPosition = useEditorStore(state => state.setSnapPosition);
-    const select = useEditorStore(state => state.select);
     const lockedAxisRef = useRef<SnapAxis | null>(null);
 
     const modules = useMemo(
@@ -32,11 +31,11 @@ export function DragController() {
     }, [endDrag, setSnapPosition]);
 
     const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-
         if (!drag) {
             return;
         }
+
+        event.stopPropagation();
 
         const moving = modulesById[drag.id];
 
@@ -80,12 +79,12 @@ export function DragController() {
     ]);
 
     const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-
         if (!drag) {
-            select(null);
+            return;
         }
-    }, [drag, select]);
+
+        event.stopPropagation();
+    }, [drag]);
 
     const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
@@ -97,10 +96,35 @@ export function DragController() {
         clearDrag();
     }, [clearDrag, drag, snapPosition, updateModulePosition]);
 
+    useEffect(() => {
+        if (!drag) {
+            return;
+        }
+
+        const handleWindowPointerUp = () => {
+            if (snapPosition) {
+                updateModulePosition(drag.id, snapPosition);
+            }
+
+            clearDrag();
+        };
+
+        window.addEventListener("pointerup", handleWindowPointerUp);
+        window.addEventListener("pointercancel", handleWindowPointerUp);
+
+        return () => {
+            window.removeEventListener("pointerup", handleWindowPointerUp);
+            window.removeEventListener("pointercancel", handleWindowPointerUp);
+        };
+    }, [clearDrag, drag, snapPosition, updateModulePosition]);
+
+    const ignoreRaycast = useCallback(() => null, []);
+
     return (
         <mesh
             rotation={[-Math.PI / 2, 0, 0]}
             position={[0, -0.01, 0]}
+            {...(drag ? {} : { raycast: ignoreRaycast })}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

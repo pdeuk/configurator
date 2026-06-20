@@ -2,14 +2,17 @@ import { create } from "zustand";
 import type {
     ArtworkInfo,
     FabricSide,
+    ModuleFabrics,
     Position3,
     StandModule
 } from "../models/ModuleModel";
 import {
     createDefaultFabrics,
     getModuleFabric,
+    recalculateArtworkDpi,
     setModuleFabric
 } from "../utils/fabrics";
+import { getFrameConnectionLayout } from "../scene/frameConnections";
 
 export type ModuleId = StandModule["id"];
 
@@ -61,6 +64,44 @@ const initialWall: StandModule = {
     depth: 0.05,
     fabrics: createDefaultFabrics()
 };
+
+function isStandModule(module: StandModule | undefined): module is StandModule {
+    return module !== undefined;
+}
+
+function recalculateModuleFabrics(
+    module: StandModule,
+    modules: StandModule[]
+): ModuleFabrics {
+    const layout = getFrameConnectionLayout(module, modules);
+    const fabrics = {
+        ...createDefaultFabrics(),
+        ...module.fabrics
+    };
+
+    return {
+        front: {
+            ...fabrics.front,
+            artwork: fabrics.front.artwork
+                ? recalculateArtworkDpi(
+                    fabrics.front.artwork,
+                    layout.fabric.width,
+                    module.height
+                )
+                : null
+        },
+        back: {
+            ...fabrics.back,
+            artwork: fabrics.back.artwork
+                ? recalculateArtworkDpi(
+                    fabrics.back.artwork,
+                    layout.fabric.width,
+                    module.height
+                )
+                : null
+        }
+    };
+}
 
 function createSnapshot(state: EditorState): EditorSnapshot {
     return {
@@ -197,14 +238,29 @@ export const useEditorStore = create<EditorState>((set) => ({
                 return state;
             }
 
+            const updatedModule: StandModule = {
+                ...current,
+                ...data
+            };
+            const dimensionsChanged =
+                (data.width !== undefined && data.width !== current.width) ||
+                (data.height !== undefined && data.height !== current.height);
+            const modules = state.moduleIds
+                .map(moduleId => state.modulesById[moduleId])
+                .filter(isStandModule)
+                .map(module => module.id === id ? updatedModule : module);
+            const nextModule = dimensionsChanged
+                ? {
+                    ...updatedModule,
+                    fabrics: recalculateModuleFabrics(updatedModule, modules)
+                }
+                : updatedModule;
+
             return {
                 history: [...state.history, createSnapshot(state)],
                 modulesById: {
                     ...state.modulesById,
-                    [id]: {
-                        ...current,
-                        ...data
-                    }
+                    [id]: nextModule
                 }
             };
         }),

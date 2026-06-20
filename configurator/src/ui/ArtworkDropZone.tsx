@@ -1,9 +1,24 @@
 import type { CSSProperties, DragEvent } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { StandModule } from "../models/ModuleModel";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import { useEditorStore } from "../store/editorStore";
 import { createArtworkInfo } from "../utils/artwork";
+import { getMergedFabricArtwork } from "../utils/fabrics";
+
+function formatArtworkMessage(
+    fileName: string,
+    effectiveDpi: number,
+    rasterCount: number
+) {
+    const wholeFileSummary = `${fileName}: ${Math.floor(effectiveDpi)} DPI on fabric`;
+
+    if (rasterCount <= 1) {
+        return wholeFileSummary;
+    }
+
+    return `${wholeFileSummary} (${rasterCount} embedded rasters analyzed)`;
+}
 
 const ACCEPTED_TYPES = ".pdf,.tif,.tiff,.jpg,.jpeg,.png";
 
@@ -21,7 +36,38 @@ export function ArtworkDropZone() {
     );
     const setModuleArtwork = useEditorStore(state => state.setModuleArtwork);
     const [isDragging, setIsDragging] = useState(false);
-    const [message, setMessage] = useState<string | null>(null);
+    const [transientMessage, setTransientMessage] = useState<string | null>(null);
+
+    const modules = useMemo(
+        () => moduleIds.map(id => modulesById[id]).filter(isStandModule),
+        [moduleIds, modulesById]
+    );
+    const mergedArtwork = useMemo(() => {
+        if (!selectedModule) {
+            return null;
+        }
+
+        const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
+
+        return getMergedFabricArtwork(
+            activeFabricSide,
+            selectedModule,
+            connectionLayout.fabric.members,
+            connectionLayout.fabric.width
+        );
+    }, [activeFabricSide, modules, selectedModule]);
+    const artworkMessage = useMemo(() => {
+        if (!mergedArtwork) {
+            return null;
+        }
+
+        return formatArtworkMessage(
+            mergedArtwork.fileName,
+            mergedArtwork.effectiveDpi,
+            mergedArtwork.rasters.length
+        );
+    }, [mergedArtwork]);
+    const displayMessage = transientMessage ?? artworkMessage;
 
     const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
         event.preventDefault();
@@ -30,7 +76,7 @@ export function ArtworkDropZone() {
         const file = event.dataTransfer.files.item(0);
 
         if (!selectedModule) {
-            setMessage("Select a frame before dropping artwork.");
+            setTransientMessage("Select a frame before dropping artwork.");
             return;
         }
 
@@ -39,8 +85,7 @@ export function ArtworkDropZone() {
         }
 
         try {
-            setMessage("Analyzing artwork...");
-            const modules = moduleIds.map(id => modulesById[id]).filter(isStandModule);
+            setTransientMessage("Analyzing artwork...");
             const mergedWidth = getFrameConnectionLayout(selectedModule, modules).fabric.width;
             const artwork = await createArtworkInfo(
                 file,
@@ -48,9 +93,9 @@ export function ArtworkDropZone() {
                 selectedModule.height
             );
             setModuleArtwork(selectedModule.id, activeFabricSide, artwork);
-            setMessage(`${artwork.fileName}: ${Math.round(artwork.effectiveDpi)} DPI`);
+            setTransientMessage(null);
         } catch (error) {
-            setMessage(error instanceof Error ? error.message : "Unable to load artwork.");
+            setTransientMessage(error instanceof Error ? error.message : "Unable to load artwork.");
         }
     };
 
@@ -75,6 +120,7 @@ export function ArtworkDropZone() {
             onDrop={handleDrop}
         >
             <input
+                id="artwork-file-input"
                 type="file"
                 accept={ACCEPTED_TYPES}
                 style={styles.fileInput}
@@ -87,8 +133,7 @@ export function ArtworkDropZone() {
                     }
 
                     try {
-                        setMessage("Analyzing artwork...");
-                        const modules = moduleIds.map(id => modulesById[id]).filter(isStandModule);
+                        setTransientMessage("Analyzing artwork...");
                         const mergedWidth = getFrameConnectionLayout(selectedModule, modules).fabric.width;
                         const artwork = await createArtworkInfo(
                             file,
@@ -96,9 +141,9 @@ export function ArtworkDropZone() {
                             selectedModule.height
                         );
                         setModuleArtwork(selectedModule.id, activeFabricSide, artwork);
-                        setMessage(`${artwork.fileName}: ${Math.round(artwork.effectiveDpi)} DPI`);
+                        setTransientMessage(null);
                     } catch (error) {
-                        setMessage(error instanceof Error ? error.message : "Unable to load artwork.");
+                        setTransientMessage(error instanceof Error ? error.message : "Unable to load artwork.");
                     } finally {
                         event.target.value = "";
                     }
@@ -110,7 +155,16 @@ export function ArtworkDropZone() {
                     ? `Drop PDF, TIFF, JPG, or PNG onto the ${activeFabricSide} fabric.`
                     : "Select a frame to upload artwork."}
             </span>
-            {message && <span style={styles.message}>{message}</span>}
+            {displayMessage && <span style={styles.message}>{displayMessage}</span>}
+            <button
+                type="button"
+                style={styles.browseButton}
+                onClick={() => {
+                    document.getElementById("artwork-file-input")?.click();
+                }}
+            >
+                Browse files
+            </button>
         </div>
     );
 }
@@ -142,7 +196,20 @@ const styles = {
         position: "absolute",
         inset: 0,
         opacity: 0,
-        cursor: "pointer"
+        cursor: "pointer",
+        pointerEvents: "none"
+    },
+    browseButton: {
+        justifySelf: "start",
+        marginTop: 4,
+        border: "1px solid #4b5562",
+        background: "#2d3440",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "6px 10px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 12
     },
     title: {
         fontSize: 13

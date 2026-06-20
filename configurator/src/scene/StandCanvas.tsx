@@ -47,7 +47,7 @@ export function StandCanvas() {
                 />
             ))}
 
-            <OrbitControls enabled={!isDragging} />
+            <OrbitControls makeDefault enabled={!isDragging} />
         </Canvas>
     );
 }

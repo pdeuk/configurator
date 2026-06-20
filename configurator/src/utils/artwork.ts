@@ -1,8 +1,13 @@
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
+import { OPS } from "pdfjs-dist";
+import type { PDFOperatorList } from "pdfjs-dist/types/src/display/api";
 import * as UTIF from "utif";
-import type { ArtworkFileType, ArtworkInfo } from "../models/ModuleModel";
-import { recalculateArtworkDpi } from "./fabrics";
+import type { ArtworkFileType } from "../models/ModuleModel";
+import {
+    buildArtworkInfo,
+    type RasterCoverageInput
+} from "./fabrics";
 
 const PDF_RENDER_SCALE = 2;
 
@@ -12,6 +17,7 @@ interface DecodedArtwork {
     imageUrl: string;
     pixelWidth: number;
     pixelHeight: number;
+    isCanvasSource: boolean;
 }
 
 interface TiffImage {
@@ -20,25 +26,42 @@ interface TiffImage {
     data?: Uint8Array;
 }
 
+type PdfMatrix = [number, number, number, number, number, number];
+
+interface PdfImageObject {
+    width: number;
+    height: number;
+}
+
+const IDENTITY_MATRIX: PdfMatrix = [1, 0, 0, 1, 0, 0];
+
 export async function createArtworkInfo(
     file: File,
     fabricWidthMeters: number,
     fabricHeightMeters: number
-): Promise<ArtworkInfo> {
+) {
     const fileType = getArtworkFileType(file);
     const decoded = await decodeArtwork(file, fileType);
-    const artwork = {
-        fileName: file.name,
-        fileType,
-        imageUrl: decoded.imageUrl,
-        pixelWidth: decoded.pixelWidth,
-        pixelHeight: decoded.pixelHeight,
-        dpiX: 0,
-        dpiY: 0,
-        effectiveDpi: 0
-    };
+    const rasters = await analyzeRasters(file, fileType, fabricWidthMeters, fabricHeightMeters);
+    const wholeFilePixels = fileType === "pdf"
+        ? await getPdfPagePixelDimensions(file)
+        : {
+            pixelWidth: decoded.pixelWidth,
+            pixelHeight: decoded.pixelHeight
+        };
 
-    return recalculateArtworkDpi(artwork, fabricWidthMeters, fabricHeightMeters);
+    return buildArtworkInfo(
+        {
+            fileName: file.name,
+            fileType,
+            imageUrl: decoded.imageUrl,
+            pixelWidth: wholeFilePixels.pixelWidth,
+            pixelHeight: wholeFilePixels.pixelHeight,
+            rasters
+        },
+        fabricWidthMeters,
+        fabricHeightMeters
+    );
 }
 
 function getArtworkFileType(file: File): ArtworkFileType {
@@ -82,6 +105,45 @@ async function decodeArtwork(
     return decodeBrowserImage(file);
 }
 
+async function analyzeRasters(
+    file: File,
+    fileType: ArtworkFileType,
+    fabricWidthMeters: number,
+    fabricHeightMeters: number
+): Promise<RasterCoverageInput[]> {
+    if (fileType === "pdf") {
+        return analyzePdfRasters(file, fabricWidthMeters, fabricHeightMeters);
+    }
+
+    if (fileType === "tiff") {
+        return analyzeTiffRasters(file, fabricWidthMeters, fabricHeightMeters);
+    }
+
+    const decoded = await decodeBrowserImage(file);
+
+    return [
+        createFullFabricRaster(
+            "Image",
+            decoded.pixelWidth,
+            decoded.pixelHeight
+        )
+    ];
+}
+
+function createFullFabricRaster(
+    label: string,
+    pixelWidth: number,
+    pixelHeight: number
+): RasterCoverageInput {
+    return {
+        label,
+        pixelWidth,
+        pixelHeight,
+        fabricWidthRatio: 1,
+        fabricHeightRatio: 1
+    };
+}
+
 async function decodeBrowserImage(file: File): Promise<DecodedArtwork> {
     const imageUrl = URL.createObjectURL(file);
     const image = new Image();
@@ -92,7 +154,22 @@ async function decodeBrowserImage(file: File): Promise<DecodedArtwork> {
     return {
         imageUrl,
         pixelWidth: image.naturalWidth,
-        pixelHeight: image.naturalHeight
+        pixelHeight: image.naturalHeight,
+        isCanvasSource: false
+    };
+}
+
+async function getPdfPagePixelDimensions(file: File) {
+    const data = await file.arrayBuffer();
+    const pdfDocument = await pdfjsLib.getDocument({ data }).promise;
+    const page = await pdfDocument.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+
+    pdfDocument.cleanup();
+
+    return {
+        pixelWidth: Math.round(viewport.width),
+        pixelHeight: Math.round(viewport.height)
     };
 }
 
@@ -120,6 +197,176 @@ async function decodePdf(file: File): Promise<DecodedArtwork> {
     pdfDocument.cleanup();
 
     return canvasToArtwork(canvas);
+}
+
+async function analyzePdfRasters(
+    file: File,
+    _fabricWidthMeters: number,
+    _fabricHeightMeters: number
+): Promise<RasterCoverageInput[]> {
+    const data = await file.arrayBuffer();
+    const pdfDocument = await pdfjsLib.getDocument({ data }).promise;
+    const page = await pdfDocument.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    const pageWidthPt = viewport.width;
+    const pageHeightPt = viewport.height;
+    const operatorList = await page.getOperatorList();
+    const embeddedRasters = await extractPdfEmbeddedRasters(page, operatorList);
+
+    pdfDocument.cleanup();
+
+    if (embeddedRasters.length === 0) {
+        const pagePixels = await getPdfPagePixelDimensions(file);
+
+        return [
+            createFullFabricRaster(
+                "Page",
+                pagePixels.pixelWidth,
+                pagePixels.pixelHeight
+            )
+        ];
+    }
+
+    return embeddedRasters.map((raster, index) => ({
+        label: `Raster ${index + 1}`,
+        pixelWidth: raster.pixelWidth,
+        pixelHeight: raster.pixelHeight,
+        fabricWidthRatio: clampRatio(raster.displayWidthPt / pageWidthPt),
+        fabricHeightRatio: clampRatio(raster.displayHeightPt / pageHeightPt)
+    }));
+}
+
+async function extractPdfEmbeddedRasters(
+    page: pdfjsLib.PDFPageProxy,
+    operatorList: PDFOperatorList
+) {
+    const rasters: Array<{
+        pixelWidth: number;
+        pixelHeight: number;
+        displayWidthPt: number;
+        displayHeightPt: number;
+    }> = [];
+    const matrixStack: PdfMatrix[] = [IDENTITY_MATRIX];
+    let matrix = IDENTITY_MATRIX;
+
+    for (let index = 0; index < operatorList.fnArray.length; index += 1) {
+        const operation = operatorList.fnArray[index];
+        const args = operatorList.argsArray[index];
+
+        if (operation === OPS.save) {
+            matrixStack.push(matrix);
+            continue;
+        }
+
+        if (operation === OPS.restore) {
+            matrix = matrixStack.pop() ?? IDENTITY_MATRIX;
+            continue;
+        }
+
+        if (operation === OPS.transform) {
+            matrix = multiplyMatrix(matrix, args as PdfMatrix);
+            continue;
+        }
+
+        if (
+            operation === OPS.paintImageXObject ||
+            operation === OPS.paintInlineImageXObject
+        ) {
+            const image = operation === OPS.paintInlineImageXObject
+                ? args[0] as PdfImageObject
+                : await resolvePdfImage(page.objs, args[0] as string);
+
+            if (!image?.width || !image?.height) {
+                continue;
+            }
+
+            const displaySize = getImageDisplaySizePt(matrix);
+
+            if (displaySize.width <= 0 || displaySize.height <= 0) {
+                continue;
+            }
+
+            rasters.push({
+                pixelWidth: image.width,
+                pixelHeight: image.height,
+                displayWidthPt: displaySize.width,
+                displayHeightPt: displaySize.height
+            });
+        }
+    }
+
+    return rasters;
+}
+
+function multiplyMatrix(left: PdfMatrix, right: PdfMatrix): PdfMatrix {
+    const [a1, b1, c1, d1, e1, f1] = left;
+    const [a2, b2, c2, d2, e2, f2] = right;
+
+    return [
+        a1 * a2 + c1 * b2,
+        b1 * a2 + d1 * b2,
+        a1 * c2 + c1 * d2,
+        b1 * c2 + d1 * d2,
+        a1 * e2 + c1 * f2 + e1,
+        b1 * e2 + d1 * f2 + f1
+    ];
+}
+
+function getImageDisplaySizePt(matrix: PdfMatrix) {
+    const [a, b, c, d] = matrix;
+
+    return {
+        width: Math.hypot(a, b),
+        height: Math.hypot(c, d)
+    };
+}
+
+async function resolvePdfImage(
+    objects: pdfjsLib.PDFPageProxy["objs"],
+    objectId: string
+): Promise<PdfImageObject | null> {
+    if (!objects.has(objectId)) {
+        return null;
+    }
+
+    try {
+        const resolved = objects.get(objectId) as PdfImageObject | undefined;
+
+        if (resolved?.width && resolved?.height) {
+            return resolved;
+        }
+    } catch {
+        // Object is resolved asynchronously.
+    }
+
+    return new Promise(resolve => {
+        objects.get(objectId, (object: PdfImageObject) => {
+            resolve(object?.width && object?.height ? object : null);
+        });
+    });
+}
+
+async function analyzeTiffRasters(
+    file: File,
+    _fabricWidthMeters: number,
+    _fabricHeightMeters: number
+): Promise<RasterCoverageInput[]> {
+    const buffer = await file.arrayBuffer();
+    const pages = UTIF.decode(buffer) as TiffImage[];
+
+    if (pages.length === 0) {
+        throw new Error("Unable to decode TIFF artwork.");
+    }
+
+    return pages.map((page, index) => {
+        UTIF.decodeImage(buffer, page);
+
+        return createFullFabricRaster(
+            pages.length > 1 ? `Page ${index + 1}` : "Image",
+            page.width,
+            page.height
+        );
+    });
 }
 
 async function decodeTiff(file: File): Promise<DecodedArtwork> {
@@ -160,6 +407,15 @@ function canvasToArtwork(canvas: HTMLCanvasElement): DecodedArtwork {
     return {
         imageUrl: canvas.toDataURL("image/png"),
         pixelWidth: canvas.width,
-        pixelHeight: canvas.height
+        pixelHeight: canvas.height,
+        isCanvasSource: true
     };
+}
+
+function clampRatio(value: number) {
+    if (!Number.isFinite(value) || value <= 0) {
+        return 1;
+    }
+
+    return Math.min(value, 1);
 }
