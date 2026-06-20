@@ -2,6 +2,8 @@ import { memo, useCallback } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useEditorStore } from "../store/editorStore";
 import type { StandModule } from "../models/ModuleModel";
+import { CubeFabricSurface } from "./CubeFabricSurface";
+import { CubeFrame } from "./CubeFrame";
 import { FabricSurface } from "./FabricSurface";
 import { WallFrame } from "./WallFrame";
 import { getFrameConnectionLayout } from "./frameConnections";
@@ -20,6 +22,7 @@ function ModuleComponent({ module, modules }: Props) {
 
     const isSelected = selectedId === module.id;
     const connectionLayout = getFrameConnectionLayout(module, modules);
+    const isCube = module.type === "cube";
 
     const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
@@ -58,17 +61,29 @@ function ModuleComponent({ module, modules }: Props) {
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
         >
-            <FabricSurface
-                module={module}
-                connectionLayout={connectionLayout.fabric}
-            />
-            <WallFrame
-                module={module}
-                color={isSelected ? "orange" : "white"}
-                hiddenSides={connectionLayout.hiddenSides}
-            />
+            {isCube ? (
+                <>
+                    <CubeFabricSurface module={module} />
+                    <CubeFrame
+                        module={module}
+                        color={isSelected ? "orange" : "white"}
+                    />
+                </>
+            ) : (
+                <>
+                    <FabricSurface
+                        module={module}
+                        connectionLayout={connectionLayout.fabric}
+                    />
+                    <WallFrame
+                        module={module}
+                        color={isSelected ? "orange" : "white"}
+                        hiddenSides={connectionLayout.hiddenSides}
+                    />
+                </>
+            )}
             {isSelected && (
-                <mesh scale={[1.03, 1.03, 1.35]}>
+                <mesh scale={isCube ? [1.03, 1.03, 1.03] : [1.03, 1.03, 1.35]}>
                     <boxGeometry
                         args={[
                             module.width,

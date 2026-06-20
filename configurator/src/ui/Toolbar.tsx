@@ -17,10 +17,12 @@ export function Toolbar() {
                 padding: 15,
                 borderRadius: 8,
                 color: "white",
-                zIndex: 10
+                zIndex: 10,
+                display: "grid",
+                gap: 8
             }}
         >
-            <h3>
+            <h3 style={{ margin: 0 }}>
                 Components
             </h3>
 
@@ -41,7 +43,7 @@ export function Toolbar() {
                         width: 1,
                         height: 2,
                         depth: 0.05,
-                        fabrics: createDefaultFabrics()
+                        fabrics: createDefaultFabrics("wall")
                     });
                 }}
             >
@@ -50,10 +52,33 @@ export function Toolbar() {
 
             <button
                 type="button"
+                onClick={() => {
+                    const count = useEditorStore.getState().moduleIds.length;
+
+                    addModule({
+                        id: `cube-${crypto.randomUUID()}`,
+                        type: "cube",
+                        position: {
+                            x: count * 0.75,
+                            y: 0,
+                            z: 0.75
+                        },
+                        rotation: 0,
+                        width: 0.5,
+                        height: 0.5,
+                        depth: 0.5,
+                        fabrics: createDefaultFabrics("cube")
+                    });
+                }}
+            >
+                Add Cube (50x50x50)
+            </button>
+
+            <button
+                type="button"
                 disabled={!canUndo}
                 onClick={undo}
                 style={{
-                    marginLeft: 8,
                     opacity: canUndo ? 1 : 0.45,
                     cursor: canUndo ? "pointer" : "not-allowed"
                 }}

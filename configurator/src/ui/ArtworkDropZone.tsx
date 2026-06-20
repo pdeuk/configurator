@@ -4,7 +4,7 @@ import type { StandModule } from "../models/ModuleModel";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import { useEditorStore } from "../store/editorStore";
 import { createArtworkInfo } from "../utils/artwork";
-import { getMergedFabricArtwork } from "../utils/fabrics";
+import { getActiveFabricArtwork, getActiveFabricPrintDimensions } from "../utils/fabrics";
 
 function formatArtworkMessage(
     fileName: string,
@@ -49,9 +49,9 @@ export function ArtworkDropZone() {
 
         const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
 
-        return getMergedFabricArtwork(
-            activeFabricSide,
+        return getActiveFabricArtwork(
             selectedModule,
+            activeFabricSide,
             connectionLayout.fabric.members,
             connectionLayout.fabric.width
         );
@@ -76,7 +76,7 @@ export function ArtworkDropZone() {
         const file = event.dataTransfer.files.item(0);
 
         if (!selectedModule) {
-            setTransientMessage("Select a frame before dropping artwork.");
+            setTransientMessage("Select a module before dropping artwork.");
             return;
         }
 
@@ -86,11 +86,16 @@ export function ArtworkDropZone() {
 
         try {
             setTransientMessage("Analyzing artwork...");
-            const mergedWidth = getFrameConnectionLayout(selectedModule, modules).fabric.width;
+            const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
+            const printDimensions = getActiveFabricPrintDimensions(
+                selectedModule,
+                activeFabricSide,
+                connectionLayout.fabric.width
+            );
             const artwork = await createArtworkInfo(
                 file,
-                mergedWidth,
-                selectedModule.height
+                printDimensions.width,
+                printDimensions.height
             );
             setModuleArtwork(selectedModule.id, activeFabricSide, artwork);
             setTransientMessage(null);
@@ -134,11 +139,16 @@ export function ArtworkDropZone() {
 
                     try {
                         setTransientMessage("Analyzing artwork...");
-                        const mergedWidth = getFrameConnectionLayout(selectedModule, modules).fabric.width;
+                        const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
+                        const printDimensions = getActiveFabricPrintDimensions(
+                            selectedModule,
+                            activeFabricSide,
+                            connectionLayout.fabric.width
+                        );
                         const artwork = await createArtworkInfo(
                             file,
-                            mergedWidth,
-                            selectedModule.height
+                            printDimensions.width,
+                            printDimensions.height
                         );
                         setModuleArtwork(selectedModule.id, activeFabricSide, artwork);
                         setTransientMessage(null);
@@ -153,7 +163,7 @@ export function ArtworkDropZone() {
             <span style={styles.text}>
                 {selectedModule
                     ? `Drop PDF, TIFF, JPG, or PNG onto the ${activeFabricSide} fabric.`
-                    : "Select a frame to upload artwork."}
+                    : "Select a module to upload artwork."}
             </span>
             {displayMessage && <span style={styles.message}>{displayMessage}</span>}
             <button

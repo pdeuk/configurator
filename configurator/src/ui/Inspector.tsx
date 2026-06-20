@@ -3,8 +3,9 @@ import type { Position3, StandModule } from "../models/ModuleModel";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import { useEditorStore } from "../store/editorStore";
 import {
-    FABRIC_SIDES,
-    getMergedFabricArtwork,
+    getActiveFabricArtwork,
+    getActiveFabricPrintDimensions,
+    getFabricSidesForModule,
     getModuleFabric
 } from "../utils/fabrics";
 
@@ -97,10 +98,16 @@ export function Inspector() {
     };
     const modules = moduleIds.map(id => modulesById[id]).filter(isStandModule);
     const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
+    const fabricSides = getFabricSidesForModule(selectedModule);
     const activeFabric = getModuleFabric(selectedModule, activeFabricSide);
-    const mergedArtwork = getMergedFabricArtwork(
-        activeFabricSide,
+    const printDimensions = getActiveFabricPrintDimensions(
         selectedModule,
+        activeFabricSide,
+        connectionLayout.fabric.width
+    );
+    const mergedArtwork = getActiveFabricArtwork(
+        selectedModule,
+        activeFabricSide,
         connectionLayout.fabric.members,
         connectionLayout.fabric.width
     );
@@ -156,8 +163,11 @@ export function Inspector() {
 
             <section style={styles.section}>
                 <h3 style={styles.sectionTitle}>Fabric</h3>
-                <div style={styles.segmented}>
-                    {FABRIC_SIDES.map(side => (
+                <div style={{
+                    ...styles.segmented,
+                    ...(fabricSides.length > 2 ? styles.cubeSegmented : undefined)
+                }}>
+                    {fabricSides.map(side => (
                         <button
                             key={side}
                             type="button"
@@ -198,8 +208,8 @@ export function Inspector() {
                         Luminous fabric
                     </label>
                     <div>
-                        Print size: {Math.round(connectionLayout.fabric.width * 100)}cm x{" "}
-                        {Math.round(selectedModule.height * 100)}cm
+                        Print size: {Math.round(printDimensions.width * 100)}cm x{" "}
+                        {Math.round(printDimensions.height * 100)}cm
                     </div>
                     {mergedArtwork ? (
                         <>
@@ -386,6 +396,9 @@ const styles = {
         gridTemplateColumns: "1fr 1fr",
         gap: 6,
         marginBottom: 8
+    },
+    cubeSegmented: {
+        gridTemplateColumns: "repeat(3, minmax(0, 1fr))"
     },
     segmentButton: {
         border: "1px solid #4b5562",

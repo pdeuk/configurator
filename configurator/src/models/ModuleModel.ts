@@ -1,5 +1,6 @@
 export type ModuleType =
     | "wall"
+    | "cube"
     | "corner";
 
 export interface Position3 {
@@ -41,9 +42,18 @@ export interface ArtworkInfo extends ArtworkDpi {
     rasters: RasterArtworkInfo[];
 }
 
-export type FabricSide =
+export type FrameFabricSide =
     | "front"
     | "back";
+
+export type CubeFabricSide =
+    | "front"
+    | "back"
+    | "left"
+    | "right"
+    | "top";
+
+export type FabricSide = FrameFabricSide | CubeFabricSide;
 
 export interface FabricInfo {
     isBlockout: boolean;
@@ -51,30 +61,22 @@ export interface FabricInfo {
     artwork?: ArtworkInfo | null;
 }
 
-export type ModuleFabrics = Record<FabricSide, FabricInfo>;
+export type ModuleFabrics = Partial<Record<FabricSide, FabricInfo>>;
 
 export interface StandModule {
-
-    id:string;
-
-    type:ModuleType;
-
-
-    position:Position3;
-
-
-    rotation:number;
-
-
-    width:number;
-    height:number;
-    depth:number;
-
-
-    snappedTo?:string | null;
-
+    id: string;
+    type: ModuleType;
+    position: Position3;
+    rotation: number;
+    width: number;
+    height: number;
+    depth: number;
+    snappedTo?: string | null;
     fabrics?: ModuleFabrics;
-
     artwork?: ArtworkInfo | null;
+}
 
+export interface FabricDimensions {
+    width: number;
+    height: number;
 }

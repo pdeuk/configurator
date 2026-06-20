@@ -2,14 +2,14 @@ import { create } from "zustand";
 import type {
     ArtworkInfo,
     FabricSide,
-    ModuleFabrics,
     Position3,
     StandModule
 } from "../models/ModuleModel";
 import {
     createDefaultFabrics,
+    getFabricSidesForModule,
     getModuleFabric,
-    recalculateArtworkDpi,
+    recalculateModuleFabrics,
     setModuleFabric
 } from "../utils/fabrics";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
@@ -63,45 +63,11 @@ const initialWall: StandModule = {
     width: 1,
     height: 2,
     depth: 0.05,
-    fabrics: createDefaultFabrics()
+    fabrics: createDefaultFabrics("wall")
 };
 
 function isStandModule(module: StandModule | undefined): module is StandModule {
     return module !== undefined;
-}
-
-function recalculateModuleFabrics(
-    module: StandModule,
-    modules: StandModule[]
-): ModuleFabrics {
-    const layout = getFrameConnectionLayout(module, modules);
-    const fabrics = {
-        ...createDefaultFabrics(),
-        ...module.fabrics
-    };
-
-    return {
-        front: {
-            ...fabrics.front,
-            artwork: fabrics.front.artwork
-                ? recalculateArtworkDpi(
-                    fabrics.front.artwork,
-                    layout.fabric.width,
-                    module.height
-                )
-                : null
-        },
-        back: {
-            ...fabrics.back,
-            artwork: fabrics.back.artwork
-                ? recalculateArtworkDpi(
-                    fabrics.back.artwork,
-                    layout.fabric.width,
-                    module.height
-                )
-                : null
-        }
-    };
 }
 
 function createSnapshot(state: EditorState): EditorSnapshot {
@@ -123,7 +89,19 @@ export const useEditorStore = create<EditorState>((set) => ({
     snapPosition: null,
     history: [],
 
-    select: id => set({ selectedId: id }),
+    select: id =>
+        set(state => {
+            const module = id ? state.modulesById[id] : undefined;
+            const validSides = module ? getFabricSidesForModule(module) : ["front" as const];
+            const activeFabricSide: FabricSide = validSides.includes(state.activeFabricSide)
+                ? state.activeFabricSide
+                : (validSides[0] ?? "front");
+
+            return {
+                selectedId: id,
+                activeFabricSide
+            };
+        }),
 
     addModule: module =>
         set(state => ({
@@ -145,14 +123,14 @@ export const useEditorStore = create<EditorState>((set) => ({
 
             const duplicate: StandModule = {
                 ...source,
-                id: `wall-${crypto.randomUUID()}`,
+                id: `${source.type}-${crypto.randomUUID()}`,
                 position: {
                     ...source.position,
                     x: source.position.x + 0.35,
                     z: source.position.z + 0.35
                 },
                 fabrics: {
-                    ...createDefaultFabrics(),
+                    ...createDefaultFabrics(source.type),
                     ...source.fabrics
                 },
                 snappedTo: null
@@ -245,15 +223,21 @@ export const useEditorStore = create<EditorState>((set) => ({
             };
             const dimensionsChanged =
                 (data.width !== undefined && data.width !== current.width) ||
-                (data.height !== undefined && data.height !== current.height);
+                (data.height !== undefined && data.height !== current.height) ||
+                (data.depth !== undefined && data.depth !== current.depth);
             const modules = state.moduleIds
                 .map(moduleId => state.modulesById[moduleId])
                 .filter(isStandModule)
                 .map(module => module.id === id ? updatedModule : module);
+            const layout = getFrameConnectionLayout(updatedModule, modules);
             const nextModule = dimensionsChanged
                 ? {
                     ...updatedModule,
-                    fabrics: recalculateModuleFabrics(updatedModule, modules)
+                    fabrics: recalculateModuleFabrics(
+                        updatedModule,
+                        modules,
+                        layout.fabric.width
+                    )
                 }
                 : updatedModule;
 

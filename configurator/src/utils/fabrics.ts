@@ -1,15 +1,22 @@
 import type {
     ArtworkDpi,
     ArtworkInfo,
+    FabricDimensions,
     FabricInfo,
     FabricSide,
     ModuleFabrics,
+    ModuleType,
     RasterArtworkInfo,
     StandModule
 } from "../models/ModuleModel";
 
 export const METERS_PER_INCH = 0.0254;
 export const CENTIMETERS_PER_METER = 100;
+
+export const FRAME_FABRIC_SIDES = ["front", "back"] as const;
+export const CUBE_FABRIC_SIDES = ["front", "back", "left", "right", "top"] as const;
+
+export const FABRIC_SIDES: FabricSide[] = [...FRAME_FABRIC_SIDES];
 
 /** One in-app dimension unit equals one meter (100 cm) in real life. */
 export function appUnitsToMeters(units: number): number {
@@ -22,6 +29,54 @@ export function metersToCentimeters(meters: number): number {
 
 export function metersToInches(meters: number): number {
     return meters / METERS_PER_INCH;
+}
+
+export function getRailThickness(
+    module: Pick<StandModule, "type" | "width" | "height" | "depth">
+): number {
+    if (module.type === "cube") {
+        return Math.min(
+            0.05,
+            module.width * 0.08,
+            module.height * 0.08,
+            module.depth * 0.08
+        );
+    }
+
+    return Math.min(
+        0.14,
+        module.width / 2,
+        module.height / 2
+    );
+}
+
+export function getFabricSidesForModule(module: StandModule): FabricSide[] {
+    return module.type === "cube"
+        ? [...CUBE_FABRIC_SIDES]
+        : [...FRAME_FABRIC_SIDES];
+}
+
+export function isFabricSideValidForModule(
+    module: StandModule,
+    side: FabricSide
+): boolean {
+    return getFabricSidesForModule(module).includes(side);
+}
+
+function createDefaultFabricInfo(): FabricInfo {
+    return {
+        isBlockout: false,
+        isLuminous: false,
+        artwork: null
+    };
+}
+
+export function createDefaultFabrics(moduleType: ModuleType = "wall"): ModuleFabrics {
+    const sides = moduleType === "cube" ? CUBE_FABRIC_SIDES : FRAME_FABRIC_SIDES;
+
+    return Object.fromEntries(
+        sides.map(side => [side, createDefaultFabricInfo()])
+    );
 }
 
 export function calculateArtworkDpi(
@@ -50,29 +105,12 @@ export interface RasterCoverageInput {
     fabricHeightRatio: number;
 }
 
-export const FABRIC_SIDES: FabricSide[] = ["front", "back"];
-
-export function createDefaultFabrics(): ModuleFabrics {
-    return {
-        front: {
-            isBlockout: false,
-            isLuminous: false,
-            artwork: null
-        },
-        back: {
-            isBlockout: false,
-            isLuminous: false,
-            artwork: null
-        }
-    };
-}
-
 export function getModuleFabric(
     module: StandModule,
     side: FabricSide
 ): FabricInfo {
     return {
-        ...createDefaultFabrics()[side],
+        ...createDefaultFabricInfo(),
         ...module.fabrics?.[side]
     };
 }
@@ -83,10 +121,62 @@ export function setModuleFabric(
     fabric: FabricInfo
 ): ModuleFabrics {
     return {
-        ...createDefaultFabrics(),
+        ...createDefaultFabrics(module.type),
         ...module.fabrics,
         [side]: fabric
     };
+}
+
+export function getFabricDimensions(
+    module: StandModule,
+    side: FabricSide
+): FabricDimensions {
+    if (module.type === "cube") {
+        switch (side) {
+            case "front":
+            case "back":
+                return {
+                    width: module.width,
+                    height: module.height
+                };
+            case "left":
+            case "right":
+                return {
+                    width: module.depth,
+                    height: module.height
+                };
+            case "top":
+                return {
+                    width: module.width,
+                    height: module.depth
+                };
+        }
+    }
+
+    switch (side) {
+        case "front":
+        case "back":
+            return {
+                width: module.width,
+                height: module.height
+            };
+        case "left":
+        case "right":
+            return {
+                width: module.depth,
+                height: module.height
+            };
+        case "top":
+            return {
+                width: module.width,
+                height: module.depth
+            };
+        default:
+            return {
+                width: module.width,
+                height: module.height
+            };
+    }
 }
 
 function buildRasterArtworkInfo(
@@ -182,6 +272,53 @@ export function getMergedFabricArtwork(
     return recalculateArtworkDpi(artwork, mergedWidth, module.height);
 }
 
+export function getModuleFabricArtwork(
+    module: StandModule,
+    side: FabricSide
+): ArtworkInfo | null {
+    const fabric = getModuleFabric(module, side);
+
+    if (!fabric.artwork) {
+        return null;
+    }
+
+    const dimensions = getFabricDimensions(module, side);
+
+    return recalculateArtworkDpi(
+        fabric.artwork,
+        dimensions.width,
+        dimensions.height
+    );
+}
+
+export function getActiveFabricArtwork(
+    module: StandModule,
+    side: FabricSide,
+    members: StandModule[],
+    mergedWidth: number
+): ArtworkInfo | null {
+    if (module.type === "cube") {
+        return getModuleFabricArtwork(module, side);
+    }
+
+    return getMergedFabricArtwork(side, module, members, mergedWidth);
+}
+
+export function getActiveFabricPrintDimensions(
+    module: StandModule,
+    side: FabricSide,
+    mergedWidth: number
+): FabricDimensions {
+    if (module.type === "cube") {
+        return getFabricDimensions(module, side);
+    }
+
+    return {
+        width: mergedWidth,
+        height: module.height
+    };
+}
+
 export function buildArtworkInfo(
     base: Omit<
         ArtworkInfo,
@@ -214,5 +351,57 @@ export function buildArtworkInfo(
         printHeightCm: metersToCentimeters(printHeightMeters),
         rasters,
         ...wholeFileDpi
+    };
+}
+
+export function recalculateModuleFabrics(
+    module: StandModule,
+    _members: StandModule[],
+    mergedWidth: number
+): ModuleFabrics {
+    if (module.type === "cube") {
+        return Object.fromEntries(
+            CUBE_FABRIC_SIDES.map(side => {
+                const fabric = getModuleFabric(module, side);
+                const dimensions = getFabricDimensions(module, side);
+
+                return [
+                    side,
+                    {
+                        ...fabric,
+                        artwork: fabric.artwork
+                            ? recalculateArtworkDpi(
+                                fabric.artwork,
+                                dimensions.width,
+                                dimensions.height
+                            )
+                            : null
+                    }
+                ];
+            })
+        );
+    }
+
+    return {
+        front: {
+            ...getModuleFabric(module, "front"),
+            artwork: getModuleFabric(module, "front").artwork
+                ? recalculateArtworkDpi(
+                    getModuleFabric(module, "front").artwork!,
+                    mergedWidth,
+                    module.height
+                )
+                : null
+        },
+        back: {
+            ...getModuleFabric(module, "back"),
+            artwork: getModuleFabric(module, "back").artwork
+                ? recalculateArtworkDpi(
+                    getModuleFabric(module, "back").artwork!,
+                    mergedWidth,
+                    module.height
+                )
+                : null
+        }
     };
 }

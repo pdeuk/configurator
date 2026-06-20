@@ -35,14 +35,18 @@ export function StandCanvas() {
             }}
             onPointerMissed={() => select(null)}
         >
+            <color attach="background" args={["#343841"]} />
             <DragController />
             <SnapPreview />
 
-            <ambientLight intensity={1} />
+            <ambientLight intensity={0.38} />
 
-            <directionalLight position={[5, 5, 5]} />
+            <directionalLight
+                position={[5, 8, 5]}
+                intensity={0.55}
+            />
 
-            <gridHelper args={[20, 20]} />
+            <gridHelper args={[20, 20, "#4a5568", "#252b36"]} />
 
             {modules.map(module => (
                 <Module

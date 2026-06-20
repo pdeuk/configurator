@@ -20,6 +20,18 @@ export function getFrameConnectionLayout(
     module: StandModule,
     modules: StandModule[]
 ): FrameConnectionLayout {
+    if (module.type === "cube") {
+        return {
+            hiddenSides: {},
+            fabric: {
+                isLeader: true,
+                width: module.width,
+                centerOffsetX: 0,
+                members: [module]
+            }
+        };
+    }
+
     const connectedModules = getConnectedFrameGroup(module, modules);
     const hiddenSides = getHiddenSides(module, connectedModules);
     const fabric = getFabricMergeLayout(module, connectedModules);
@@ -141,6 +153,10 @@ function getFabricMergeLayout(
 }
 
 function canConnectFrames(module: StandModule, other: StandModule) {
+    if (module.type !== "wall" || other.type !== "wall") {
+        return false;
+    }
+
     const localOffset = getLocalOffset(module, other);
     const targetDistance = (module.width + other.width) / 2;
 
