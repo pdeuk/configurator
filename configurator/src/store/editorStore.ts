@@ -19,6 +19,13 @@ import { clampBannerSegmentCount } from "../utils/bannerFabrics";
 import { DEFAULT_BANNER_SEGMENT_COUNT } from "../utils/bannerGeometry";
 import { sanitizeActiveFabricSides } from "../utils/applyFabricArtwork";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
+import {
+    DEFAULT_FLOOR_DIMENSIONS,
+    DEFAULT_FLOOR_MATERIAL_ID,
+    clampFloorSize,
+    type FloorMaterialId,
+    type FloorSize
+} from "../utils/floorMaterials";
 
 export type ModuleId = StandModule["id"];
 
@@ -33,6 +40,11 @@ interface EditorSnapshot {
     selectedId: ModuleId | null;
 }
 
+export interface ArtworkEditMode {
+    moduleId: ModuleId;
+    side: FabricSide;
+}
+
 interface EditorState {
     moduleIds: ModuleId[];
     modulesById: Record<ModuleId, StandModule>;
@@ -40,6 +52,10 @@ interface EditorState {
     activeFabricSides: FabricSide[];
     drag: DragState | null;
     snapPosition: Position3 | null;
+    artworkEditMode: ArtworkEditMode | null;
+    floorMaterialId: FloorMaterialId;
+    floorSize: FloorSize;
+    showGrid: boolean;
     history: EditorSnapshot[];
     select: (id: ModuleId | null) => void;
     addModule: (module: StandModule) => void;
@@ -55,6 +71,11 @@ interface EditorState {
         id: ModuleId,
         assignments: Array<{ side: FabricSide; artwork: ArtworkInfo }>
     ) => void;
+    setConnectedFabricArtwork: (
+        id: ModuleId,
+        side: FabricSide,
+        artwork: ArtworkInfo
+    ) => void;
     setModuleFabricBlockoutForSides: (
         id: ModuleId,
         sides: FabricSide[],
@@ -66,6 +87,11 @@ interface EditorState {
         isLuminous: boolean
     ) => void;
     setSnapPosition: (position: Position3 | null) => void;
+    openArtworkEdit: (moduleId: ModuleId, side: FabricSide) => void;
+    closeArtworkEdit: () => void;
+    setFloorMaterialId: (materialId: FloorMaterialId) => void;
+    setFloorSize: (size: Partial<FloorSize>) => void;
+    setShowGrid: (showGrid: boolean) => void;
 }
 
 const initialWall: StandModule = {
@@ -119,6 +145,10 @@ export const useEditorStore = create<EditorState>((set) => ({
     activeFabricSides: ["front"],
     drag: null,
     snapPosition: null,
+    artworkEditMode: null,
+    floorMaterialId: DEFAULT_FLOOR_MATERIAL_ID,
+    floorSize: DEFAULT_FLOOR_DIMENSIONS,
+    showGrid: true,
     history: [],
 
     select: id =>
@@ -402,6 +432,49 @@ export const useEditorStore = create<EditorState>((set) => ({
             };
         }),
 
+    setConnectedFabricArtwork: (id, side, artwork) =>
+        set(state => {
+            const anchor = state.modulesById[id];
+
+            if (!anchor) {
+                return state;
+            }
+
+            const modules = state.moduleIds
+                .map(moduleId => state.modulesById[moduleId])
+                .filter((module): module is StandModule => !!module);
+            const connectionLayout = getFrameConnectionLayout(anchor, modules);
+            const nextModulesById = { ...state.modulesById };
+
+            for (const member of connectionLayout.fabric.members) {
+                const current = nextModulesById[member.id];
+
+                if (!current) {
+                    continue;
+                }
+
+                const fabrics = applyFabricUpdates(current, [{
+                    side,
+                    fabric: {
+                        ...getModuleFabric(current, side),
+                        artwork
+                    }
+                }]);
+                const nextModule: StandModule = {
+                    ...current,
+                    fabrics,
+                    ...(member.id === id ? { artwork } : {})
+                };
+
+                nextModulesById[member.id] = nextModule;
+            }
+
+            return {
+                history: [...state.history, createSnapshot(state)],
+                modulesById: nextModulesById
+            };
+        }),
+
     setModuleFabricBlockoutForSides: (id, sides, isBlockout) =>
         set(state => {
             const current = state.modulesById[id];
@@ -500,5 +573,37 @@ export const useEditorStore = create<EditorState>((set) => ({
             }
 
             return { snapPosition: position };
+        }),
+
+    openArtworkEdit: (moduleId, side) =>
+        set({
+            artworkEditMode: {
+                moduleId,
+                side
+            },
+            activeFabricSides: [side]
+        }),
+
+    closeArtworkEdit: () =>
+        set({
+            artworkEditMode: null
+        }),
+
+    setFloorMaterialId: materialId =>
+        set({
+            floorMaterialId: materialId
+        }),
+
+    setFloorSize: size =>
+        set(state => ({
+            floorSize: clampFloorSize({
+                ...state.floorSize,
+                ...size
+            })
+        })),
+
+    setShowGrid: showGrid =>
+        set({
+            showGrid
         })
 }));

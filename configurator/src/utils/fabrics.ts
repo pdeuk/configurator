@@ -389,6 +389,43 @@ export function recalculateArtworkDpi(
     };
 }
 
+export function attachArtworkSource(artwork: ArtworkInfo): ArtworkInfo {
+    if (artwork.sourceArtwork) {
+        return artwork;
+    }
+
+    const { sourceArtwork: _sourceArtwork, ...snapshot } = artwork;
+
+    return {
+        ...artwork,
+        sourceArtwork: snapshot
+    };
+}
+
+export function getArtworkEditImageUrl(artwork: ArtworkInfo): string {
+    return artwork.sourceArtwork?.imageUrl ?? artwork.imageUrl;
+}
+
+export function restoreArtworkFromSource(
+    artwork: ArtworkInfo,
+    fabricWidthMeters: number,
+    fabricHeightMeters: number
+): ArtworkInfo | null {
+    if (!artwork.sourceArtwork) {
+        return null;
+    }
+
+    return recalculateArtworkDpi(
+        {
+            ...artwork,
+            ...artwork.sourceArtwork,
+            sourceArtwork: artwork.sourceArtwork
+        },
+        fabricWidthMeters,
+        fabricHeightMeters
+    );
+}
+
 export function getMergedFabric(
     side: FabricSide,
     members: StandModule[]

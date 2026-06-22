@@ -98,6 +98,7 @@ export function Inspector() {
     const setModuleFabricLuminousForSides = useEditorStore(
         state => state.setModuleFabricLuminousForSides
     );
+    const openArtworkEdit = useEditorStore(state => state.openArtworkEdit);
 
     if (!selectedModule) {
         return (
@@ -155,6 +156,16 @@ export function Inspector() {
         connectionLayout.fabric.width
     );
     const selectionLabel = formatFabricSidesLabel(activeFabricSides);
+    const singleFabricSide = activeFabricSides.length === 1 ? activeFabricSides[0] : null;
+    const singleFaceArtwork = singleFabricSide
+        ? getModuleFabric(selectedModule, singleFabricSide).artwork
+        : null;
+    const canEditFaceArtwork = Boolean(
+        singleFabricSide &&
+        singleFaceArtwork &&
+        !getModuleFabric(selectedModule, singleFabricSide).isBlockout &&
+        !(isCubeMelamineTopActive(selectedModule) && singleFabricSide === "top")
+    );
 
     return (
         <aside style={styles.panel}>
@@ -383,6 +394,23 @@ export function Inspector() {
                             </div>
                             {mergedArtwork ? (
                                 <>
+                                    <button
+                                        type="button"
+                                        style={{
+                                            ...styles.button,
+                                            ...(canEditFaceArtwork ? undefined : styles.disabledButton)
+                                        }}
+                                        disabled={!canEditFaceArtwork}
+                                        onClick={() => {
+                                            if (!singleFabricSide || !canEditFaceArtwork) {
+                                                return;
+                                            }
+
+                                            openArtworkEdit(selectedModule.id, singleFabricSide);
+                                        }}
+                                    >
+                                        Edit image
+                                    </button>
                                     <div>File: {mergedArtwork.fileName}</div>
                                     <div>
                                         File pixels: {mergedArtwork.pixelWidth} x{" "}
@@ -647,6 +675,10 @@ const styles = {
         cursor: "pointer",
         font: "inherit",
         fontSize: 13
+    },
+    disabledButton: {
+        opacity: 0.45,
+        cursor: "not-allowed"
     },
     dangerButton: {
         gridColumn: "1 / -1",

@@ -3,8 +3,9 @@ import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { OPS } from "pdfjs-dist";
 import type { PDFOperatorList } from "pdfjs-dist/types/src/display/api";
 import * as UTIF from "utif";
-import type { ArtworkFileType } from "../models/ModuleModel";
+import type { ArtworkFileType, ArtworkSourceSnapshot } from "../models/ModuleModel";
 import {
+    attachArtworkSource,
     buildArtworkInfo,
     type RasterCoverageInput
 } from "./fabrics";
@@ -50,7 +51,7 @@ export async function createArtworkInfo(
             pixelHeight: decoded.pixelHeight
         };
 
-    return buildArtworkInfo(
+    return attachArtworkSource(buildArtworkInfo(
         {
             fileName: file.name,
             fileType,
@@ -61,7 +62,7 @@ export async function createArtworkInfo(
         },
         fabricWidthMeters,
         fabricHeightMeters
-    );
+    ));
 }
 
 function getArtworkFileType(file: File): ArtworkFileType {
@@ -142,6 +143,116 @@ function createFullFabricRaster(
         fabricWidthRatio: 1,
         fabricHeightRatio: 1
     };
+}
+
+export function createArtworkInfoFromCanvas(
+    canvas: HTMLCanvasElement,
+    source: {
+        fileName: string;
+        fileType: ArtworkFileType;
+    },
+    fabricWidthMeters: number,
+    fabricHeightMeters: number
+) {
+    const outputFileType: ArtworkFileType =
+        source.fileType === "jpg" ? "jpg" : "png";
+    const mimeType = outputFileType === "jpg" ? "image/jpeg" : "image/png";
+
+    return canvasToArtworkInfo(
+        canvas,
+        mimeType,
+        outputFileType,
+        source.fileName,
+        fabricWidthMeters,
+        fabricHeightMeters
+    );
+}
+
+export async function createArtworkInfoFromCanvasAsync(
+    canvas: HTMLCanvasElement,
+    source: {
+        fileName: string;
+        fileType: ArtworkFileType;
+    },
+    fabricWidthMeters: number,
+    fabricHeightMeters: number,
+    preservedSourceArtwork?: ArtworkSourceSnapshot
+) {
+    const outputFileType: ArtworkFileType =
+        source.fileType === "jpg" ? "jpg" : "png";
+    const mimeType = outputFileType === "jpg" ? "image/jpeg" : "image/png";
+    const blob = await canvasToBlob(canvas, mimeType, 0.92);
+
+    return {
+        ...buildArtworkInfo(
+            {
+                fileName: source.fileName,
+                fileType: outputFileType,
+                imageUrl: URL.createObjectURL(blob),
+                pixelWidth: canvas.width,
+                pixelHeight: canvas.height,
+                rasters: [
+                    createFullFabricRaster(
+                        "Edited image",
+                        canvas.width,
+                        canvas.height
+                    )
+                ]
+            },
+            fabricWidthMeters,
+            fabricHeightMeters
+        ),
+        ...(preservedSourceArtwork ? { sourceArtwork: preservedSourceArtwork } : {})
+    };
+}
+
+function canvasToBlob(
+    canvas: HTMLCanvasElement,
+    mimeType: string,
+    quality: number
+): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(
+            blob => {
+                if (blob) {
+                    resolve(blob);
+                    return;
+                }
+
+                reject(new Error("Unable to encode edited artwork."));
+            },
+            mimeType,
+            quality
+        );
+    });
+}
+
+function canvasToArtworkInfo(
+    canvas: HTMLCanvasElement,
+    mimeType: string,
+    outputFileType: ArtworkFileType,
+    fileName: string,
+    fabricWidthMeters: number,
+    fabricHeightMeters: number
+) {
+    return buildArtworkInfo(
+        {
+            fileName,
+            fileType: outputFileType,
+            imageUrl: canvas.toDataURL(mimeType, 0.92),
+            pixelWidth: canvas.width,
+            pixelHeight: canvas.height,
+            rasters: [
+                createFullFabricRaster(
+                    "Edited image",
+                    canvas.width,
+                    canvas.height
+                )
+            ]
+        },
+        fabricWidthMeters,
+        fabricHeightMeters
+    );
 }
 
 async function decodeBrowserImage(file: File): Promise<DecodedArtwork> {

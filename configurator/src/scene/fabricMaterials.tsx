@@ -10,10 +10,12 @@ import { BLOCKOUT_FABRIC_COLOR } from "../utils/fabrics";
 import {
     BLOCKOUT_ARTWORK_COLOR,
     LUMINOUS_EMISSIVE_INTENSITY,
+    LUMINOUS_ARTWORK_ROUGHNESS,
     LUMINOUS_TRANSMISSION,
     PLAIN_FABRIC_COLOR,
     PLAIN_LUMINOUS_EMISSIVE_INTENSITY,
-    PLAIN_LUMINOUS_TRANSMISSION
+    PLAIN_LUMINOUS_TRANSMISSION,
+    LUMINOUS_PLAIN_ROUGHNESS
 } from "./fabricLuminous";
 
 interface FabricArtworkMaterialProps {
@@ -44,7 +46,7 @@ export function FabricArtworkMaterial({
                 ior={1.35}
                 attenuationColor="#fff8ec"
                 attenuationDistance={1.2}
-                roughness={0.78}
+                roughness={LUMINOUS_ARTWORK_ROUGHNESS}
                 metalness={0}
                 side={side}
             />
@@ -99,7 +101,7 @@ export function FabricFaceMaterial({
                 ior={1.35}
                 attenuationColor="#fff8ec"
                 attenuationDistance={1.2}
-                roughness={0.82}
+                roughness={LUMINOUS_PLAIN_ROUGHNESS}
                 metalness={0}
                 side={side}
             />

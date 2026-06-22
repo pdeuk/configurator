@@ -55,7 +55,11 @@ export interface ArtworkInfo extends ArtworkDpi {
     printWidthCm: number;
     printHeightCm: number;
     rasters: RasterArtworkInfo[];
+    /** Unedited upload kept for re-editing and reset-to-original. */
+    sourceArtwork?: ArtworkSourceSnapshot;
 }
+
+export type ArtworkSourceSnapshot = Omit<ArtworkInfo, "sourceArtwork">;
 
 export type FrameFabricSide =
     | "front"
