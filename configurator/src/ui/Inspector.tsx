@@ -1,5 +1,6 @@
 import type { CSSProperties, ChangeEvent } from "react";
 import type { Position3, StandModule } from "../models/ModuleModel";
+import { isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import { useEditorStore } from "../store/editorStore";
 import {
@@ -11,7 +12,12 @@ import {
     getActiveFabricPrintDimensions,
     getFabricSidesForModule,
     getModuleFabric,
-    isBannerFabricSide
+    isBannerFabricSide,
+    isCubeMelamineTopActive,
+    MELAMINE_TOP_EXCESS_CM,
+    MELAMINE_TOP_THICKNESS_CM,
+    melamineBlocksFabricOptions,
+    setModuleFabric
 } from "../utils/fabrics";
 import { clampBannerSegmentCount } from "../utils/bannerFabrics";
 import {
@@ -116,7 +122,9 @@ export function Inspector() {
     };
     const modules = moduleIds.map(id => modulesById[id]).filter(isStandModule);
     const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
-    const isCircularBanner = selectedModule.type === "circularBanner";
+    const isHangingBanner = isHangingBannerType(selectedModule.type);
+    const isCube = selectedModule.type === "cube";
+    const isPromoStand = isPromoStandType(selectedModule.type);
     const fabricSides = getFabricSidesForModule(selectedModule);
     const selectedFabrics = activeFabricSides.map(side => getModuleFabric(selectedModule, side));
     const allSelectedBlockout = selectedFabrics.every(fabric => fabric.isBlockout);
@@ -124,15 +132,25 @@ export function Inspector() {
     const allSelectedLuminous = selectedFabrics.every(
         fabric => fabric.isLuminous && !fabric.isBlockout
     );
+    const fabricOptionsBlockedByMelamine = melamineBlocksFabricOptions(
+        selectedModule,
+        activeFabricSides
+    );
+    const topMelamineOnlySelection = isCubeMelamineTopActive(selectedModule)
+        && activeFabricSides.length === 1
+        && activeFabricSides[0] === "top";
     const primaryFabricSide = activeFabricSides[0] ?? fabricSides[0] ?? "front";
+    const fabricReadoutSide = activeFabricSides.find(
+        side => !(isCubeMelamineTopActive(selectedModule) && side === "top")
+    ) ?? primaryFabricSide;
     const printDimensions = getActiveFabricPrintDimensions(
         selectedModule,
-        primaryFabricSide,
+        fabricReadoutSide,
         connectionLayout.fabric.width
     );
     const mergedArtwork = getActiveFabricArtwork(
         selectedModule,
-        primaryFabricSide,
+        fabricReadoutSide,
         connectionLayout.fabric.members,
         connectionLayout.fabric.width
     );
@@ -160,13 +178,21 @@ export function Inspector() {
                         value={selectedModule.position.z}
                         onChange={z => updatePosition({ z })}
                     />
+                    {isHangingBanner && (
+                        <NumberField
+                            label="Y"
+                            value={selectedModule.position.y}
+                            min={0}
+                            onChange={y => updatePosition({ y: Math.max(0, y) })}
+                        />
+                    )}
                 </div>
             </section>
 
             <section style={styles.section}>
                 <h3 style={styles.sectionTitle}>Dimensions</h3>
                 <div style={styles.grid}>
-                    {isCircularBanner ? (
+                    {isHangingBanner ? (
                         <>
                             <NumberField
                                 label="Ring ø"
@@ -263,106 +289,153 @@ export function Inspector() {
                         </button>
                     ))}
                 </div>
+                {isCube && (
+                    <label style={styles.melamineRow}>
+                        <input
+                            type="checkbox"
+                            checked={selectedModule.hasMelamineTop === true}
+                            onChange={event => {
+                                const hasMelamineTop = event.target.checked;
+
+                                updateModule(selectedModule.id, {
+                                    hasMelamineTop,
+                                    ...(hasMelamineTop ? {
+                                        fabrics: setModuleFabric(selectedModule, "top", {
+                                            ...getModuleFabric(selectedModule, "top"),
+                                            isBlockout: false,
+                                            isLuminous: false,
+                                            artwork: null
+                                        })
+                                    } : {})
+                                });
+                            }}
+                        />
+                        Melamine top ({MELAMINE_TOP_THICKNESS_CM} cm)
+                    </label>
+                )}
+                {isPromoStand && (
+                    <div style={styles.melamineRow}>
+                        Melamine top ({MELAMINE_TOP_THICKNESS_CM} cm,{" "}
+                        {MELAMINE_TOP_EXCESS_CM} cm overhang)
+                    </div>
+                )}
                 <div style={styles.readout}>
                     <div style={styles.selectionSummary}>
                         Selected: {selectionLabel}
                     </div>
-                    <label style={styles.checkboxRow}>
-                        <input
-                            type="checkbox"
-                            checked={allSelectedBlockout}
-                            ref={element => {
-                                if (element) {
-                                    element.indeterminate =
-                                        anySelectedBlockout && !allSelectedBlockout;
-                                }
-                            }}
-                            onChange={event => setModuleFabricBlockoutForSides(
-                                selectedModule.id,
-                                activeFabricSides,
-                                event.target.checked
-                            )}
-                        />
-                        Block-out fabric
-                    </label>
-                    <label style={styles.checkboxRow}>
-                        <input
-                            type="checkbox"
-                            checked={allSelectedLuminous}
-                            disabled={anySelectedBlockout}
-                            ref={element => {
-                                if (element) {
-                                    element.indeterminate =
-                                        !anySelectedBlockout &&
-                                        selectedFabrics.some(fabric => fabric.isLuminous) &&
-                                        !allSelectedLuminous;
-                                }
-                            }}
-                            onChange={event => setModuleFabricLuminousForSides(
-                                selectedModule.id,
-                                activeFabricSides,
-                                event.target.checked
-                            )}
-                        />
-                        Luminous fabric
-                    </label>
-                    <div>
-                        Print size: {Math.round(printDimensions.width * 100)}cm x{" "}
-                        {Math.round(printDimensions.height * 100)}cm
-                    </div>
-                    {mergedArtwork ? (
+                    {topMelamineOnlySelection ? (
                         <>
-                            <div>File: {mergedArtwork.fileName}</div>
                             <div>
-                                File pixels: {mergedArtwork.pixelWidth} x{" "}
-                                {mergedArtwork.pixelHeight}
+                                Solid melamine panel covering the full top face.
                             </div>
-                            <div style={styles.dpiGroup}>
-                                <strong>Whole file on fabric</strong>
-                                <div>
-                                    Print area: {Math.round(mergedArtwork.printWidthCm)}cm x{" "}
-                                    {Math.round(mergedArtwork.printHeightCm)}cm
-                                </div>
-                                <div>
-                                    DPI: {formatDpi(mergedArtwork.dpiX)} x{" "}
-                                    {formatDpi(mergedArtwork.dpiY)}
-                                </div>
-                                <div>
-                                    Effective DPI: {formatEffectiveDpi(mergedArtwork.effectiveDpi)}
-                                </div>
-                            </div>
-                            {mergedArtwork.rasters.some(
-                                raster =>
-                                    raster.fabricWidthRatio < 0.999 ||
-                                    raster.fabricHeightRatio < 0.999
-                            ) || mergedArtwork.rasters.length > 1 ? (
-                                <div style={styles.dpiGroup}>
-                                    <strong>Embedded rasters</strong>
-                                    {mergedArtwork.rasters.map(raster => (
-                                        <div key={raster.label} style={styles.rasterBlock}>
-                                            <div>{raster.label}</div>
-                                            <div>
-                                                Pixels: {raster.pixelWidth} x {raster.pixelHeight}
-                                            </div>
-                                            <div>
-                                                Print area: {Math.round(raster.printWidthCm)}cm x{" "}
-                                                {Math.round(raster.printHeightCm)}cm
-                                            </div>
-                                            <div>
-                                                DPI: {formatDpi(raster.dpiX)} x{" "}
-                                                {formatDpi(raster.dpiY)}
-                                            </div>
-                                            <div>
-                                                Effective DPI:{" "}
-                                                {formatEffectiveDpi(raster.effectiveDpi)}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : null}
+                            <div>Thickness: {MELAMINE_TOP_THICKNESS_CM} cm</div>
                         </>
                     ) : (
-                        <div>Drop artwork to apply to {selectionLabel}.</div>
+                        <>
+                            <label style={styles.checkboxRow}>
+                                <input
+                                    type="checkbox"
+                                    checked={allSelectedBlockout}
+                                    disabled={fabricOptionsBlockedByMelamine}
+                                    ref={element => {
+                                        if (element) {
+                                            element.indeterminate =
+                                                anySelectedBlockout && !allSelectedBlockout;
+                                        }
+                                    }}
+                                    onChange={event => setModuleFabricBlockoutForSides(
+                                        selectedModule.id,
+                                        activeFabricSides,
+                                        event.target.checked
+                                    )}
+                                />
+                                Block-out fabric
+                            </label>
+                            <label style={styles.checkboxRow}>
+                                <input
+                                    type="checkbox"
+                                    checked={allSelectedLuminous}
+                                    disabled={anySelectedBlockout || fabricOptionsBlockedByMelamine}
+                                    ref={element => {
+                                        if (element) {
+                                            element.indeterminate =
+                                                !anySelectedBlockout &&
+                                                selectedFabrics.some(fabric => fabric.isLuminous) &&
+                                                !allSelectedLuminous;
+                                        }
+                                    }}
+                                    onChange={event => setModuleFabricLuminousForSides(
+                                        selectedModule.id,
+                                        activeFabricSides,
+                                        event.target.checked
+                                    )}
+                                />
+                                Luminous fabric
+                            </label>
+                            {fabricOptionsBlockedByMelamine && (
+                                <div style={styles.melamineHint}>
+                                    Block-out and luminous are unavailable while top uses melamine.
+                                </div>
+                            )}
+                            <div>
+                                Print size: {Math.round(printDimensions.width * 100)}cm x{" "}
+                                {Math.round(printDimensions.height * 100)}cm
+                            </div>
+                            {mergedArtwork ? (
+                                <>
+                                    <div>File: {mergedArtwork.fileName}</div>
+                                    <div>
+                                        File pixels: {mergedArtwork.pixelWidth} x{" "}
+                                        {mergedArtwork.pixelHeight}
+                                    </div>
+                                    <div style={styles.dpiGroup}>
+                                        <strong>Whole file on fabric</strong>
+                                        <div>
+                                            Print area: {Math.round(mergedArtwork.printWidthCm)}cm x{" "}
+                                            {Math.round(mergedArtwork.printHeightCm)}cm
+                                        </div>
+                                        <div>
+                                            DPI: {formatDpi(mergedArtwork.dpiX)} x{" "}
+                                            {formatDpi(mergedArtwork.dpiY)}
+                                        </div>
+                                        <div>
+                                            Effective DPI: {formatEffectiveDpi(mergedArtwork.effectiveDpi)}
+                                        </div>
+                                    </div>
+                                    {mergedArtwork.rasters.some(
+                                        raster =>
+                                            raster.fabricWidthRatio < 0.999 ||
+                                            raster.fabricHeightRatio < 0.999
+                                    ) || mergedArtwork.rasters.length > 1 ? (
+                                        <div style={styles.dpiGroup}>
+                                            <strong>Embedded rasters</strong>
+                                            {mergedArtwork.rasters.map(raster => (
+                                                <div key={raster.label} style={styles.rasterBlock}>
+                                                    <div>{raster.label}</div>
+                                                    <div>
+                                                        Pixels: {raster.pixelWidth} x {raster.pixelHeight}
+                                                    </div>
+                                                    <div>
+                                                        Print area: {Math.round(raster.printWidthCm)}cm x{" "}
+                                                        {Math.round(raster.printHeightCm)}cm
+                                                    </div>
+                                                    <div>
+                                                        DPI: {formatDpi(raster.dpiX)} x{" "}
+                                                        {formatDpi(raster.dpiY)}
+                                                    </div>
+                                                    <div>
+                                                        Effective DPI:{" "}
+                                                        {formatEffectiveDpi(raster.effectiveDpi)}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                </>
+                            ) : (
+                                <div>Drop artwork to apply to {selectionLabel}.</div>
+                            )}
+                        </>
                     )}
                 </div>
             </section>
@@ -402,12 +475,20 @@ export function Inspector() {
     );
 }
 
+const PANEL_INSET = 20;
+
 const styles = {
     panel: {
         position: "absolute",
-        top: 20,
-        right: 20,
-        width: 280,
+        top: PANEL_INSET,
+        right: PANEL_INSET,
+        width: `min(280px, calc(100vw - ${PANEL_INSET * 2}px))`,
+        maxHeight: `calc(100vh - ${PANEL_INSET * 2}px)`,
+        overflowY: "auto",
+        overflowX: "hidden",
+        overscrollBehavior: "contain",
+        scrollbarGutter: "stable",
+        boxSizing: "border-box",
         background: "#20242b",
         color: "#f7f7f2",
         border: "1px solid #3b414a",
@@ -531,6 +612,18 @@ const styles = {
         display: "flex",
         alignItems: "center",
         gap: 8
+    },
+    melamineRow: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 8,
+        fontSize: 12,
+        color: "#cbd3dc"
+    },
+    melamineHint: {
+        color: "#707987",
+        fontSize: 11
     },
     dpiGroup: {
         display: "grid",

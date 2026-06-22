@@ -1,12 +1,17 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useEditorStore } from "../store/editorStore";
 import type { StandModule } from "../models/ModuleModel";
 import { getBannerSelectionHitSize } from "../utils/bannerGeometry";
+import { isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
 import { CircularBannerFabricSurface } from "./CircularBannerFabricSurface";
 import { CircularBannerFrame } from "./CircularBannerFrame";
+import { SquareBannerFabricSurface } from "./SquareBannerFabricSurface";
+import { SquareBannerFrame } from "./SquareBannerFrame";
 import { CubeFabricSurface } from "./CubeFabricSurface";
 import { CubeFrame } from "./CubeFrame";
+import { PromoStandFabricSurface } from "./PromoStandFabricSurface";
+import { PromoStandFrame } from "./PromoStandFrame";
 import { FabricSurface } from "./FabricSurface";
 import { WallFrame } from "./WallFrame";
 import { getFrameConnectionLayout } from "./frameConnections";
@@ -14,6 +19,18 @@ import { ignoreRaycast } from "./raycast";
 
 const SELECTION_HIT_PADDING = 0.05;
 const MIN_SELECTION_HIT_DEPTH = 0.18;
+const DRAG_THRESHOLD_PX = 4;
+
+interface PendingDrag {
+    pointerId: number;
+    startX: number;
+    startY: number;
+    offset: {
+        x: number;
+        y: number;
+        z: number;
+    };
+}
 
 function getSelectionHitSize(module: StandModule) {
     return {
@@ -32,31 +49,71 @@ function ModuleComponent({ module, modules }: Props) {
     const selectedId = useEditorStore(state => state.selectedId);
     const select = useEditorStore(state => state.select);
     const beginDrag = useEditorStore(state => state.beginDrag);
+    const dragPendingRef = useRef<PendingDrag | null>(null);
 
     const isSelected = selectedId === module.id;
     const connectionLayout = getFrameConnectionLayout(module, modules);
     const isCube = module.type === "cube";
+    const isPromoStand = isPromoStandType(module.type);
+    const isBoxLike = isCube || isPromoStand;
     const isCircularBanner = module.type === "circularBanner";
-    const hitSize = isCircularBanner
+    const isSquareBanner = module.type === "squareBanner";
+    const isHangingBanner = isHangingBannerType(module.type);
+    const hitSize = isHangingBanner
         ? getBannerSelectionHitSize(module)
         : getSelectionHitSize(module);
 
     const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
 
+        if (!isSelected) {
+            select(module.id);
+            return;
+        }
+
         if (event.target instanceof Element) {
             event.target.setPointerCapture(event.pointerId);
         }
 
-        select(module.id);
-        beginDrag(module.id, {
-            x: module.position.x - event.point.x,
-            y: 0,
-            z: module.position.z - event.point.z
-        });
-    }, [beginDrag, module.id, module.position.x, module.position.z, select]);
+        dragPendingRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            offset: {
+                x: module.position.x - event.point.x,
+                y: 0,
+                z: module.position.z - event.point.z
+            }
+        };
+    }, [isSelected, module.id, module.position.x, module.position.z, select]);
+
+    const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
+        const pending = dragPendingRef.current;
+
+        if (!pending || pending.pointerId !== event.pointerId) {
+            return;
+        }
+
+        const deltaX = event.clientX - pending.startX;
+        const deltaY = event.clientY - pending.startY;
+
+        if (Math.hypot(deltaX, deltaY) < DRAG_THRESHOLD_PX) {
+            return;
+        }
+
+        event.stopPropagation();
+        dragPendingRef.current = null;
+
+        if (event.target instanceof Element && event.target.hasPointerCapture(event.pointerId)) {
+            event.target.releasePointerCapture(event.pointerId);
+        }
+
+        beginDrag(module.id, pending.offset);
+    }, [beginDrag, module.id]);
 
     const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {
+        dragPendingRef.current = null;
+
         if (event.target instanceof Element && event.target.hasPointerCapture(event.pointerId)) {
             event.target.releasePointerCapture(event.pointerId);
         }
@@ -77,6 +134,7 @@ function ModuleComponent({ module, modules }: Props) {
         >
             <mesh
                 onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
             >
@@ -97,6 +155,22 @@ function ModuleComponent({ module, modules }: Props) {
                 <>
                     <CircularBannerFabricSurface module={module} />
                     <CircularBannerFrame
+                        module={module}
+                        color={isSelected ? "orange" : "white"}
+                    />
+                </>
+            ) : isSquareBanner ? (
+                <>
+                    <SquareBannerFabricSurface module={module} />
+                    <SquareBannerFrame
+                        module={module}
+                        color={isSelected ? "orange" : "white"}
+                    />
+                </>
+            ) : isPromoStand ? (
+                <>
+                    <PromoStandFabricSurface module={module} />
+                    <PromoStandFrame
                         module={module}
                         color={isSelected ? "orange" : "white"}
                     />
@@ -125,9 +199,9 @@ function ModuleComponent({ module, modules }: Props) {
             {isSelected && (
                 <mesh
                     scale={
-                        isCircularBanner
+                        isHangingBanner
                             ? [1.03, 1.03, 1.03]
-                            : isCube
+                            : isBoxLike
                                 ? [1.03, 1.03, 1.03]
                                 : [1.03, 1.03, 1.35]
                     }
@@ -135,7 +209,7 @@ function ModuleComponent({ module, modules }: Props) {
                 >
                     <boxGeometry
                         args={
-                            isCircularBanner
+                            isHangingBanner
                                 ? [
                                     module.width,
                                     module.height,

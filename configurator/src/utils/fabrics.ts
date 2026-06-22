@@ -9,6 +9,7 @@ import type {
     RasterArtworkInfo,
     StandModule
 } from "../models/ModuleModel";
+import { isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
 import {
     createDefaultBannerFabrics,
     getBannerFabricSides,
@@ -21,14 +22,24 @@ import {
     getBannerMidRadius,
     getBannerSegmentAngle,
     getBannerSegmentArcWidth,
-    getBannerSegmentCount
+    getBannerSegmentCount,
+    getSquareBannerSegmentWidth,
+    getSquareBannerSegmentWidthForLayer
 } from "./bannerGeometry";
 
 export const METERS_PER_INCH = 0.0254;
 export const CENTIMETERS_PER_METER = 100;
+export const MELAMINE_TOP_THICKNESS_CM = 2.5;
+export const MELAMINE_TOP_THICKNESS = MELAMINE_TOP_THICKNESS_CM / CENTIMETERS_PER_METER;
+export const MELAMINE_TOP_EXCESS_CM = 1;
+export const MELAMINE_TOP_EXCESS = MELAMINE_TOP_EXCESS_CM / CENTIMETERS_PER_METER;
+export const MELAMINE_SHELF_THICKNESS_CM = 1.5;
+export const MELAMINE_SHELF_THICKNESS = MELAMINE_SHELF_THICKNESS_CM / CENTIMETERS_PER_METER;
+export const MIN_PRINT_DPI = 150;
 
 export const FRAME_FABRIC_SIDES = ["front", "back"] as const;
 export const CUBE_FABRIC_SIDES = ["front", "back", "left", "right", "top"] as const;
+export const PROMO_STAND_FABRIC_SIDES = ["front", "left", "right", "inside"] as const;
 
 export const FABRIC_SIDES: FabricSide[] = [...FRAME_FABRIC_SIDES];
 
@@ -60,7 +71,16 @@ export function getRailThickness(
         );
     }
 
-    if (module.type === "cube") {
+    if (module.type === "squareBanner") {
+        return Math.min(
+            0.08,
+            getSquareBannerSegmentWidth(module) * 0.12,
+            module.height * 0.08,
+            module.depth * 0.5
+        );
+    }
+
+    if (module.type === "cube" || module.type === "promoStand") {
         return Math.min(
             0.05,
             module.width * 0.08,
@@ -77,13 +97,55 @@ export function getRailThickness(
 }
 
 export function getFabricSidesForModule(module: StandModule): FabricSide[] {
-    if (module.type === "circularBanner") {
+    if (isHangingBannerType(module.type)) {
         return getBannerFabricSides(getBannerSegmentCount(module));
+    }
+
+    if (module.type === "promoStand") {
+        return [...PROMO_STAND_FABRIC_SIDES];
     }
 
     return module.type === "cube"
         ? [...CUBE_FABRIC_SIDES]
         : [...FRAME_FABRIC_SIDES];
+}
+
+export function isPromoStandMelamineTopActive(module: StandModule): boolean {
+    return isPromoStandType(module.type);
+}
+
+export function isMelamineTopActive(module: StandModule): boolean {
+    return isCubeMelamineTopActive(module) || isPromoStandMelamineTopActive(module);
+}
+
+export function isCubeMelamineTopActive(module: StandModule): boolean {
+    return module.type === "cube" && module.hasMelamineTop === true;
+}
+
+export function melamineBlocksFabricOptions(
+    module: StandModule,
+    sides: FabricSide[]
+): boolean {
+    if (isPromoStandMelamineTopActive(module)) {
+        return false;
+    }
+
+    return isCubeMelamineTopActive(module) && sides.includes("top");
+}
+
+export function filterMelamineBlockedFabricSides(
+    module: StandModule,
+    sides: FabricSide[]
+): FabricSide[] {
+    if (isPromoStandMelamineTopActive(module)) {
+        return sides;
+    }
+
+    if (!isCubeMelamineTopActive(module)) {
+        return sides;
+    }
+
+    return sides.filter(side => side !== "top");
 }
 
 export function isFabricSideValidForModule(
@@ -105,11 +167,15 @@ export function createDefaultFabrics(
     moduleType: ModuleType = "wall",
     segmentCount = DEFAULT_BANNER_SEGMENT_COUNT
 ): ModuleFabrics {
-    if (moduleType === "circularBanner") {
+    if (isHangingBannerType(moduleType)) {
         return createDefaultBannerFabrics(segmentCount);
     }
 
-    const sides = moduleType === "cube" ? CUBE_FABRIC_SIDES : FRAME_FABRIC_SIDES;
+    const sides = moduleType === "promoStand"
+        ? PROMO_STAND_FABRIC_SIDES
+        : moduleType === "cube"
+            ? CUBE_FABRIC_SIDES
+            : FRAME_FABRIC_SIDES;
 
     return Object.fromEntries(
         sides.map(side => [side, createDefaultFabricInfo()])
@@ -171,14 +237,46 @@ export function getFabricDimensions(
     module: StandModule,
     side: FabricSide
 ): FabricDimensions {
-    if (module.type === "circularBanner" && isBannerFabricSide(side)) {
+    if (isHangingBannerType(module.type) && isBannerFabricSide(side)) {
         const parsed = parseBannerFabricSide(side);
 
         if (parsed) {
             return {
-                width: getBannerSegmentArcWidth(module, parsed.layer),
+                width: module.type === "circularBanner"
+                    ? getBannerSegmentArcWidth(module, parsed.layer)
+                    : getSquareBannerSegmentWidthForLayer(module, parsed.layer),
                 height: module.height
             };
+        }
+    }
+
+    if (module.type === "promoStand") {
+        const rail = getRailThickness(module);
+        const innerWidth = Math.max(module.width - rail * 2, rail);
+        const innerHeight = Math.max(module.height - rail * 2, rail);
+
+        switch (side) {
+            case "front":
+                return {
+                    width: module.width,
+                    height: module.height
+                };
+            case "left":
+            case "right":
+                return {
+                    width: module.depth,
+                    height: module.height
+                };
+            case "inside":
+                return {
+                    width: innerWidth,
+                    height: innerHeight
+                };
+            default:
+                return {
+                    width: module.width,
+                    height: module.height
+                };
         }
     }
 
@@ -348,7 +446,7 @@ export function getActiveFabricArtwork(
     members: StandModule[],
     mergedWidth: number
 ): ArtworkInfo | null {
-    if (module.type === "cube" || module.type === "circularBanner") {
+    if (module.type === "cube" || isPromoStandType(module.type) || isHangingBannerType(module.type)) {
         return getModuleFabricArtwork(module, side);
     }
 
@@ -360,7 +458,7 @@ export function getActiveFabric(
     side: FabricSide,
     members: StandModule[]
 ): FabricInfo {
-    if (module.type === "cube" || module.type === "circularBanner") {
+    if (module.type === "cube" || isPromoStandType(module.type) || isHangingBannerType(module.type)) {
         return getModuleFabric(module, side);
     }
 
@@ -372,7 +470,7 @@ export function getActiveFabricPrintDimensions(
     side: FabricSide,
     mergedWidth: number
 ): FabricDimensions {
-    if (module.type === "cube" || module.type === "circularBanner") {
+    if (module.type === "cube" || isPromoStandType(module.type) || isHangingBannerType(module.type)) {
         return getFabricDimensions(module, side);
     }
 
@@ -386,7 +484,7 @@ export function resizeModuleFabricsForSegmentCount(
     module: StandModule,
     segmentCount: number
 ): ModuleFabrics {
-    if (module.type !== "circularBanner") {
+    if (!isHangingBannerType(module.type)) {
         return module.fabrics ?? createDefaultFabrics(module.type);
     }
 
@@ -435,11 +533,34 @@ export function recalculateModuleFabrics(
     _members: StandModule[],
     mergedWidth: number
 ): ModuleFabrics {
-    if (module.type === "circularBanner") {
+    if (isHangingBannerType(module.type)) {
         const segmentCount = getBannerSegmentCount(module);
 
         return Object.fromEntries(
             getBannerFabricSides(segmentCount).map(side => {
+                const fabric = getModuleFabric(module, side);
+                const dimensions = getFabricDimensions(module, side);
+
+                return [
+                    side,
+                    {
+                        ...fabric,
+                        artwork: fabric.artwork
+                            ? recalculateArtworkDpi(
+                                fabric.artwork,
+                                dimensions.width,
+                                dimensions.height
+                            )
+                            : null
+                    }
+                ];
+            })
+        );
+    }
+
+    if (module.type === "promoStand") {
+        return Object.fromEntries(
+            PROMO_STAND_FABRIC_SIDES.map(side => {
                 const fabric = getModuleFabric(module, side);
                 const dimensions = getFabricDimensions(module, side);
 

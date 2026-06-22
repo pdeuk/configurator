@@ -57,23 +57,25 @@ export function CubeFrame({ module, color }: CubeFrameProps) {
 
             <Rail
                 size={[innerWidth, rail, rail]}
-                position={[0, topY, frontZ]}
-                color={color}
-            />
-            <Rail
-                size={[innerWidth, rail, rail]}
                 position={[0, bottomY, frontZ]}
                 color={color}
             />
 
             <Rail
                 size={[innerWidth, rail, rail]}
-                position={[0, topY, backZ]}
+                position={[0, topY, frontZ]}
                 color={color}
             />
+
             <Rail
                 size={[innerWidth, rail, rail]}
                 position={[0, bottomY, backZ]}
+                color={color}
+            />
+
+            <Rail
+                size={[innerWidth, rail, rail]}
+                position={[0, topY, backZ]}
                 color={color}
             />
 

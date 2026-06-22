@@ -1,4 +1,5 @@
 import type { StandModule } from "../models/ModuleModel";
+import { isHangingBannerType } from "../models/ModuleModel";
 import type { HiddenFrameSides } from "./WallFrame";
 
 const CONNECTION_TOLERANCE = 0.025;
@@ -20,7 +21,7 @@ export function getFrameConnectionLayout(
     module: StandModule,
     modules: StandModule[]
 ): FrameConnectionLayout {
-    if (module.type === "cube" || module.type === "circularBanner") {
+    if (module.type === "cube" || module.type === "promoStand" || isHangingBannerType(module.type)) {
         return {
             hiddenSides: {},
             fabric: {

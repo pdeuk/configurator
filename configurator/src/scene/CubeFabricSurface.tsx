@@ -3,13 +3,13 @@ import {
     CUBE_FABRIC_SIDES,
     getFabricDimensions,
     getModuleFabric,
-    getModuleFabricArtwork
+    getModuleFabricArtwork,
+    isCubeMelamineTopActive
 } from "../utils/fabrics";
+import { CubeMelamineTop } from "./CubeMelamineTop";
 import { FabricPanel } from "./fabricPanel";
 
 const FABRIC_INSET = 0.003;
-const BACKLIGHT_OFFSET = 0.045;
-const GLOW_OFFSET = 0.009;
 
 interface CubeFabricSurfaceProps {
     module: StandModule;
@@ -21,10 +21,6 @@ interface CubeFaceLayout {
     panelHeight: number;
     position: [number, number, number];
     rotation: [number, number, number];
-    backlightPosition: [number, number, number];
-    backlightRotation: [number, number, number];
-    glowPosition: [number, number, number];
-    glowRotation: [number, number, number];
 }
 
 function getCubeFaceLayout(module: StandModule, side: CubeFabricSide): CubeFaceLayout {
@@ -40,11 +36,7 @@ function getCubeFaceLayout(module: StandModule, side: CubeFabricSide): CubeFaceL
                 panelWidth: dimensions.width,
                 panelHeight: dimensions.height,
                 position: [0, 0, -halfDepth - FABRIC_INSET],
-                rotation: [0, Math.PI, 0],
-                backlightPosition: [0, 0, -halfDepth + BACKLIGHT_OFFSET],
-                backlightRotation: [0, 0, 0],
-                glowPosition: [0, 0, -halfDepth - GLOW_OFFSET],
-                glowRotation: [0, Math.PI, 0]
+                rotation: [0, Math.PI, 0]
             };
         case "back":
             return {
@@ -52,11 +44,7 @@ function getCubeFaceLayout(module: StandModule, side: CubeFabricSide): CubeFaceL
                 panelWidth: dimensions.width,
                 panelHeight: dimensions.height,
                 position: [0, 0, halfDepth + FABRIC_INSET],
-                rotation: [0, 0, 0],
-                backlightPosition: [0, 0, halfDepth - BACKLIGHT_OFFSET],
-                backlightRotation: [0, Math.PI, 0],
-                glowPosition: [0, 0, halfDepth + GLOW_OFFSET],
-                glowRotation: [0, 0, 0]
+                rotation: [0, 0, 0]
             };
         case "left":
             return {
@@ -64,11 +52,7 @@ function getCubeFaceLayout(module: StandModule, side: CubeFabricSide): CubeFaceL
                 panelWidth: dimensions.width,
                 panelHeight: dimensions.height,
                 position: [-halfWidth - FABRIC_INSET, 0, 0],
-                rotation: [0, -Math.PI / 2, 0],
-                backlightPosition: [-halfWidth + BACKLIGHT_OFFSET, 0, 0],
-                backlightRotation: [0, -Math.PI / 2, 0],
-                glowPosition: [-halfWidth - GLOW_OFFSET, 0, 0],
-                glowRotation: [0, -Math.PI / 2, 0]
+                rotation: [0, -Math.PI / 2, 0]
             };
         case "right":
             return {
@@ -76,11 +60,7 @@ function getCubeFaceLayout(module: StandModule, side: CubeFabricSide): CubeFaceL
                 panelWidth: dimensions.width,
                 panelHeight: dimensions.height,
                 position: [halfWidth + FABRIC_INSET, 0, 0],
-                rotation: [0, Math.PI / 2, 0],
-                backlightPosition: [halfWidth - BACKLIGHT_OFFSET, 0, 0],
-                backlightRotation: [0, Math.PI / 2, 0],
-                glowPosition: [halfWidth + GLOW_OFFSET, 0, 0],
-                glowRotation: [0, Math.PI / 2, 0]
+                rotation: [0, Math.PI / 2, 0]
             };
         case "top":
             return {
@@ -88,19 +68,21 @@ function getCubeFaceLayout(module: StandModule, side: CubeFabricSide): CubeFaceL
                 panelWidth: dimensions.width,
                 panelHeight: dimensions.height,
                 position: [0, halfHeight + FABRIC_INSET, 0],
-                rotation: [-Math.PI / 2, 0, 0],
-                backlightPosition: [0, halfHeight - BACKLIGHT_OFFSET, 0],
-                backlightRotation: [-Math.PI / 2, 0, 0],
-                glowPosition: [0, halfHeight + GLOW_OFFSET, 0],
-                glowRotation: [-Math.PI / 2, 0, 0]
+                rotation: [-Math.PI / 2, 0, 0]
             };
     }
 }
 
 export function CubeFabricSurface({ module }: CubeFabricSurfaceProps) {
+    const hasMelamineTop = isCubeMelamineTopActive(module);
+
     return (
         <>
             {CUBE_FABRIC_SIDES.map(side => {
+                if (hasMelamineTop && side === "top") {
+                    return null;
+                }
+
                 const layout = getCubeFaceLayout(module, side);
                 const fabric = getModuleFabric(module, side);
                 const artwork = getModuleFabricArtwork(module, side);
@@ -114,13 +96,10 @@ export function CubeFabricSurface({ module }: CubeFabricSurfaceProps) {
                         panelHeight={layout.panelHeight}
                         position={layout.position}
                         rotation={layout.rotation}
-                        backlightPosition={layout.backlightPosition}
-                        backlightRotation={layout.backlightRotation}
-                        glowPosition={layout.glowPosition}
-                        glowRotation={layout.glowRotation}
                     />
                 );
             })}
+            {hasMelamineTop && <CubeMelamineTop module={module} />}
         </>
     );
 }

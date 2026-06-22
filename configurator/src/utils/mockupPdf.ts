@@ -4,7 +4,8 @@ import {
     getActiveFabric,
     getActiveFabricArtwork,
     getActiveFabricPrintDimensions,
-    getFabricSidesForModule
+    getFabricSidesForModule,
+    MIN_PRINT_DPI
 } from "./fabrics";
 import { createSolidBlockoutMockup, loadImageElement } from "./mockupImage";
 
@@ -17,6 +18,7 @@ export interface MockupEntry {
     printHeightCm: number;
     pixelWidth: number | null;
     pixelHeight: number | null;
+    effectiveDpi: number | null;
 }
 
 interface BlockoutMockupDraft extends MockupEntry {
@@ -58,6 +60,7 @@ export function getMockupEntries(
                 printHeightCm,
                 pixelWidth: null,
                 pixelHeight: null,
+                effectiveDpi: null,
                 needsBlockoutFill: true
             };
         }
@@ -77,9 +80,49 @@ export function getMockupEntries(
             printWidthCm,
             printHeightCm,
             pixelWidth: artwork?.pixelWidth ?? null,
-            pixelHeight: artwork?.pixelHeight ?? null
+            pixelHeight: artwork?.pixelHeight ?? null,
+            effectiveDpi: artwork?.effectiveDpi ?? null
         };
     });
+}
+
+export function getInsufficientDpiTooltip(
+    printWidthCm: number,
+    printHeightCm: number
+) {
+    return `The current image file is not suitable for printing on ${printWidthCm} × ${printHeightCm} cm.`;
+}
+
+export function isMockupEntryDpiSuitable(entry: MockupEntry): boolean {
+    if (entry.isBlockout) {
+        return true;
+    }
+
+    if (!entry.imageUrl) {
+        return true;
+    }
+
+    return entry.effectiveDpi !== null && entry.effectiveDpi >= MIN_PRINT_DPI;
+}
+
+export function hasInsufficientMockupDpi(entries: MockupEntry[]): boolean {
+    return entries.some(entry => !isMockupEntryDpiSuitable(entry));
+}
+
+export function hasEmptyMockupArtwork(entries: Pick<MockupEntry, "imageUrl">[]): boolean {
+    return entries.some(entry => !entry.imageUrl);
+}
+
+export function canDownloadMockup(
+    entries: MockupEntry[],
+    isExporting: boolean
+): boolean {
+    return (
+        entries.length > 0 &&
+        !hasEmptyMockupArtwork(entries) &&
+        !hasInsufficientMockupDpi(entries) &&
+        !isExporting
+    );
 }
 
 function isBlockoutDraft(entry: MockupEntryDraft): entry is BlockoutMockupDraft {
@@ -107,7 +150,8 @@ export function resolveMockupEntries(
             printWidthCm: entry.printWidthCm,
             printHeightCm: entry.printHeightCm,
             pixelWidth: composed.pixelWidth,
-            pixelHeight: composed.pixelHeight
+            pixelHeight: composed.pixelHeight,
+            effectiveDpi: null
         };
     });
 }
@@ -147,6 +191,15 @@ export async function downloadMockupPdf(
     entries: MockupEntryDraft[]
 ) {
     const resolvedEntries = resolveMockupEntries(entries);
+
+    if (resolvedEntries.some(entry => !entry.imageUrl)) {
+        return;
+    }
+
+    if (hasInsufficientMockupDpi(resolvedEntries)) {
+        return;
+    }
+
     const entriesWithImages = resolvedEntries.filter(
         (entry): entry is MockupEntry & { imageUrl: string } =>
             entry.imageUrl !== null

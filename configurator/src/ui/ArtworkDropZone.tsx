@@ -7,7 +7,11 @@ import {
     createArtworkAssignmentsForSides,
     formatFabricSidesLabel
 } from "../utils/applyFabricArtwork";
-import { getActiveFabricArtwork } from "../utils/fabrics";
+import {
+    filterMelamineBlockedFabricSides,
+    getActiveFabricArtwork,
+    isCubeMelamineTopActive
+} from "../utils/fabrics";
 
 function formatArtworkMessage(
     fileName: string,
@@ -77,11 +81,24 @@ export function ArtworkDropZone() {
         );
     }, [activeFabricSides.length, mergedArtwork]);
     const displayMessage = transientMessage ?? artworkMessage;
+    const artworkSides = selectedModule
+        ? filterMelamineBlockedFabricSides(selectedModule, activeFabricSides)
+        : activeFabricSides;
     const selectionLabel = formatFabricSidesLabel(activeFabricSides);
+    const artworkSelectionLabel = formatFabricSidesLabel(artworkSides);
+    const topMelamineBlocksAllSides = selectedModule
+        && isCubeMelamineTopActive(selectedModule)
+        && artworkSides.length === 0
+        && activeFabricSides.length > 0;
 
     const applyArtworkFile = async (file: File) => {
         if (!selectedModule || activeFabricSides.length === 0) {
             setTransientMessage("Select a module and at least one fabric face.");
+            return;
+        }
+
+        if (artworkSides.length === 0) {
+            setTransientMessage("Top face uses melamine and cannot accept artwork.");
             return;
         }
 
@@ -90,7 +107,7 @@ export function ArtworkDropZone() {
             const assignments = await createArtworkAssignmentsForSides(
                 file,
                 selectedModule,
-                activeFabricSides,
+                artworkSides,
                 modules
             );
             setModuleArtworkForSides(selectedModule.id, assignments);
@@ -158,7 +175,11 @@ export function ArtworkDropZone() {
             <strong style={styles.title}>Artwork</strong>
             <span style={styles.text}>
                 {selectedModule
-                    ? `Drop PDF, TIFF, JPG, or PNG onto ${selectionLabel}.`
+                    ? topMelamineBlocksAllSides
+                        ? "Top uses melamine — select another face for artwork."
+                        : artworkSides.length < activeFabricSides.length
+                            ? `Drop artwork onto ${artworkSelectionLabel} (top uses melamine).`
+                            : `Drop PDF, TIFF, JPG, or PNG onto ${selectionLabel}.`
                     : "Select a module to upload artwork."}
             </span>
             {displayMessage && <span style={styles.message}>{displayMessage}</span>}

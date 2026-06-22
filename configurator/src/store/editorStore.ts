@@ -6,6 +6,7 @@ import type {
     Position3,
     StandModule
 } from "../models/ModuleModel";
+import { isHangingBannerType } from "../models/ModuleModel";
 import {
     createDefaultFabrics,
     getFabricSidesForModule,
@@ -283,7 +284,7 @@ export const useEditorStore = create<EditorState>((set) => ({
                 ...data
             };
             const segmentCountChanged =
-                updatedModule.type === "circularBanner" &&
+                isHangingBannerType(updatedModule.type) &&
                 data.segmentCount !== undefined &&
                 clampBannerSegmentCount(data.segmentCount) !==
                     clampBannerSegmentCount(

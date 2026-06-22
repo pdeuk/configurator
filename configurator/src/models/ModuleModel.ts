@@ -1,8 +1,22 @@
 export type ModuleType =
     | "wall"
     | "cube"
+    | "promoStand"
     | "corner"
-    | "circularBanner";
+    | "circularBanner"
+    | "squareBanner";
+
+export function isHangingBannerType(type: ModuleType): boolean {
+    return type === "circularBanner" || type === "squareBanner";
+}
+
+export function isPromoStandType(type: ModuleType): boolean {
+    return type === "promoStand";
+}
+
+export function isBoxLikeModuleType(type: ModuleType): boolean {
+    return type === "cube" || type === "promoStand";
+}
 
 export interface Position3 {
     x: number;
@@ -54,13 +68,23 @@ export type CubeFabricSide =
     | "right"
     | "top";
 
+export type PromoStandFabricSide =
+    | "front"
+    | "left"
+    | "right"
+    | "inside";
+
 export type BannerFabricLayer = "outside" | "inside";
 
 export type BannerFabricSide =
     | `outside-${number}`
     | `inside-${number}`;
 
-export type FabricSide = FrameFabricSide | CubeFabricSide | BannerFabricSide;
+export type FabricSide =
+    | FrameFabricSide
+    | CubeFabricSide
+    | PromoStandFabricSide
+    | BannerFabricSide;
 
 export interface FabricInfo {
     isBlockout: boolean;
@@ -79,6 +103,7 @@ export interface StandModule {
     height: number;
     depth: number;
     segmentCount?: number;
+    hasMelamineTop?: boolean;
     snappedTo?: string | null;
     fabrics?: ModuleFabrics;
     artwork?: ArtworkInfo | null;

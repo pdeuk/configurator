@@ -65,15 +65,41 @@ export function Toolbar() {
                             y: 0,
                             z: 0.75
                         },
-                        rotation: 0,
+                        rotation: Math.PI,
                         width: 0.5,
                         height: 0.5,
                         depth: 0.5,
+                        hasMelamineTop: false,
                         fabrics: createDefaultFabrics("cube")
                     });
                 }}
             >
                 Add Cube (50x50x50)
+            </button>
+
+            <button
+                type="button"
+                style={styles.button}
+                onClick={() => {
+                    const count = useEditorStore.getState().moduleIds.length;
+
+                    addModule({
+                        id: `promo-stand-${crypto.randomUUID()}`,
+                        type: "promoStand",
+                        position: {
+                            x: count * 0.75,
+                            y: 0,
+                            z: 0.75
+                        },
+                        rotation: Math.PI,
+                        width: 1,
+                        height: 1,
+                        depth: 0.5,
+                        fabrics: createDefaultFabrics("promoStand")
+                    });
+                }}
+            >
+                Add Promo Stand (100x100x50)
             </button>
 
             <button
@@ -91,9 +117,9 @@ export function Toolbar() {
                             z: 0.9
                         },
                         rotation: 0,
-                        width: 1.2,
-                        height: 2,
-                        depth: 0.08,
+                        width: 3,
+                        height: 1,
+                        depth: 0.05,
                         segmentCount: DEFAULT_BANNER_SEGMENT_COUNT,
                         fabrics: createDefaultFabrics(
                             "circularBanner",
@@ -103,6 +129,35 @@ export function Toolbar() {
                 }}
             >
                 Add Hanging Banner (Circular)
+            </button>
+
+            <button
+                type="button"
+                style={styles.button}
+                onClick={() => {
+                    const count = useEditorStore.getState().moduleIds.length;
+
+                    addModule({
+                        id: `square-banner-${crypto.randomUUID()}`,
+                        type: "squareBanner",
+                        position: {
+                            x: count * 0.9,
+                            y: 0,
+                            z: 0.9
+                        },
+                        rotation: 0,
+                        width: 3,
+                        height: 1,
+                        depth: 0.05,
+                        segmentCount: DEFAULT_BANNER_SEGMENT_COUNT,
+                        fabrics: createDefaultFabrics(
+                            "squareBanner",
+                            DEFAULT_BANNER_SEGMENT_COUNT
+                        )
+                    });
+                }}
+            >
+                Add Hanging Banner (Square)
             </button>
 
             <button
