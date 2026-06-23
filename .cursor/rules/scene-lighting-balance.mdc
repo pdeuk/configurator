@@ -32,8 +32,9 @@ Do **not** retune lighting or fabric materials unless the user explicitly asks. 
 
 ## Luminous fabric
 
-- Glow lives **only** in `fabricLuminousBacklight.tsx` (core + bloom + rect area light behind panel)
-- Use `getInteriorLocalZOffset()` for backing/glow placement — never fixed `-Z` offsets on rotated front faces
+- Glow lives **only** in `fabricLuminousBacklight.tsx` — `rectAreaLight` behind panel (no visible glow plane meshes; they bled through from the back)
+- Backing/glow sit at local `-Z` / `radius - offset` behind the fabric face
+- When block-out or luminous layers exist, fabric uses `DoubleSide` so the back face occludes interior layers
 - Tune via `fabricLuminous.ts` constants only; keep artwork material unchanged when toggling luminous
 
 ## Block-out fabric

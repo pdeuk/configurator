@@ -1,4 +1,4 @@
-import { AdditiveBlending, BackSide, FrontSide } from "three";
+import { AdditiveBlending, FrontSide } from "three";
 
 export const PLAIN_FABRIC_COLOR = "#d8d2c4";
 /** Cool daylight LED backlight — separate from the printed face. */
@@ -30,7 +30,8 @@ export function getFabricCoreGlowMaterialProps() {
         blending: AdditiveBlending,
         depthWrite: false,
         toneMapped: false,
-        side: BackSide
+        // Face the fabric (+Z); culled from the back of the panel.
+        side: FrontSide
     } as const;
 }
 
@@ -42,7 +43,7 @@ export function getFabricBloomGlowMaterialProps() {
         blending: AdditiveBlending,
         depthWrite: false,
         toneMapped: false,
-        side: BackSide
+        side: FrontSide
     } as const;
 }
 

@@ -26,7 +26,7 @@ export function FabricPanel({
     doubleSided = false
 }: FabricPanelProps) {
     const isLuminous = fabric.isLuminous && !fabric.isBlockout;
-    const materialSide = doubleSided ? DoubleSide : FrontSide;
+    const materialSide = doubleSided || fabric.isBlockout ? DoubleSide : FrontSide;
 
     return (
         <group position={position} rotation={rotation}>
@@ -34,14 +34,12 @@ export function FabricPanel({
                 <LuminousBacklightPlane
                     panelWidth={panelWidth}
                     panelHeight={panelHeight}
-                    rotation={rotation}
                 />
             )}
             {fabric.isBlockout && (
                 <BlockoutBackingPlane
                     panelWidth={panelWidth}
                     panelHeight={panelHeight}
-                    rotation={rotation}
                     doubleSided={doubleSided}
                 />
             )}

@@ -1,4 +1,4 @@
-﻿import { BackSide, FrontSide } from "three";
+﻿import { BackSide, DoubleSide, FrontSide } from "three";
 import type { ArtworkInfo, FabricInfo } from "../models/ModuleModel";
 import { BlockoutBackingArc } from "./fabricBlockout";
 import { FabricFaceMaterial } from "./fabricMaterials";
@@ -27,7 +27,11 @@ export function CurvedFabricArc({
 }: CurvedFabricArcProps) {
     const isLuminous = fabric.isLuminous && !fabric.isBlockout;
     const radialSegments = Math.max(12, Math.ceil(thetaLength * 32));
-    const materialSide = inward ? BackSide : FrontSide;
+    const materialSide = fabric.isBlockout
+        ? DoubleSide
+        : inward
+            ? BackSide
+            : FrontSide;
 
     return (
         <>
@@ -37,8 +41,6 @@ export function CurvedFabricArc({
                     height={height}
                     thetaStart={thetaStart}
                     thetaLength={thetaLength}
-                    radialSegments={radialSegments}
-                    inward={inward}
                 />
             )}
             {fabric.isBlockout && (
@@ -48,7 +50,6 @@ export function CurvedFabricArc({
                     thetaStart={thetaStart}
                     thetaLength={thetaLength}
                     radialSegments={radialSegments}
-                    inward={inward}
                 />
             )}
             <mesh
