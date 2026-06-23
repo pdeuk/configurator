@@ -1,6 +1,9 @@
 export const GRID_SIZE = 20;
 export const MIN_FLOOR_SIZE = 0.5;
 export const DEFAULT_FLOOR_SIZE = GRID_SIZE;
+/** Default floor footprint: 1200 cm × 1200 cm (stored in meters). */
+export const DEFAULT_FLOOR_WIDTH = 12;
+export const DEFAULT_FLOOR_DEPTH = 12;
 
 /** @deprecated Use GRID_SIZE */
 export const FLOOR_SIZE = GRID_SIZE;
@@ -11,8 +14,8 @@ export interface FloorSize {
 }
 
 export const DEFAULT_FLOOR_DIMENSIONS: FloorSize = {
-    width: DEFAULT_FLOOR_SIZE,
-    depth: DEFAULT_FLOOR_SIZE
+    width: DEFAULT_FLOOR_WIDTH,
+    depth: DEFAULT_FLOOR_DEPTH
 };
 
 export function clampFloorDimension(value: number): number {
@@ -80,7 +83,7 @@ export const FLOOR_MATERIALS: FloorMaterialDefinition[] = [
     }
 ];
 
-export const DEFAULT_FLOOR_MATERIAL_ID: FloorMaterialId = "interiorTiles";
+export const DEFAULT_FLOOR_MATERIAL_ID: FloorMaterialId = "woodFloorWorn";
 
 /** Full-strength texture multiply — color vividness comes from toneMapped=false + emissiveMap. */
 export const FLOOR_DIFFUSE_TINT = "#ffffff";
