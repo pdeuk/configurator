@@ -31,9 +31,12 @@ interface ProjectSessionContextValue {
     activeProjectId: string;
     activeProjectName: string;
     isManagerOpen: boolean;
+    isTemplateGalleryOpen: boolean;
     isBusy: boolean;
     openManager: () => void;
     closeManager: () => void;
+    openTemplateGallery: () => void;
+    closeTemplateGallery: () => void;
     refreshProjects: () => Promise<void>;
     saveActiveProject: () => Promise<ProjectDocument>;
     createNewProject: () => Promise<void>;
@@ -103,6 +106,7 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
     const [activeProjectName, setActiveProjectName] = useState(initialDocument.name);
     const [projects, setProjects] = useState<ProjectDocument[]>([]);
     const [isManagerOpen, setIsManagerOpen] = useState(false);
+    const [isTemplateGalleryOpen, setIsTemplateGalleryOpen] = useState(false);
     const [isBusy, setIsBusy] = useState(false);
 
     const {
@@ -435,9 +439,12 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
         activeProjectId,
         activeProjectName,
         isManagerOpen,
+        isTemplateGalleryOpen,
         isBusy,
         openManager: () => setIsManagerOpen(true),
         closeManager: () => setIsManagerOpen(false),
+        openTemplateGallery: () => setIsTemplateGalleryOpen(true),
+        closeTemplateGallery: () => setIsTemplateGalleryOpen(false),
         refreshProjects,
         saveActiveProject,
         createNewProject,
@@ -457,6 +464,7 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
         deleteProject,
         isBusy,
         isManagerOpen,
+        isTemplateGalleryOpen,
         openProject,
         projects,
         refreshProjects,

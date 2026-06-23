@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ProjectDocument } from "../../models/ProjectModel";
 import { formatProjectSummary, useProjectSession } from "./projectSession";
 import { PermissionGuard } from "../auth";
-import { TemplateGallery } from "../templates";
 import { VersionHistoryPanel } from "./VersionHistoryPanel";
 
 function formatUpdatedAt(value: string): string {
@@ -25,16 +24,14 @@ export function ProjectManager() {
         refreshProjects,
         saveActiveProject,
         createNewProject,
-        createProjectFromTemplate,
-        createTemplateFromCurrentProject,
         openProject,
         deleteProject,
-        renameProject
+        renameProject,
+        openTemplateGallery
     } = useProjectSession();
     const [renameTarget, setRenameTarget] = useState<ProjectDocument | null>(null);
     const [renameValue, setRenameValue] = useState("");
     const [newProjectMenuOpen, setNewProjectMenuOpen] = useState(false);
-    const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
     const newProjectMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -151,7 +148,7 @@ export function ProjectManager() {
                                         disabled={isBusy}
                                         onClick={() => {
                                             setNewProjectMenuOpen(false);
-                                            setTemplateGalleryOpen(true);
+                                            openTemplateGallery();
                                         }}
                                     >
                                         From Template
@@ -285,17 +282,6 @@ export function ProjectManager() {
                     </div>
                 )}
             </div>
-
-            <TemplateGallery
-                isOpen={templateGalleryOpen}
-                isBusy={isBusy}
-                onClose={() => setTemplateGalleryOpen(false)}
-                onUseTemplate={async templateId => {
-                    await createProjectFromTemplate(templateId);
-                    setTemplateGalleryOpen(false);
-                }}
-                onCreateFromCurrent={createTemplateFromCurrentProject}
-            />
         </div>
     );
 }

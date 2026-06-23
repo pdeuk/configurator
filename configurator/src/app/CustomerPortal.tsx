@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
     buildPortalProjectPath,
     customerService,
@@ -17,14 +18,16 @@ import {
 } from "../services/settings";
 import { ProjectService } from "../services/ProjectService";
 import { getProjectStorage } from "../services/cloud";
-import { CloudSessionProvider, useCloudSession } from "../ui/cloud";
+import { useCloudSession } from "../ui/cloud";
 import { SharedProjectViewer } from "./SharedProjectViewer";
 
 interface CustomerPortalProps {
     projectId?: string | null;
 }
 
-function CustomerPortalShell({ projectId }: CustomerPortalProps) {
+function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortalProps) {
+    const navigate = useNavigate();
+    const projectId = projectIdProp;
     const { user, isConfigured, login, register, logout, isAuthenticating, authError } =
         useCloudSession();
     const [customer, setCustomer] = useState<Customer | null>(null);
@@ -157,7 +160,7 @@ function CustomerPortalShell({ projectId }: CustomerPortalProps) {
             await logout();
         }
 
-        window.location.href = "/portal";
+        navigate("/portal", { replace: true });
     };
 
     if (projectId && customer) {
@@ -236,6 +239,11 @@ function CustomerPortalShell({ projectId }: CustomerPortalProps) {
                         )}
                     </div>
                     {(error || authError) && <p style={styles.error}>{error ?? authError}</p>}
+                    <p style={styles.backLinkRow}>
+                        <Link to="/" style={styles.backLink}>
+                            Organization workspace sign-in
+                        </Link>
+                    </p>
                 </div>
             </div>
         );
@@ -285,7 +293,7 @@ function CustomerPortalShell({ projectId }: CustomerPortalProps) {
                                     type="button"
                                     style={styles.buttonPrimary}
                                     onClick={() => {
-                                        window.location.href = buildPortalProjectPath(project.projectId);
+                                        navigate(buildPortalProjectPath(project.projectId));
                                     }}
                                 >
                                     Open project
@@ -334,12 +342,10 @@ function CustomerPortalShell({ projectId }: CustomerPortalProps) {
     );
 }
 
-export function CustomerPortal({ projectId = null }: CustomerPortalProps) {
-    return (
-        <CloudSessionProvider>
-            <CustomerPortalShell projectId={projectId} />
-        </CloudSessionProvider>
-    );
+export function CustomerPortal() {
+    const { projectId } = useParams<{ projectId?: string }>();
+
+    return <CustomerPortalShell projectId={projectId ?? null} />;
 }
 
 const styles = {
@@ -504,5 +510,13 @@ const styles = {
         margin: 0,
         color: "#fca5a5",
         fontSize: 12
+    },
+    backLinkRow: {
+        margin: "8px 0 0",
+        fontSize: 13
+    },
+    backLink: {
+        color: "#93c5fd",
+        textDecoration: "none"
     }
 };

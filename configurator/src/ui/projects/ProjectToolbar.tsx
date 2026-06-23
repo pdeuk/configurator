@@ -19,11 +19,11 @@ import {
 } from "../../services/system";
 import { trackEvent } from "../../services/analytics";
 import { AsyncErrorTrigger, PdfExportErrorBoundary } from "../system";
-import { useSettings, AdminPanel } from "../settings";
-import { PermissionGuard, usePermissions, UserManagementPanel } from "../auth";
+import { useSettings } from "../settings";
+import { PermissionGuard, usePermissions } from "../auth";
 import { AuthPanel, useCloudSession } from "../cloud";
-import { AssignCustomerDialog } from "../customer/AssignCustomerDialog";
 import { useARPreview } from "../ar";
+import { useAppShell } from "../shell";
 import { useProjectSession } from "./projectSession";
 
 export function ProjectToolbar() {
@@ -31,6 +31,7 @@ export function ProjectToolbar() {
         activeProjectName,
         isBusy,
         openManager,
+        openTemplateGallery,
         saveActiveProject,
         saveRevision,
         refreshProjects
@@ -44,6 +45,12 @@ export function ProjectToolbar() {
     const { settings, materialCatalog } = useSettings();
     const { canManageUsers } = usePermissions();
     const { openARPreview } = useARPreview();
+    const {
+        openAdmin,
+        openAssignCustomer,
+        openUsers,
+        toggleReviews
+    } = useAppShell();
     const [menuOpen, setMenuOpen] = useState(false);
     const [cloudMenuOpen, setCloudMenuOpen] = useState(false);
     const [shareMessage, setShareMessage] = useState<string | null>(null);
@@ -52,9 +59,6 @@ export function ProjectToolbar() {
     const [quoteMessage, setQuoteMessage] = useState<string | null>(null);
     const [exportBoundaryError, setExportBoundaryError] = useState<Error | null>(null);
     const [cloudMessage, setCloudMessage] = useState<string | null>(null);
-    const [adminOpen, setAdminOpen] = useState(false);
-    const [assignCustomerOpen, setAssignCustomerOpen] = useState(false);
-    const [usersOpen, setUsersOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const cloudContainerRef = useRef<HTMLDivElement>(null);
 
@@ -470,7 +474,7 @@ export function ProjectToolbar() {
                                 disabled={isBusy}
                                 onClick={() => {
                                     setMenuOpen(false);
-                                    setAssignCustomerOpen(true);
+                                    openAssignCustomer();
                                 }}
                             >
                                 Assign Customer…
@@ -483,7 +487,7 @@ export function ProjectToolbar() {
                                 disabled={isBusy}
                                 onClick={() => {
                                     setMenuOpen(false);
-                                    setAdminOpen(true);
+                                    openAdmin("dashboard");
                                 }}
                             >
                                 Admin Settings…
@@ -496,7 +500,7 @@ export function ProjectToolbar() {
                                 disabled={isBusy}
                                 onClick={() => {
                                     setMenuOpen(false);
-                                    setUsersOpen(true);
+                                    openUsers();
                                 }}
                             >
                                 User Management…
@@ -518,6 +522,99 @@ export function ProjectToolbar() {
                     </div>
                 )}
             </div>
+
+            <nav style={styles.navGroup} aria-label="Application">
+                <PermissionGuard action="projects.view">
+                    <button type="button" style={styles.navButton} disabled={isBusy} onClick={openManager}>
+                        Projects
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="projects.create">
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={openTemplateGallery}
+                    >
+                        Templates
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="projects.edit">
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={() => openAdmin("components")}
+                    >
+                        Components
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="settings.edit">
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={() => openAdmin("customers")}
+                    >
+                        Customers
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="quotes.export">
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={() => void handleExportQuotePdf()}
+                    >
+                        Quotes
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="manufacturing.export">
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={() => void handleExportManufacturingPdf()}
+                    >
+                        Manufacturing
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="projects.edit">
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={toggleReviews}
+                    >
+                        Reviews
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="projects.view">
+                    <button type="button" style={styles.navButton} disabled={isBusy} onClick={openARPreview}>
+                        AR Preview
+                    </button>
+                </PermissionGuard>
+                <PermissionGuard action="settings.edit">
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={() => openAdmin("dashboard")}
+                    >
+                        Admin
+                    </button>
+                </PermissionGuard>
+                {canManageUsers && (
+                    <button
+                        type="button"
+                        style={styles.navButton}
+                        disabled={isBusy}
+                        onClick={openUsers}
+                    >
+                        Users
+                    </button>
+                )}
+            </nav>
 
             {isConfigured && (
                 <div style={styles.group} ref={cloudContainerRef}>
@@ -558,17 +655,6 @@ export function ProjectToolbar() {
                     )}
                 </div>
             )}
-
-            <PermissionGuard action="projects.view">
-                <button
-                    type="button"
-                    style={styles.shareButton}
-                    disabled={isBusy}
-                    onClick={openARPreview}
-                >
-                    View in AR
-                </button>
-            </PermissionGuard>
 
             <PermissionGuard action="projects.edit">
                 <button
@@ -628,15 +714,6 @@ export function ProjectToolbar() {
                     Save Project
                 </button>
             </PermissionGuard>
-
-            <PermissionGuard action="settings.edit">
-                <AdminPanel isOpen={adminOpen} onClose={() => setAdminOpen(false)} />
-            </PermissionGuard>
-            <AssignCustomerDialog
-                isOpen={assignCustomerOpen}
-                onClose={() => setAssignCustomerOpen(false)}
-            />
-            <UserManagementPanel isOpen={usersOpen} onClose={() => setUsersOpen(false)} />
             </div>
         </PdfExportErrorBoundary>
     );
@@ -645,14 +722,33 @@ export function ProjectToolbar() {
 const styles = {
     bar: {
         position: "absolute",
-        top: 20,
+        top: 40,
         left: 320,
         right: 20,
         zIndex: 12,
         display: "flex",
         alignItems: "center",
+        flexWrap: "wrap",
         gap: 10,
         pointerEvents: "none"
+    },
+    navGroup: {
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 6,
+        pointerEvents: "auto"
+    },
+    navButton: {
+        border: "1px solid #4b5562",
+        background: "#2d3440",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "8px 10px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 12,
+        whiteSpace: "nowrap"
     },
     group: {
         position: "relative",

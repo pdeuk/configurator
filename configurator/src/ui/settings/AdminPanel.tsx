@@ -12,14 +12,23 @@ import { CatalogAdminTab } from "./CatalogAdminTab";
 import { CustomersAdminTab } from "./CustomersAdminTab";
 import { DashboardTab } from "./DashboardTab";
 
-type AdminTab = "dashboard" | "company" | "materials" | "pricing" | "erp" | "activity" | "components" | "customers";
+export type AdminTab =
+    | "dashboard"
+    | "company"
+    | "materials"
+    | "pricing"
+    | "erp"
+    | "activity"
+    | "components"
+    | "customers";
 
 interface AdminPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    initialTab?: AdminTab;
 }
 
-export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
+export function AdminPanel({ isOpen, onClose, initialTab }: AdminPanelProps) {
     const {
         settings,
         materialCatalog,
@@ -36,6 +45,12 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     const [currency, setCurrency] = useState("EUR");
     const [taxRate, setTaxRate] = useState("0.21");
     const [terms, setTerms] = useState("");
+
+    useEffect(() => {
+        if (isOpen && initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab, isOpen]);
 
     useEffect(() => {
         if (!settings || !materialCatalog) {

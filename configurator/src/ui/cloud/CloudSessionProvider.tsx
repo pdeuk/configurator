@@ -24,6 +24,7 @@ import {
 
 interface CloudSessionContextValue {
     isConfigured: boolean;
+    isSessionReady: boolean;
     user: AuthUser | null;
     syncStatus: CloudSyncStatus;
     isAuthenticating: boolean;
@@ -52,6 +53,7 @@ interface CloudSessionProviderProps {
 
 export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
     const isConfigured = isSupabaseConfigured();
+    const [isSessionReady, setIsSessionReady] = useState(!isConfigured);
     const [user, setUser] = useState<AuthUser | null>(null);
     const [syncStatus, setSyncStatus] = useState<CloudSyncStatus>("local");
     const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -62,6 +64,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
             setCloudStorageContext({ user: null });
             setActiveCloudAssetStore(null);
             setCloudSyncStatus("local");
+            setIsSessionReady(true);
             return;
         }
 
@@ -73,6 +76,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
                 setCloudStorageContext({ user: currentUser });
                 setActiveCloudAssetStore(createCloudAssetStoreForUser(currentUser));
                 setCloudSyncStatus(currentUser ? "synced" : "local");
+                setIsSessionReady(true);
             }
         });
 
@@ -81,6 +85,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
             setCloudStorageContext({ user: nextUser });
             setActiveCloudAssetStore(createCloudAssetStoreForUser(nextUser));
             setCloudSyncStatus(nextUser ? "synced" : "local");
+            setIsSessionReady(true);
         });
         const unsubscribeSync = subscribeCloudSyncStatus(setSyncStatus);
         const unsubscribeOnline = installOnlineStatusListeners();
@@ -146,6 +151,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
 
     const value = useMemo<CloudSessionContextValue>(() => ({
         isConfigured,
+        isSessionReady,
         user,
         syncStatus,
         isAuthenticating,
@@ -159,6 +165,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
         importLocalProjects,
         isAuthenticating,
         isConfigured,
+        isSessionReady,
         login,
         logout,
         register,

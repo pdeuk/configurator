@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { hydrateModulesArtwork } from "../lib/artworkAssetHydration";
 import { projectDocumentToPersistableState } from "../lib/projectSerialization";
 import { customerService, type CustomerProjectPermissions } from "../services/customer";
@@ -16,12 +17,12 @@ interface SharedProjectViewerProps {
     permissions?: CustomerProjectPermissions;
 }
 
-export function SharedProjectViewer({
-    shareToken,
-    portalProjectId,
-    customerId,
-    permissions
-}: SharedProjectViewerProps) {
+export function SharedProjectViewer(props: SharedProjectViewerProps = {}) {
+    const routeParams = useParams<{ token?: string; projectId?: string }>();
+    const shareToken = props.shareToken ?? routeParams.token;
+    const portalProjectId = props.portalProjectId ?? routeParams.projectId;
+    const customerId = props.customerId;
+    const permissions = props.permissions;
     const [projectName, setProjectName] = useState("Shared project");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +131,9 @@ export function SharedProjectViewer({
                     <div style={styles.headerTitle}>{projectName}</div>
                 </div>
                 <div style={styles.headerActions}>
+                    <Link to="/portal" style={styles.portalLink}>
+                        Customer portal
+                    </Link>
                     <button
                         type="button"
                         style={styles.arButton}
@@ -215,6 +219,11 @@ const styles = {
         cursor: "pointer",
         font: "inherit",
         fontSize: 13
+    },
+    portalLink: {
+        color: "#93c5fd",
+        fontSize: 13,
+        textDecoration: "none"
     },
     headerLabel: {
         fontSize: 11,
