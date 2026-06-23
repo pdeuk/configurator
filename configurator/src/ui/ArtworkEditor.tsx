@@ -8,7 +8,7 @@ import {
     DEFAULT_ARTWORK_EDIT_STATE,
     getArtworkEditOutputDimensions,
     getArtworkEditPreviewDimensions,
-    loadArtworkImage,
+    loadArtworkInfoImage,
     renderEditedArtworkToCanvas,
     revokeArtworkImageUrl,
     rotateArtworkEditState,
@@ -20,7 +20,6 @@ import {
     formatBannerFabricLabel,
     getActiveFabricArtwork,
     getActiveFabricPrintDimensions,
-    getArtworkEditImageUrl,
     getModuleFabric,
     isBannerFabricSide,
     restoreArtworkFromSource
@@ -100,12 +99,8 @@ export function ArtworkEditor() {
         };
     }, [artworkEditMode, modules, modulesById]);
 
-    const sourceImageUrl = editContext?.artwork
-        ? getArtworkEditImageUrl(editContext.artwork)
-        : null;
-
     useEffect(() => {
-        if (!sourceImageUrl) {
+        if (!editContext?.artwork) {
             setSourceImage(null);
             return;
         }
@@ -114,7 +109,7 @@ export function ArtworkEditor() {
         setLoadError(null);
         setEditState(DEFAULT_ARTWORK_EDIT_STATE);
 
-        loadArtworkImage(sourceImageUrl)
+        loadArtworkInfoImage(editContext.artwork)
             .then(image => {
                 if (!cancelled) {
                     setSourceImage(image);
@@ -130,7 +125,7 @@ export function ArtworkEditor() {
         return () => {
             cancelled = true;
         };
-    }, [sourceImageUrl, editContext?.side, editContext?.module.id]);
+    }, [editContext?.artwork, editContext?.side, editContext?.module.id]);
 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 

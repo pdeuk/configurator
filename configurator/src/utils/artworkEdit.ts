@@ -1,5 +1,7 @@
 import { MIN_PRINT_DPI } from "./fabrics";
 import { PLAIN_FABRIC_COLOR } from "../scene/fabricLuminous";
+import type { ArtworkInfo } from "../models/ModuleModel";
+import { resolveArtworkDisplayUrl } from "../lib/artworkAssetHydration";
 
 export interface ArtworkCropRect {
     x: number;
@@ -84,6 +86,14 @@ export async function loadArtworkImage(imageUrl: string): Promise<HTMLImageEleme
     }
 
     return loadImageElement(imageUrl);
+}
+
+export async function loadArtworkInfoImage(artwork: ArtworkInfo): Promise<HTMLImageElement> {
+    const imageUrl = await resolveArtworkDisplayUrl(
+        artwork.sourceArtwork ?? artwork
+    );
+
+    return loadArtworkImage(imageUrl);
 }
 
 function loadImageElement(imageUrl: string): Promise<HTMLImageElement> {

@@ -47,11 +47,12 @@ interface Props {
 
 function ModuleComponent({ module, modules }: Props) {
     const selectedId = useEditorStore(state => state.selectedId);
+    const readOnly = useEditorStore(state => state.readOnly);
     const select = useEditorStore(state => state.select);
     const beginDrag = useEditorStore(state => state.beginDrag);
     const dragPendingRef = useRef<PendingDrag | null>(null);
 
-    const isSelected = selectedId === module.id;
+    const isSelected = !readOnly && selectedId === module.id;
     const connectionLayout = getFrameConnectionLayout(module, modules);
     const isCube = module.type === "cube";
     const isPromoStand = isPromoStandType(module.type);
@@ -132,25 +133,27 @@ function ModuleComponent({ module, modules }: Props) {
                 0
             ]}
         >
-            <mesh
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-            >
-                <boxGeometry
-                    args={[
-                        hitSize.width,
-                        hitSize.height,
-                        hitSize.depth
-                    ]}
-                />
-                <meshBasicMaterial
-                    transparent
-                    opacity={0}
-                    depthWrite={false}
-                />
-            </mesh>
+            {!readOnly && (
+                <mesh
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                >
+                    <boxGeometry
+                        args={[
+                            hitSize.width,
+                            hitSize.height,
+                            hitSize.depth
+                        ]}
+                    />
+                    <meshBasicMaterial
+                        transparent
+                        opacity={0}
+                        depthWrite={false}
+                    />
+                </mesh>
+            )}
             {isCircularBanner ? (
                 <>
                     <CircularBannerFabricSurface module={module} />

@@ -47,6 +47,8 @@ export interface RasterArtworkInfo extends ArtworkDpi {
 }
 
 export interface ArtworkInfo extends ArtworkDpi {
+    /** Persistent artwork reference in IndexedDB. */
+    assetId?: string;
     fileName: string;
     fileType: ArtworkFileType;
     imageUrl: string;

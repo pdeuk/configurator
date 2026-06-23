@@ -534,8 +534,9 @@ export { createBannerFabricSide, formatBannerFabricLabel, isBannerFabricSide, pa
 export function buildArtworkInfo(
     base: Omit<
         ArtworkInfo,
-        "dpiX" | "dpiY" | "effectiveDpi" | "printWidthCm" | "printHeightCm" | "rasters"
+        "dpiX" | "dpiY" | "effectiveDpi" | "printWidthCm" | "printHeightCm" | "rasters" | "assetId"
     > & {
+        assetId?: string;
         rasters: RasterCoverageInput[];
     },
     fabricWidthMeters: number,
@@ -562,7 +563,8 @@ export function buildArtworkInfo(
         printWidthCm: metersToCentimeters(printWidthMeters),
         printHeightCm: metersToCentimeters(printHeightMeters),
         rasters,
-        ...wholeFileDpi
+        ...wholeFileDpi,
+        ...(base.assetId !== undefined ? { assetId: base.assetId } : {})
     };
 }
 

@@ -1,7 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Configurator } from "./app/Configurator";
+import { App } from "./app/App";
+import { errorTrackingService } from "./services/system";
 import "./index.css";
+
+errorTrackingService.installGlobalHandlers();
 
 ReactDOM
     .createRoot(
@@ -9,6 +12,6 @@ ReactDOM
     )
     .render(
         <React.StrictMode>
-            <Configurator />
+            <App />
         </React.StrictMode>
     );

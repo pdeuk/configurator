@@ -4,6 +4,8 @@ import { OPS } from "pdfjs-dist";
 import type { PDFOperatorList } from "pdfjs-dist/types/src/display/api";
 import * as UTIF from "utif";
 import type { ArtworkFileType, ArtworkSourceSnapshot } from "../models/ModuleModel";
+import { assetService } from "../services/assets";
+import { syncAssetToCloudIfAvailable } from "../services/cloud";
 import {
     attachArtworkSource,
     buildArtworkInfo,
@@ -51,7 +53,7 @@ export async function createArtworkInfo(
             pixelHeight: decoded.pixelHeight
         };
 
-    return attachArtworkSource(buildArtworkInfo(
+    const artwork = buildArtworkInfo(
         {
             fileName: file.name,
             fileType,
@@ -62,7 +64,40 @@ export async function createArtworkInfo(
         },
         fabricWidthMeters,
         fabricHeightMeters
-    ));
+    );
+    const asset = await assetService.upload(file, {
+        width: artwork.pixelWidth,
+        height: artwork.pixelHeight,
+        dpi: artwork.effectiveDpi
+    });
+    const imageUrl = await assetService.resolveDisplayUrl(asset.id);
+
+    void syncAssetToCloudIfAvailable(asset.id);
+
+    if (
+        decoded.imageUrl.startsWith("blob:")
+        && decoded.imageUrl !== imageUrl
+    ) {
+        URL.revokeObjectURL(decoded.imageUrl);
+    }
+
+    return attachArtworkSource({
+        ...artwork,
+        assetId: asset.id,
+        imageUrl
+    });
+}
+
+export function getArtworkFileTypeFromFile(file: File): ArtworkFileType {
+    return getArtworkFileType(file);
+}
+
+export async function createArtworkDisplayUrlFromFile(
+    file: File,
+    fileType: ArtworkFileType
+): Promise<string> {
+    const decoded = await decodeArtwork(file, fileType);
+    return decoded.imageUrl;
 }
 
 function getArtworkFileType(file: File): ArtworkFileType {
@@ -182,26 +217,40 @@ export async function createArtworkInfoFromCanvasAsync(
         source.fileType === "jpg" ? "jpg" : "png";
     const mimeType = outputFileType === "jpg" ? "image/jpeg" : "image/png";
     const blob = await canvasToBlob(canvas, mimeType, 0.92);
+    const artwork = buildArtworkInfo(
+        {
+            fileName: source.fileName,
+            fileType: outputFileType,
+            imageUrl: "",
+            pixelWidth: canvas.width,
+            pixelHeight: canvas.height,
+            rasters: [
+                createFullFabricRaster(
+                    "Edited image",
+                    canvas.width,
+                    canvas.height
+                )
+            ]
+        },
+        fabricWidthMeters,
+        fabricHeightMeters
+    );
+    const asset = await assetService.uploadBlob(blob, {
+        filename: source.fileName,
+        type: outputFileType,
+        size: blob.size,
+        width: canvas.width,
+        height: canvas.height,
+        dpi: artwork.effectiveDpi
+    });
+    const imageUrl = await assetService.resolveDisplayUrl(asset.id);
+
+    void syncAssetToCloudIfAvailable(asset.id);
 
     return {
-        ...buildArtworkInfo(
-            {
-                fileName: source.fileName,
-                fileType: outputFileType,
-                imageUrl: URL.createObjectURL(blob),
-                pixelWidth: canvas.width,
-                pixelHeight: canvas.height,
-                rasters: [
-                    createFullFabricRaster(
-                        "Edited image",
-                        canvas.width,
-                        canvas.height
-                    )
-                ]
-            },
-            fabricWidthMeters,
-            fabricHeightMeters
-        ),
+        ...artwork,
+        assetId: asset.id,
+        imageUrl,
         ...(preservedSourceArtwork ? { sourceArtwork: preservedSourceArtwork } : {})
     };
 }

@@ -1,6 +1,7 @@
 import type { ChangeEvent } from "react";
 import { useState } from "react";
 import { useEditorStore } from "../store/editorStore";
+import { usePermissions } from "./auth";
 import {
     COMPONENT_OPTIONS,
     createComponentModule,
@@ -17,6 +18,7 @@ const MAX_FLOOR_SIZE_CM = GRID_SIZE * 100;
 const MIN_FLOOR_SIZE_CM = MIN_FLOOR_SIZE * 100;
 
 export function Toolbar() {
+    const { can } = usePermissions();
     const addModule = useEditorStore(state => state.addModule);
     const undo = useEditorStore(state => state.undo);
     const canUndo = useEditorStore(state => state.history.length > 0);
@@ -65,6 +67,7 @@ export function Toolbar() {
                     style={styles.select}
                     value={componentSelection}
                     onChange={handleComponentChange}
+                    disabled={!can("projects.create")}
                 >
                     <option value="">Add component…</option>
                     {COMPONENT_OPTIONS.map(option => (
@@ -82,7 +85,7 @@ export function Toolbar() {
                     opacity: canUndo ? 1 : 0.45,
                     cursor: canUndo ? "pointer" : "not-allowed"
                 }}
-                disabled={!canUndo}
+                disabled={!canUndo || !can("projects.edit")}
                 onClick={undo}
             >
                 Undo
@@ -95,6 +98,7 @@ export function Toolbar() {
                     ...(showGrid ? styles.buttonActive : undefined)
                 }}
                 onClick={() => setShowGrid(!showGrid)}
+                disabled={!can("projects.edit")}
                 aria-pressed={showGrid}
             >
                 {showGrid ? "Hide grid" : "Show grid"}
@@ -108,6 +112,7 @@ export function Toolbar() {
                     onChange={event =>
                         setFloorMaterialId(event.target.value as FloorMaterialId)
                     }
+                    disabled={!can("projects.edit")}
                 >
                     {FLOOR_MATERIALS.map(material => (
                         <option key={material.id} value={material.id}>
@@ -128,6 +133,7 @@ export function Toolbar() {
                         step={10}
                         value={Math.round(floorSize.width * 100)}
                         onChange={event => updateFloorWidthCm(Number(event.target.value))}
+                        disabled={!can("projects.edit")}
                     />
                 </label>
                 <label style={styles.field}>
@@ -140,6 +146,7 @@ export function Toolbar() {
                         step={10}
                         value={Math.round(floorSize.depth * 100)}
                         onChange={event => updateFloorDepthCm(Number(event.target.value))}
+                        disabled={!can("projects.edit")}
                     />
                 </label>
             </div>

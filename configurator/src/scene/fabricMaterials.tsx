@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLoader } from "@react-three/fiber";
 import {
     BackSide,
@@ -6,6 +7,10 @@ import {
     type Side
 } from "three";
 import type { ArtworkInfo, FabricInfo } from "../models/ModuleModel";
+import {
+    MISSING_ARTWORK_DATA_URL,
+    resolveArtworkDisplayUrl
+} from "../lib/artworkAssetHydration";
 import { BLOCKOUT_FABRIC_COLOR } from "../utils/fabrics";
 import {
     ARTWORK_LUMINOUS_COLOR,
@@ -22,7 +27,7 @@ interface FabricArtworkMaterialProps {
     side?: Side;
 }
 
-export function FabricArtworkMaterial({
+function FabricArtworkMaterialInner({
     imageUrl,
     isBlockout,
     isLuminous,
@@ -51,6 +56,66 @@ export function FabricArtworkMaterial({
     );
 }
 
+function useResolvedArtworkImageUrl(artwork: ArtworkInfo): string {
+    const [imageUrl, setImageUrl] = useState(() => getInitialArtworkImageUrl(artwork));
+
+    useEffect(() => {
+        let cancelled = false;
+
+        void resolveArtworkDisplayUrl(artwork).then(resolvedUrl => {
+            if (!cancelled) {
+                setImageUrl(resolvedUrl);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [artwork.assetId, artwork.imageUrl]);
+
+    return imageUrl;
+}
+
+function getInitialArtworkImageUrl(artwork: ArtworkInfo): string {
+    if (
+        artwork.imageUrl.startsWith("blob:")
+        || artwork.imageUrl.startsWith("data:")
+        || artwork.imageUrl.startsWith("http://")
+        || artwork.imageUrl.startsWith("https://")
+    ) {
+        return artwork.imageUrl;
+    }
+
+    return artwork.imageUrl || MISSING_ARTWORK_DATA_URL;
+}
+
+export function FabricArtworkMaterial(props: FabricArtworkMaterialProps) {
+    return <FabricArtworkMaterialInner {...props} />;
+}
+
+function FabricFaceMaterialWithArtwork({
+    artwork,
+    fabric,
+    isLuminous,
+    side = FrontSide
+}: {
+    artwork: ArtworkInfo;
+    fabric: FabricInfo;
+    isLuminous: boolean;
+    side?: Side;
+}) {
+    const imageUrl = useResolvedArtworkImageUrl(artwork);
+
+    return (
+        <FabricArtworkMaterialInner
+            imageUrl={imageUrl}
+            isBlockout={fabric.isBlockout}
+            isLuminous={isLuminous}
+            side={side}
+        />
+    );
+}
+
 interface FabricFaceMaterialProps {
     fabric: FabricInfo;
     artwork: ArtworkInfo | null;
@@ -68,9 +133,9 @@ export function FabricFaceMaterial({
 
     if (artwork) {
         return (
-            <FabricArtworkMaterial
-                imageUrl={artwork.imageUrl}
-                isBlockout={fabric.isBlockout}
+            <FabricFaceMaterialWithArtwork
+                artwork={artwork}
+                fabric={fabric}
                 isLuminous={isLuminous}
                 side={side}
             />

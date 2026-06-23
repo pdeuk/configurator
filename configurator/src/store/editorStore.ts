@@ -6,7 +6,10 @@ import type {
     Position3,
     StandModule
 } from "../models/ModuleModel";
+import type { ProjectDocument } from "../models/ProjectModel";
 import { isHangingBannerType } from "../models/ModuleModel";
+import { projectDocumentToPersistableState } from "../services/ProjectService";
+import { getInitialPersistableState } from "../lib/projectPersistence";
 import {
     createDefaultFabrics,
     getFabricSidesForModule,
@@ -20,12 +23,12 @@ import { DEFAULT_BANNER_SEGMENT_COUNT } from "../utils/bannerGeometry";
 import { sanitizeActiveFabricSides } from "../utils/applyFabricArtwork";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import {
-    DEFAULT_FLOOR_DIMENSIONS,
-    DEFAULT_FLOOR_MATERIAL_ID,
     clampFloorSize,
     type FloorMaterialId,
     type FloorSize
 } from "../utils/floorMaterials";
+
+const defaultPersistableState = getInitialPersistableState();
 
 export type ModuleId = StandModule["id"];
 
@@ -56,6 +59,7 @@ interface EditorState {
     floorMaterialId: FloorMaterialId;
     floorSize: FloorSize;
     showGrid: boolean;
+    readOnly: boolean;
     history: EditorSnapshot[];
     select: (id: ModuleId | null) => void;
     addModule: (module: StandModule) => void;
@@ -92,22 +96,10 @@ interface EditorState {
     setFloorMaterialId: (materialId: FloorMaterialId) => void;
     setFloorSize: (size: Partial<FloorSize>) => void;
     setShowGrid: (showGrid: boolean) => void;
+    setReadOnly: (readOnly: boolean) => void;
+    loadProjectDocument: (document: ProjectDocument) => void;
 }
 
-const initialWall: StandModule = {
-    id: "wall-001",
-    type: "wall",
-    position: {
-        x: 0,
-        y: 0,
-        z: 0
-    },
-    rotation: Math.PI,
-    width: 1,
-    height: 2,
-    depth: 0.05,
-    fabrics: createDefaultFabrics("wall")
-};
 
 function isStandModule(module: StandModule | undefined): module is StandModule {
     return module !== undefined;
@@ -137,18 +129,17 @@ function applyFabricUpdates(
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
-    moduleIds: [initialWall.id],
-    modulesById: {
-        [initialWall.id]: initialWall
-    },
+    moduleIds: defaultPersistableState.moduleIds,
+    modulesById: defaultPersistableState.modulesById,
     selectedId: null,
     activeFabricSides: ["front"],
     drag: null,
     snapPosition: null,
     artworkEditMode: null,
-    floorMaterialId: DEFAULT_FLOOR_MATERIAL_ID,
-    floorSize: DEFAULT_FLOOR_DIMENSIONS,
-    showGrid: true,
+    floorMaterialId: defaultPersistableState.floorMaterialId,
+    floorSize: defaultPersistableState.floorSize,
+    showGrid: defaultPersistableState.showGrid,
+    readOnly: false,
     history: [],
 
     select: id =>
@@ -605,5 +596,37 @@ export const useEditorStore = create<EditorState>((set) => ({
     setShowGrid: showGrid =>
         set({
             showGrid
+        }),
+
+    setReadOnly: readOnly =>
+        set({
+            readOnly,
+            ...(readOnly
+                ? {
+                    selectedId: null,
+                    drag: null,
+                    snapPosition: null,
+                    artworkEditMode: null
+                }
+                : {})
+        }),
+
+    loadProjectDocument: document =>
+        set(() => {
+            const persistableState = projectDocumentToPersistableState(document);
+
+            return {
+                moduleIds: persistableState.moduleIds,
+                modulesById: persistableState.modulesById,
+                floorMaterialId: persistableState.floorMaterialId,
+                floorSize: persistableState.floorSize,
+                showGrid: persistableState.showGrid,
+                selectedId: null,
+                activeFabricSides: ["front"],
+                drag: null,
+                snapPosition: null,
+                artworkEditMode: null,
+                history: []
+            };
         })
 }));

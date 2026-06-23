@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { ComponentLibraryPanel } from "./catalog";
 import { MockupPanel } from "./MockupPanel";
 import { Toolbar } from "./Toolbar";
 
@@ -10,6 +11,7 @@ export function LeftSidebar() {
             <div style={styles.toolbarSlot}>
                 <Toolbar />
             </div>
+            <ComponentLibraryPanel />
             <MockupPanel />
         </div>
     );
