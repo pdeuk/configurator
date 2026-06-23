@@ -5,7 +5,7 @@ import {
     getActiveFabricArtwork,
     getActiveFabricPrintDimensions,
     getFabricSidesForModule,
-    MIN_PRINT_DPI
+    MIN_SUITABLE_MOCKUP_DPI
 } from "./fabrics";
 import { createSolidBlockoutMockup, loadImageElement } from "./mockupImage";
 
@@ -102,7 +102,7 @@ export function isMockupEntryDpiSuitable(entry: MockupEntry): boolean {
         return true;
     }
 
-    return entry.effectiveDpi !== null && entry.effectiveDpi >= MIN_PRINT_DPI;
+    return entry.effectiveDpi !== null && entry.effectiveDpi >= MIN_SUITABLE_MOCKUP_DPI;
 }
 
 export function hasInsufficientMockupDpi(entries: MockupEntry[]): boolean {

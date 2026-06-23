@@ -1,0 +1,51 @@
+---
+description: Preserve tuned 3D scene, floor, fabric, and luminous rendering balance
+globs: configurator/src/scene/**/*,configurator/src/utils/floorMaterials.ts
+alwaysApply: false
+---
+
+# Scene lighting & fabric balance (locked)
+
+Do **not** retune lighting or fabric materials unless the user explicitly asks. This balance was iterated to completion.
+
+## Scene (`StandCanvas.tsx`)
+
+- Exposure: `toneMappingExposure: 1.3`
+- Background: `#525862`
+- Cool neutral exhibition hall (not warm apartment): ambient `0.5`, hemisphere `0.55`, key dir `0.82`, fill `0.34`, ceiling dir `0.4`
+- Environment: `studio` preset, `environmentIntensity: 0.48`
+- **No** render-layer tricks on the camera or floor
+
+## Floor (`Floor.tsx`, `floorMaterials.ts`)
+
+- Default layer 0 only — no `FLOOR_LAYER` separation
+- `meshLambertMaterial`: `map` + `emissiveMap` (same texture), `toneMapped={false}`, `envMap={null}`
+- `FLOOR_DIFFUSE_TINT #ffffff`, `FLOOR_EMISSIVE_INTENSITY 0.2`, `FLOOR_AO_INTENSITY 0.18`
+- No floor-only rect/hemisphere lights (they spilled onto fabrics)
+
+## Artwork on fabric (`fabricMaterials.tsx`)
+
+- **Always** `meshBasicMaterial` + `toneMapped={false}` — never `meshStandardMaterial` on uploaded images
+- Luminous **off**: `ARTWORK_RESTING_COLOR` (`#737373`) — dim, accurate hues, no scene wash
+- Luminous **on**: `ARTWORK_LUMINOUS_COLOR` (`#ffffff`) — full print brightness
+- Do **not** add emissive/transmission/`emissiveMap` to artwork materials
+
+## Luminous fabric
+
+- Glow lives **only** in `fabricLuminousBacklight.tsx` (core + bloom + rect area light behind panel)
+- Use `getInteriorLocalZOffset()` for backing/glow placement — never fixed `-Z` offsets on rotated front faces
+- Tune via `fabricLuminous.ts` constants only; keep artwork material unchanged when toggling luminous
+
+## Block-out fabric
+
+- Face: unlit `meshBasicMaterial` `#6a6a6a`
+- Backing: `fabricBlockout.tsx`, interior-side offset, `FrontSide`/`BackSide` (not `DoubleSide` on front faces)
+- Backing render order behind fabric face
+
+## Anti-patterns (caused regressions)
+
+- `meshStandardMaterial` on artwork under bright scene lights → white wash
+- Uniform emissive or transmission on artwork → wash-out
+- Floor on render layer 1 + camera layer enable → invisible floor / fabric artifacts
+- Warm env preset or warm key light → luminous reads as lamps not LED panels
+- Block-out backing at wrong local Z on Y=π panels → extra visible layer on front

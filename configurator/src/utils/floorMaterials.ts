@@ -82,10 +82,12 @@ export const FLOOR_MATERIALS: FloorMaterialDefinition[] = [
 
 export const DEFAULT_FLOOR_MATERIAL_ID: FloorMaterialId = "interiorTiles";
 
-/** Slight multiply tint to keep floor textures from reading too bright. */
-export const FLOOR_DIFFUSE_TINT = "#e8e8e8";
+/** Full-strength texture multiply — color vividness comes from toneMapped=false + emissiveMap. */
+export const FLOOR_DIFFUSE_TINT = "#ffffff";
 
-export const FLOOR_ENV_MAP_INTENSITY = 0.68;
+export const FLOOR_AO_INTENSITY = 0.18;
+/** Even surface glow that follows the floor texture colors. */
+export const FLOOR_EMISSIVE_INTENSITY = 0.2;
 
 export function getFloorMaterial(id: FloorMaterialId): FloorMaterialDefinition {
     return FLOOR_MATERIALS.find(material => material.id === id)

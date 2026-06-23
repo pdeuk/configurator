@@ -8,14 +8,11 @@ import {
 import type { ArtworkInfo, FabricInfo } from "../models/ModuleModel";
 import { BLOCKOUT_FABRIC_COLOR } from "../utils/fabrics";
 import {
-    BLOCKOUT_ARTWORK_COLOR,
-    LUMINOUS_EMISSIVE_INTENSITY,
-    LUMINOUS_ARTWORK_ROUGHNESS,
-    LUMINOUS_TRANSMISSION,
+    ARTWORK_LUMINOUS_COLOR,
+    ARTWORK_RESTING_COLOR,
+    GLOW_COLOR,
     PLAIN_FABRIC_COLOR,
-    PLAIN_LUMINOUS_EMISSIVE_INTENSITY,
-    PLAIN_LUMINOUS_TRANSMISSION,
-    LUMINOUS_PLAIN_ROUGHNESS
+    PLAIN_LUMINOUS_EMISSIVE_INTENSITY
 } from "./fabricLuminous";
 
 interface FabricArtworkMaterialProps {
@@ -33,32 +30,22 @@ export function FabricArtworkMaterial({
 }: FabricArtworkMaterialProps) {
     const texture = useLoader(TextureLoader, imageUrl);
 
-    if (isLuminous && !isBlockout) {
+    if (isBlockout) {
         return (
-            <meshPhysicalMaterial
+            <meshBasicMaterial
                 map={texture}
-                color="#ffffff"
-                emissiveMap={texture}
-                emissive="#ffffff"
-                emissiveIntensity={LUMINOUS_EMISSIVE_INTENSITY}
-                transmission={LUMINOUS_TRANSMISSION}
-                thickness={0.02}
-                ior={1.35}
-                attenuationColor="#fff8ec"
-                attenuationDistance={1.2}
-                roughness={LUMINOUS_ARTWORK_ROUGHNESS}
-                metalness={0}
+                color={BLOCKOUT_FABRIC_COLOR}
+                toneMapped={false}
                 side={side}
             />
         );
     }
 
     return (
-        <meshStandardMaterial
-            color={isBlockout ? BLOCKOUT_ARTWORK_COLOR : "white"}
+        <meshBasicMaterial
             map={texture}
-            roughness={0.95}
-            metalness={0}
+            color={isLuminous ? ARTWORK_LUMINOUS_COLOR : ARTWORK_RESTING_COLOR}
+            toneMapped={false}
             side={side}
         />
     );
@@ -90,19 +77,25 @@ export function FabricFaceMaterial({
         );
     }
 
+    if (fabric.isBlockout) {
+        return (
+            <meshBasicMaterial
+                color={BLOCKOUT_FABRIC_COLOR}
+                toneMapped={false}
+                side={side}
+            />
+        );
+    }
+
     if (isLuminous) {
         return (
-            <meshPhysicalMaterial
-                color={plainFabricColor}
-                emissive={plainFabricColor}
+            <meshStandardMaterial
+                color="#ffffff"
+                emissive={GLOW_COLOR}
                 emissiveIntensity={PLAIN_LUMINOUS_EMISSIVE_INTENSITY}
-                transmission={PLAIN_LUMINOUS_TRANSMISSION}
-                thickness={0.02}
-                ior={1.35}
-                attenuationColor="#fff8ec"
-                attenuationDistance={1.2}
-                roughness={LUMINOUS_PLAIN_ROUGHNESS}
+                roughness={0.9}
                 metalness={0}
+                toneMapped={false}
                 side={side}
             />
         );

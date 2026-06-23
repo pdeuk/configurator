@@ -1,6 +1,7 @@
-import { useMemo, Suspense } from "react";
+import { useMemo, Suspense, useLayoutEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { ClampedOrbitControls } from "./ClampedOrbitControls";
 import { DragController } from "./DragController";
 import { FaceEditCamera } from "./FaceEditCamera";
@@ -30,8 +31,13 @@ export function StandCanvas() {
         [moduleIds, modulesById]
     );
 
+    useLayoutEffect(() => {
+        RectAreaLightUniformsLib.init();
+    }, []);
+
     return (
         <Canvas
+            gl={{ toneMappingExposure: 1.3 }}
             camera={{
                 position: [5, 4, 5],
                 fov: 45
@@ -42,33 +48,40 @@ export function StandCanvas() {
                 }
             }}
         >
-            <color attach="background" args={["#343841"]} />
+            <color attach="background" args={["#525862"]} />
             <DragController />
             <SnapPreview />
             <FaceEditCamera />
 
-            <ambientLight intensity={0.44} />
+            {/* Exhibition hall — bright neutral fill; cool enough for luminous fabric. */}
+            <ambientLight intensity={0.5} color="#eef2f7" />
 
             <hemisphereLight
-                color="#eef3f8"
-                groundColor="#6f5f4f"
-                intensity={0.48}
+                color="#eef2f7"
+                groundColor="#7a8494"
+                intensity={0.55}
             />
 
             <directionalLight
                 position={[5, 10, 5]}
-                intensity={0.65}
-                color="#fffaf2"
+                intensity={0.82}
+                color="#f5f8fc"
             />
 
             <directionalLight
                 position={[-4, 6, -3]}
-                intensity={0.18}
-                color="#e8f0ff"
+                intensity={0.34}
+                color="#e8f0f8"
+            />
+
+            <directionalLight
+                position={[0, 14, 2]}
+                intensity={0.4}
+                color="#f8fafc"
             />
 
             <Environment
-                preset="apartment"
+                preset="studio"
                 background={false}
                 environmentIntensity={0.48}
             />

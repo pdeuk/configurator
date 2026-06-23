@@ -36,6 +36,7 @@ export const MELAMINE_TOP_EXCESS = MELAMINE_TOP_EXCESS_CM / CENTIMETERS_PER_METE
 export const MELAMINE_SHELF_THICKNESS_CM = 1.5;
 export const MELAMINE_SHELF_THICKNESS = MELAMINE_SHELF_THICKNESS_CM / CENTIMETERS_PER_METER;
 export const MIN_PRINT_DPI = 150;
+export const MIN_SUITABLE_MOCKUP_DPI = 72;
 
 export const FRAME_FABRIC_SIDES = ["front", "back"] as const;
 export const CUBE_FABRIC_SIDES = ["front", "back", "left", "right", "top"] as const;

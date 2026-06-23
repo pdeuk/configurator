@@ -1,13 +1,8 @@
-import { AdditiveBlending, DoubleSide } from "three";
+import { DoubleSide } from "three";
 import type { ArtworkInfo, FabricInfo } from "../models/ModuleModel";
-import {
-    BLOCKOUT_BACKING_COLOR,
-    BLOCKOUT_BACKING_OFFSET,
-    BLOCKOUT_BACKING_RENDER_ORDER,
-    getFabricFaceGlowMaterialProps,
-    LUMINOUS_FACE_GLOW_RENDER_ORDER,
-    LUMINOUS_FABRIC_RENDER_ORDER
-} from "./fabricLuminous";
+import { BlockoutBackingPlane } from "./fabricBlockout";
+import { LUMINOUS_FABRIC_RENDER_ORDER } from "./fabricLuminous";
+import { LuminousBacklightPlane } from "./fabricLuminousBacklight";
 import { FabricFaceMaterial, FrontSide } from "./fabricMaterials";
 import { ignoreRaycast } from "./raycast";
 
@@ -31,13 +26,27 @@ export function FabricPanel({
     doubleSided = false
 }: FabricPanelProps) {
     const isLuminous = fabric.isLuminous && !fabric.isBlockout;
-    const faceGlowMaterialProps = getFabricFaceGlowMaterialProps();
     const materialSide = doubleSided ? DoubleSide : FrontSide;
 
     return (
         <group position={position} rotation={rotation}>
+            {isLuminous && (
+                <LuminousBacklightPlane
+                    panelWidth={panelWidth}
+                    panelHeight={panelHeight}
+                    rotation={rotation}
+                />
+            )}
+            {fabric.isBlockout && (
+                <BlockoutBackingPlane
+                    panelWidth={panelWidth}
+                    panelHeight={panelHeight}
+                    rotation={rotation}
+                    doubleSided={doubleSided}
+                />
+            )}
             <mesh
-                renderOrder={LUMINOUS_FABRIC_RENDER_ORDER}
+                renderOrder={isLuminous ? LUMINOUS_FABRIC_RENDER_ORDER : 1}
                 raycast={ignoreRaycast}
             >
                 <planeGeometry args={[panelWidth, panelHeight]} />
@@ -48,33 +57,6 @@ export function FabricPanel({
                     side={materialSide}
                 />
             </mesh>
-            {isLuminous && (
-                <mesh
-                    renderOrder={LUMINOUS_FACE_GLOW_RENDER_ORDER}
-                    raycast={ignoreRaycast}
-                >
-                    <planeGeometry args={[panelWidth, panelHeight]} />
-                    <meshBasicMaterial
-                        blending={AdditiveBlending}
-                        depthWrite={false}
-                        {...faceGlowMaterialProps}
-                    />
-                </mesh>
-            )}
-            {fabric.isBlockout && (
-                <mesh
-                    position={[0, 0, -BLOCKOUT_BACKING_OFFSET]}
-                    renderOrder={BLOCKOUT_BACKING_RENDER_ORDER}
-                    raycast={ignoreRaycast}
-                >
-                    <planeGeometry args={[panelWidth, panelHeight]} />
-                    <meshBasicMaterial
-                        color={BLOCKOUT_BACKING_COLOR}
-                        side={DoubleSide}
-                        toneMapped={false}
-                    />
-                </mesh>
-            )}
         </group>
     );
 }
