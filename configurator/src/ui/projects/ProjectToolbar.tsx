@@ -1,40 +1,49 @@
 import { useEffect, useRef, useState } from "react";
 import { formatCloudSyncStatus } from "../../services/cloud";
-import {
-    generateManufacturingPackage,
-    manufacturingService
-} from "../../services/manufacturing";
-import { reviewService } from "../../services/reviews";
-import { buildShareUrl, shareService } from "../../services/sharing";
-import {
-    applyMaterialCatalogToManufacturingPackage,
-    downloadOrganizationQuotePDF,
-    generateOrganizationQuote
-} from "../../services/settings";
-import {
-    auditService,
-    errorTrackingService,
-    loadingStateService,
-    performanceService
-} from "../../services/system";
-import { trackEvent } from "../../services/analytics";
 import { AsyncErrorTrigger, PdfExportErrorBoundary } from "../system";
-import { useSettings } from "../settings";
 import { PermissionGuard, usePermissions } from "../auth";
 import { AuthPanel, useCloudSession } from "../cloud";
 import { useARPreview } from "../ar";
 import { useAppShell } from "../shell";
+import { EditorModeIndicator } from "../shell/EditorModeIndicator";
+import { MenuDivider, MenuSection, menuStyles } from "../shell/menuStyles";
+import { usePresentationMode } from "../presentation/PresentationModeContext";
 import { useProjectSession } from "./projectSession";
+import { useProjectQuickActions } from "./useProjectQuickActions";
+import {
+    CHROME_ACTION_ROW_HEIGHT,
+    CHROME_ACTION_ROW_TOP,
+    CHROME_HEADER_ROW_HEIGHT,
+    CHROME_ROW_TOP,
+    LEFT_CHROME_OFFSET,
+    MORE_MENU_RIGHT,
+    MORE_MENU_TOP,
+    PANEL_INSET,
+    PANEL_SECTION_GAP,
+    RIGHT_CHROME_OFFSET
+} from "../shell/layout";
 
-export function ProjectToolbar() {
+interface ProjectToolbarProps {
+    onOpenComponentLibrary?: () => void;
+    onOpenMockups?: () => void;
+}
+
+export function ProjectToolbar({
+    onOpenComponentLibrary,
+    onOpenMockups
+}: ProjectToolbarProps) {
     const {
         activeProjectName,
+        activeProjectId,
         isBusy,
         openManager,
         openTemplateGallery,
         saveActiveProject,
         saveRevision,
-        refreshProjects
+        refreshProjects,
+        createNewProject,
+        deleteProject,
+        renameProject
     } = useProjectSession();
     const {
         isConfigured,
@@ -42,32 +51,45 @@ export function ProjectToolbar() {
         syncStatus,
         importLocalProjects
     } = useCloudSession();
-    const { settings, materialCatalog } = useSettings();
     const { canManageUsers } = usePermissions();
     const { openARPreview } = useARPreview();
+    const { enterPresentationMode } = usePresentationMode();
     const {
         openAdmin,
         openAssignCustomer,
         openUsers,
-        toggleReviews
+        showReviews
     } = useAppShell();
+    const {
+        statusMessage: quickActionMessage,
+        handleShare,
+        handleExportQuotePdf,
+        handleExportManufacturingPdf,
+        handleExportManufacturingJson
+    } = useProjectQuickActions();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const [cloudMenuOpen, setCloudMenuOpen] = useState(false);
     const [shareMessage, setShareMessage] = useState<string | null>(null);
     const [revisionMessage, setRevisionMessage] = useState<string | null>(null);
-    const [manufacturingMessage, setManufacturingMessage] = useState<string | null>(null);
-    const [quoteMessage, setQuoteMessage] = useState<string | null>(null);
-    const [exportBoundaryError, setExportBoundaryError] = useState<Error | null>(null);
     const [cloudMessage, setCloudMessage] = useState<string | null>(null);
+    const [exportBoundaryError, setExportBoundaryError] = useState<Error | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const moreContainerRef = useRef<HTMLDivElement>(null);
     const cloudContainerRef = useRef<HTMLDivElement>(null);
+
+    const closeMenus = () => {
+        setMenuOpen(false);
+        setMoreMenuOpen(false);
+        setCloudMenuOpen(false);
+    };
 
     useEffect(() => {
         void refreshProjects();
     }, [refreshProjects]);
 
     useEffect(() => {
-        if (!menuOpen && !cloudMenuOpen) {
+        if (!menuOpen && !moreMenuOpen && !cloudMenuOpen) {
             return;
         }
 
@@ -78,12 +100,15 @@ export function ProjectToolbar() {
                 return;
             }
 
+            if (moreContainerRef.current?.contains(target)) {
+                return;
+            }
+
             if (cloudContainerRef.current?.contains(target)) {
                 return;
             }
 
-            setMenuOpen(false);
-            setCloudMenuOpen(false);
+            closeMenus();
         };
 
         window.addEventListener("mousedown", handlePointerDown);
@@ -91,203 +116,29 @@ export function ProjectToolbar() {
         return () => {
             window.removeEventListener("mousedown", handlePointerDown);
         };
-    }, [cloudMenuOpen, menuOpen]);
+    }, [cloudMenuOpen, menuOpen, moreMenuOpen]);
 
-    const handleShare = async () => {
-        setShareMessage(null);
+    const handleRenameProject = async () => {
+        const nextName = window.prompt("Rename project", activeProjectName)?.trim();
 
-        try {
-            const document = await saveActiveProject();
-            const shared = await shareService.createShareLink(document);
-            const shareUrl = buildShareUrl(shared.shareToken);
-
-            await reviewService.sendForReview(
-                document.id,
-                shared.shareToken,
-                user?.id ?? null
-            );
-
-            await navigator.clipboard.writeText(shareUrl);
-            setShareMessage("Link copied");
-        } catch (error) {
-            console.warn("Share link creation failed.", error);
-            setShareMessage("Share failed");
-        }
-    };
-
-    const handleExportManufacturingPdf = async () => {
-        setManufacturingMessage(null);
-        setExportBoundaryError(null);
-
-        try {
-            await loadingStateService.run("export", async () => {
-                const startedAt = performance.now();
-                const document = await saveActiveProject();
-                let manufacturingPackage = generateManufacturingPackage(document);
-
-                if (materialCatalog) {
-                    manufacturingPackage = applyMaterialCatalogToManufacturingPackage(
-                        manufacturingPackage,
-                        materialCatalog
-                    );
-                }
-
-                await manufacturingService.downloadManufacturingPDF(manufacturingPackage, {
-                    projectName: document.name
-                });
-
-                performanceService.recordExportDuration(
-                    "export.manufacturingPdf",
-                    Math.round(performance.now() - startedAt),
-                    { projectId: document.id }
-                );
-
-                await auditService.record({
-                    action: "manufacturing.exported",
-                    entityType: "manufacturing",
-                    entityId: manufacturingPackage.id
-                });
-                await trackEvent({
-                    event: "manufacturing.exported",
-                    entityType: "manufacturing",
-                    entityId: manufacturingPackage.id,
-                    metadata: {
-                        projectId: document.id,
-                        format: "pdf"
-                    }
-                });
-            });
-            setManufacturingMessage("Mfg PDF exported");
-        } catch (error) {
-            errorTrackingService.captureError(error, {
-                context: "export.manufacturingPdf"
-            });
-            console.warn("Manufacturing PDF export failed.", error);
-            setManufacturingMessage("Mfg export failed");
-            setExportBoundaryError(
-                error instanceof Error ? error : new Error("Manufacturing PDF export failed.")
-            );
-        }
-    };
-
-    const handleExportManufacturingJson = async () => {
-        setManufacturingMessage(null);
-        setExportBoundaryError(null);
-
-        try {
-            await loadingStateService.run("export", async () => {
-                const startedAt = performance.now();
-                const document = await saveActiveProject();
-                let manufacturingPackage = generateManufacturingPackage(document);
-
-                if (materialCatalog) {
-                    manufacturingPackage = applyMaterialCatalogToManufacturingPackage(
-                        manufacturingPackage,
-                        materialCatalog
-                    );
-                }
-
-                manufacturingService.downloadManufacturingJSON(manufacturingPackage, {
-                    projectName: document.name
-                });
-
-                performanceService.recordExportDuration(
-                    "export.manufacturingJson",
-                    Math.round(performance.now() - startedAt),
-                    { projectId: document.id }
-                );
-
-                await auditService.record({
-                    action: "manufacturing.exported",
-                    entityType: "manufacturing",
-                    entityId: manufacturingPackage.id
-                });
-                await trackEvent({
-                    event: "manufacturing.exported",
-                    entityType: "manufacturing",
-                    entityId: manufacturingPackage.id,
-                    metadata: {
-                        projectId: document.id,
-                        format: "json"
-                    }
-                });
-            });
-            setManufacturingMessage("Mfg JSON exported");
-        } catch (error) {
-            errorTrackingService.captureError(error, {
-                context: "export.manufacturingJson"
-            });
-            console.warn("Manufacturing JSON export failed.", error);
-            setManufacturingMessage("Mfg export failed");
-            setExportBoundaryError(
-                error instanceof Error ? error : new Error("Manufacturing JSON export failed.")
-            );
-        }
-    };
-
-    const handleExportQuotePdf = async () => {
-        setQuoteMessage(null);
-        setExportBoundaryError(null);
-
-        if (!settings || !materialCatalog) {
-            setQuoteMessage("Settings not loaded");
+        if (!nextName || nextName === activeProjectName) {
             return;
         }
 
-        try {
-            await loadingStateService.run("export", async () => {
-                const startedAt = performance.now();
-                const document = await saveActiveProject();
-                const quote = generateOrganizationQuote(document, settings, materialCatalog);
+        await renameProject(activeProjectId, nextName);
+        setRevisionMessage("Project renamed");
+    };
 
-                await trackEvent({
-                    event: "quote.created",
-                    entityType: "quote",
-                    entityId: quote.id,
-                    metadata: {
-                        projectId: document.id,
-                        total: quote.pricing.total,
-                        currency: settings.quoteDefaults.currency
-                    }
-                });
+    const handleDeleteProject = async () => {
+        const confirmed = window.confirm(
+            `Delete "${activeProjectName}"? This cannot be undone.`
+        );
 
-                await downloadOrganizationQuotePDF(document, settings, materialCatalog, {}, {
-                    fileName: `${document.name.replace(/[^\w\-]+/g, "-").toLowerCase()}-quote.pdf`
-                });
-
-                performanceService.recordExportDuration(
-                    "export.quotePdf",
-                    Math.round(performance.now() - startedAt),
-                    { projectId: document.id }
-                );
-
-                await auditService.record({
-                    action: "quote.exported",
-                    entityType: "quote",
-                    entityId: document.id
-                });
-                await trackEvent({
-                    event: "quote.exported",
-                    entityType: "quote",
-                    entityId: quote.id,
-                    metadata: {
-                        projectId: document.id,
-                        total: quote.pricing.total,
-                        currency: settings.quoteDefaults.currency
-                    }
-                });
-            });
-            setQuoteMessage("Quote PDF exported");
-        } catch (error) {
-            errorTrackingService.captureError(error, {
-                context: "export.quotePdf"
-            });
-            console.warn("Quote PDF export failed.", error);
-            setQuoteMessage("Quote export failed");
-            setExportBoundaryError(
-                error instanceof Error ? error : new Error("Quote PDF export failed.")
-            );
+        if (!confirmed) {
+            return;
         }
+
+        await deleteProject(activeProjectId);
     };
 
     const handleImportToCloud = async () => {
@@ -306,74 +157,20 @@ export function ProjectToolbar() {
     };
 
     useEffect(() => {
-        if (!shareMessage) {
+        if (!shareMessage && !revisionMessage && !cloudMessage && !quickActionMessage) {
             return;
         }
 
         const timeout = window.setTimeout(() => {
             setShareMessage(null);
-        }, 2500);
-
-        return () => {
-            window.clearTimeout(timeout);
-        };
-    }, [shareMessage]);
-
-    useEffect(() => {
-        if (!revisionMessage) {
-            return;
-        }
-
-        const timeout = window.setTimeout(() => {
             setRevisionMessage(null);
-        }, 2500);
-
-        return () => {
-            window.clearTimeout(timeout);
-        };
-    }, [revisionMessage]);
-
-    useEffect(() => {
-        if (!manufacturingMessage) {
-            return;
-        }
-
-        const timeout = window.setTimeout(() => {
-            setManufacturingMessage(null);
-        }, 2500);
-
-        return () => {
-            window.clearTimeout(timeout);
-        };
-    }, [manufacturingMessage]);
-
-    useEffect(() => {
-        if (!quoteMessage) {
-            return;
-        }
-
-        const timeout = window.setTimeout(() => {
-            setQuoteMessage(null);
-        }, 2500);
-
-        return () => {
-            window.clearTimeout(timeout);
-        };
-    }, [quoteMessage]);
-
-    useEffect(() => {
-        if (!cloudMessage) {
-            return;
-        }
-
-        const timeout = window.setTimeout(() => {
             setCloudMessage(null);
-        }, 3500);
+        }, 2800);
 
         return () => {
             window.clearTimeout(timeout);
         };
-    }, [cloudMessage]);
+    }, [cloudMessage, quickActionMessage, revisionMessage, shareMessage]);
 
     return (
         <PdfExportErrorBoundary
@@ -381,374 +178,543 @@ export function ProjectToolbar() {
             onReset={() => setExportBoundaryError(null)}
         >
             <AsyncErrorTrigger error={exportBoundaryError} />
-            <div style={styles.bar}>
-            <div style={styles.group} ref={containerRef}>
-                <button
-                    type="button"
-                    style={styles.projectButton}
-                    disabled={isBusy}
-                    onClick={() => setMenuOpen(current => !current)}
-                    aria-haspopup="menu"
-                    aria-expanded={menuOpen}
-                >
-                    <span style={styles.projectLabel}>Project</span>
-                    <span style={styles.projectName}>{activeProjectName}</span>
-                    <span style={styles.chevron}>{menuOpen ? "▴" : "▾"}</span>
-                </button>
-
-                {menuOpen && (
-                    <div style={styles.menu} role="menu">
-                        <PermissionGuard action="projects.edit">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    void saveActiveProject();
-                                }}
-                            >
-                                Save Project
-                            </button>
-                        </PermissionGuard>
-                        <PermissionGuard action="projects.edit">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    void saveRevision().then(revision => {
-                                        if (revision) {
-                                            setRevisionMessage(`Saved v${revision.versionNumber}`);
-                                        }
-                                    });
-                                }}
-                            >
-                                Save Revision
-                            </button>
-                        </PermissionGuard>
-                        <PermissionGuard action="manufacturing.export">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    void handleExportManufacturingPdf();
-                                }}
-                            >
-                                Export Manufacturing PDF
-                            </button>
-                        </PermissionGuard>
-                        <PermissionGuard action="manufacturing.export">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    void handleExportManufacturingJson();
-                                }}
-                            >
-                                Export Manufacturing JSON
-                            </button>
-                        </PermissionGuard>
-                        <PermissionGuard action="quotes.export">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    void handleExportQuotePdf();
-                                }}
-                            >
-                                Export Quote PDF
-                            </button>
-                        </PermissionGuard>
-                        <PermissionGuard action="settings.edit">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    openAssignCustomer();
-                                }}
-                            >
-                                Assign Customer…
-                            </button>
-                        </PermissionGuard>
-                        <PermissionGuard action="settings.edit">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    openAdmin("dashboard");
-                                }}
-                            >
-                                Admin Settings…
-                            </button>
-                        </PermissionGuard>
-                        {canManageUsers && (
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    openUsers();
-                                }}
-                            >
-                                User Management…
-                            </button>
-                        )}
-                        <PermissionGuard action="projects.view">
-                            <button
-                                type="button"
-                                style={styles.menuItem}
-                                disabled={isBusy}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    openManager();
-                                }}
-                            >
-                                Manage Projects…
-                            </button>
-                        </PermissionGuard>
-                    </div>
-                )}
-            </div>
-
-            <nav style={styles.navGroup} aria-label="Application">
-                <PermissionGuard action="projects.view">
-                    <button type="button" style={styles.navButton} disabled={isBusy} onClick={openManager}>
-                        Projects
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="projects.create">
+            <div style={styles.barContainer}>
+                <div style={styles.headerRow}>
+                <div style={styles.group} ref={containerRef}>
                     <button
                         type="button"
-                        style={styles.navButton}
+                        style={styles.projectButton}
                         disabled={isBusy}
-                        onClick={openTemplateGallery}
-                    >
-                        Templates
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="projects.edit">
-                    <button
-                        type="button"
-                        style={styles.navButton}
-                        disabled={isBusy}
-                        onClick={() => openAdmin("components")}
-                    >
-                        Components
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="settings.edit">
-                    <button
-                        type="button"
-                        style={styles.navButton}
-                        disabled={isBusy}
-                        onClick={() => openAdmin("customers")}
-                    >
-                        Customers
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="quotes.export">
-                    <button
-                        type="button"
-                        style={styles.navButton}
-                        disabled={isBusy}
-                        onClick={() => void handleExportQuotePdf()}
-                    >
-                        Quotes
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="manufacturing.export">
-                    <button
-                        type="button"
-                        style={styles.navButton}
-                        disabled={isBusy}
-                        onClick={() => void handleExportManufacturingPdf()}
-                    >
-                        Manufacturing
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="projects.edit">
-                    <button
-                        type="button"
-                        style={styles.navButton}
-                        disabled={isBusy}
-                        onClick={toggleReviews}
-                    >
-                        Reviews
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="projects.view">
-                    <button type="button" style={styles.navButton} disabled={isBusy} onClick={openARPreview}>
-                        AR Preview
-                    </button>
-                </PermissionGuard>
-                <PermissionGuard action="settings.edit">
-                    <button
-                        type="button"
-                        style={styles.navButton}
-                        disabled={isBusy}
-                        onClick={() => openAdmin("dashboard")}
-                    >
-                        Admin
-                    </button>
-                </PermissionGuard>
-                {canManageUsers && (
-                    <button
-                        type="button"
-                        style={styles.navButton}
-                        disabled={isBusy}
-                        onClick={openUsers}
-                    >
-                        Users
-                    </button>
-                )}
-            </nav>
-
-            {isConfigured && (
-                <div style={styles.group} ref={cloudContainerRef}>
-                    <button
-                        type="button"
-                        style={styles.cloudButton}
-                        disabled={isBusy}
-                        onClick={() => setCloudMenuOpen(current => !current)}
+                        onClick={() => {
+                            setMoreMenuOpen(false);
+                            setCloudMenuOpen(false);
+                            setMenuOpen(current => !current);
+                        }}
                         aria-haspopup="menu"
-                        aria-expanded={cloudMenuOpen}
+                        aria-expanded={menuOpen}
+                        title="Project name and file actions"
                     >
-                        <span style={styles.cloudLabel}>Account</span>
-                        <span style={styles.cloudValue}>
-                            {user?.email || "Sign in"}
-                        </span>
-                        <span style={styles.syncBadge} data-status={syncStatus}>
-                            {formatCloudSyncStatus(syncStatus)}
-                        </span>
+                        <span style={styles.projectLabel}>Project</span>
+                        <span style={styles.projectName}>{activeProjectName}</span>
+                        <span style={styles.chevron}>{menuOpen ? "▴" : "▾"}</span>
                     </button>
 
-                    {cloudMenuOpen && (
-                        <div style={styles.cloudMenu}>
-                            <AuthPanel onClose={() => setCloudMenuOpen(false)} />
-                            {user && (
+                    {menuOpen && (
+                        <div style={styles.menu} role="menu">
+                            <PermissionGuard action="projects.create">
                                 <button
                                     type="button"
-                                    style={styles.menuItem}
+                                    style={menuStyles.item}
                                     disabled={isBusy}
                                     onClick={() => {
-                                        setCloudMenuOpen(false);
-                                        void handleImportToCloud();
+                                        closeMenus();
+                                        void createNewProject();
                                     }}
                                 >
-                                    Import to cloud
+                                    New project
                                 </button>
-                            )}
+                            </PermissionGuard>
+                            <PermissionGuard action="projects.view">
+                                <button
+                                    type="button"
+                                    style={menuStyles.item}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        openManager();
+                                    }}
+                                >
+                                    Open project
+                                </button>
+                            </PermissionGuard>
+
+                            <MenuDivider />
+
+                            <PermissionGuard action="projects.edit">
+                                <button
+                                    type="button"
+                                    style={menuStyles.item}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        void saveActiveProject().then(() => {
+                                            setRevisionMessage("Project saved");
+                                        });
+                                    }}
+                                >
+                                    Save
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard action="projects.edit">
+                                <button
+                                    type="button"
+                                    style={menuStyles.item}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        void saveRevision().then(revision => {
+                                            if (revision) {
+                                                setRevisionMessage(`Saved v${revision.versionNumber}`);
+                                            }
+                                        });
+                                    }}
+                                >
+                                    Save revision
+                                </button>
+                            </PermissionGuard>
+
+                            <MenuDivider />
+
+                            <PermissionGuard action="projects.edit">
+                                <button
+                                    type="button"
+                                    style={menuStyles.item}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        void handleRenameProject();
+                                    }}
+                                >
+                                    Rename
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard action="projects.delete">
+                                <button
+                                    type="button"
+                                    style={menuStyles.item}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        void handleDeleteProject();
+                                    }}
+                                >
+                                    Delete
+                                </button>
+                            </PermissionGuard>
+
+                            <MenuDivider />
+
+                            <MenuSection label="Exports" />
+                            <PermissionGuard action="quotes.export">
+                                <button
+                                    type="button"
+                                    style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        void handleExportQuotePdf();
+                                    }}
+                                >
+                                    Quote PDF
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard action="manufacturing.export">
+                                <button
+                                    type="button"
+                                    style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        void handleExportManufacturingPdf();
+                                    }}
+                                >
+                                    Manufacturing PDF
+                                </button>
+                            </PermissionGuard>
+                            <PermissionGuard action="manufacturing.export">
+                                <button
+                                    type="button"
+                                    style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        void handleExportManufacturingJson();
+                                    }}
+                                >
+                                    Manufacturing JSON
+                                </button>
+                            </PermissionGuard>
                         </div>
                     )}
                 </div>
-            )}
 
-            <PermissionGuard action="projects.edit">
-                <button
-                    type="button"
-                    style={styles.shareButton}
-                    disabled={isBusy}
-                    onClick={() => void handleShare()}
-                >
-                    Share
-                </button>
-            </PermissionGuard>
+                <EditorModeIndicator />
 
-            {shareMessage && (
-                <span style={styles.shareMessage}>{shareMessage}</span>
-            )}
+                {(shareMessage || revisionMessage || cloudMessage || quickActionMessage) && (
+                    <span style={styles.shareMessage}>
+                        {shareMessage
+                            ?? revisionMessage
+                            ?? cloudMessage
+                            ?? quickActionMessage}
+                    </span>
+                )}
 
-            {revisionMessage && (
-                <span style={styles.shareMessage}>{revisionMessage}</span>
-            )}
+                {isConfigured && (
+                    <div style={{ ...styles.group, marginLeft: "auto" }} ref={cloudContainerRef}>
+                        <button
+                            type="button"
+                            style={styles.cloudButton}
+                            disabled={isBusy}
+                            onClick={() => {
+                                setMenuOpen(false);
+                                setMoreMenuOpen(false);
+                                setCloudMenuOpen(current => !current);
+                            }}
+                            aria-haspopup="menu"
+                            aria-expanded={cloudMenuOpen}
+                            title="Account and sync"
+                        >
+                            <span style={styles.cloudLabel}>Account</span>
+                            <span style={styles.cloudValue}>
+                                {user?.email || "Sign in"}
+                            </span>
+                            <span style={styles.syncBadge} data-status={syncStatus}>
+                                {formatCloudSyncStatus(syncStatus)}
+                            </span>
+                        </button>
 
-            {manufacturingMessage && (
-                <span style={styles.shareMessage}>{manufacturingMessage}</span>
-            )}
+                        {cloudMenuOpen && (
+                            <div style={styles.cloudMenu}>
+                                <AuthPanel onClose={closeMenus} />
+                                {user && (
+                                    <button
+                                        type="button"
+                                        style={styles.menuItem}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            void handleImportToCloud();
+                                        }}
+                                    >
+                                        Import to cloud
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+                </div>
+            </div>
 
-            {quoteMessage && (
-                <span style={styles.shareMessage}>{quoteMessage}</span>
-            )}
+            <div style={styles.actionToolbar}>
+                <div style={styles.primaryActions}>
+                    <PermissionGuard action="projects.edit">
+                        <button
+                            type="button"
+                            style={styles.saveButton}
+                            disabled={isBusy}
+                            title="Save project"
+                            onClick={() => void saveActiveProject()}
+                        >
+                            Save
+                        </button>
+                    </PermissionGuard>
 
-            {cloudMessage && (
-                <span style={styles.shareMessage}>{cloudMessage}</span>
-            )}
+                    <PermissionGuard action="projects.edit">
+                        <button
+                            type="button"
+                            style={styles.shareButton}
+                            disabled={isBusy}
+                            title="Copy client review link"
+                            onClick={() => void handleShare()}
+                        >
+                            Share
+                        </button>
+                    </PermissionGuard>
 
-            <PermissionGuard action="projects.edit">
-                <button
-                    type="button"
-                    style={styles.revisionButton}
-                    disabled={isBusy}
-                    onClick={() => {
-                        void saveRevision().then(revision => {
-                            if (revision) {
-                                setRevisionMessage(`Saved v${revision.versionNumber}`);
-                            }
-                        });
-                    }}
-                >
-                    Save Revision
-                </button>
-            </PermissionGuard>
+                    <PermissionGuard action="quotes.export">
+                        <button
+                            type="button"
+                            style={styles.actionButton}
+                            disabled={isBusy}
+                            title="Download quote PDF"
+                            onClick={() => void handleExportQuotePdf()}
+                        >
+                            Quote
+                        </button>
+                    </PermissionGuard>
 
-            <PermissionGuard action="projects.edit">
-                <button
-                    type="button"
-                    style={styles.saveButton}
-                    disabled={isBusy}
-                    onClick={() => void saveActiveProject()}
-                >
-                    Save Project
-                </button>
-            </PermissionGuard>
+                    <PermissionGuard action="projects.view">
+                        <button
+                            type="button"
+                            style={styles.actionButton}
+                            disabled={isBusy}
+                            title="Customer-facing presentation preview"
+                            onClick={enterPresentationMode}
+                        >
+                            Preview
+                        </button>
+                    </PermissionGuard>
+
+                    <div style={styles.group} ref={moreContainerRef}>
+                        <button
+                            type="button"
+                            style={styles.actionButton}
+                            disabled={isBusy}
+                            title="Templates, reviews, admin, and more"
+                            onClick={() => {
+                                setMenuOpen(false);
+                                setCloudMenuOpen(false);
+                                setMoreMenuOpen(current => !current);
+                            }}
+                            aria-haspopup="menu"
+                            aria-expanded={moreMenuOpen}
+                        >
+                            More ▾
+                        </button>
+
+                        {moreMenuOpen && (
+                            <div style={styles.moreMenu} role="menu">
+                                <MenuSection label="Design Tools" />
+                                <PermissionGuard action="projects.create">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openTemplateGallery();
+                                        }}
+                                    >
+                                        Templates
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="projects.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            onOpenComponentLibrary?.();
+                                        }}
+                                    >
+                                        Component library
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="projects.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            onOpenMockups?.();
+                                        }}
+                                    >
+                                        Mockups
+                                    </button>
+                                </PermissionGuard>
+
+                                <MenuDivider />
+                                <MenuSection label="Collaboration" />
+                                <PermissionGuard action="projects.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            showReviews();
+                                        }}
+                                    >
+                                        Reviews
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="settings.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openAdmin("customers");
+                                        }}
+                                    >
+                                        Customers
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="projects.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            void handleShare();
+                                        }}
+                                    >
+                                        Share links
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="settings.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openAssignCustomer();
+                                        }}
+                                    >
+                                        Assign customer
+                                    </button>
+                                </PermissionGuard>
+
+                                <MenuDivider />
+                                <MenuSection label="Tools" />
+                                <PermissionGuard action="projects.view">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openARPreview();
+                                        }}
+                                    >
+                                        AR preview
+                                    </button>
+                                </PermissionGuard>
+
+                                <MenuDivider />
+                                <MenuSection label="Administration" />
+                                <PermissionGuard action="settings.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openAdmin("erp");
+                                        }}
+                                    >
+                                        ERP
+                                    </button>
+                                </PermissionGuard>
+                                {canManageUsers && (
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openUsers();
+                                        }}
+                                    >
+                                        Users & roles
+                                    </button>
+                                )}
+                                <PermissionGuard action="settings.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openAdmin("dashboard");
+                                        }}
+                                    >
+                                        Analytics
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="settings.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openAdmin("company");
+                                        }}
+                                    >
+                                        Company settings
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="settings.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openAdmin("activity");
+                                        }}
+                                    >
+                                        Activity logs
+                                    </button>
+                                </PermissionGuard>
+                                <PermissionGuard action="projects.edit">
+                                    <button
+                                        type="button"
+                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            openAdmin("components");
+                                        }}
+                                    >
+                                        Catalog management
+                                    </button>
+                                </PermissionGuard>
+                                <button
+                                    type="button"
+                                    style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                        closeMenus();
+                                        window.open("/portal", "_blank", "noopener,noreferrer");
+                                    }}
+                                >
+                                    Customer portal
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </PdfExportErrorBoundary>
     );
 }
 
 const styles = {
-    bar: {
+    barContainer: {
         position: "absolute",
-        top: 40,
-        left: 320,
-        right: 20,
+        top: CHROME_ROW_TOP,
+        left: LEFT_CHROME_OFFSET,
+        right: RIGHT_CHROME_OFFSET,
         zIndex: 12,
+        display: "flex",
+        alignItems: "center",
+        minHeight: CHROME_HEADER_ROW_HEIGHT,
+        pointerEvents: "none"
+    },
+    headerRow: {
         display: "flex",
         alignItems: "center",
         flexWrap: "wrap",
         gap: 10,
+        width: "100%",
         pointerEvents: "none"
     },
-    navGroup: {
+    actionToolbar: {
+        position: "absolute",
+        top: CHROME_ACTION_ROW_TOP,
+        right: PANEL_INSET,
+        zIndex: 12,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        minHeight: CHROME_ACTION_ROW_HEIGHT,
+        maxWidth: `calc(100vw - ${LEFT_CHROME_OFFSET + PANEL_INSET}px)`,
+        pointerEvents: "none"
+    },
+    primaryActions: {
         display: "flex",
         flexWrap: "wrap",
         alignItems: "center",
-        gap: 6,
+        gap: 8,
         pointerEvents: "auto"
-    },
-    navButton: {
-        border: "1px solid #4b5562",
-        background: "#2d3440",
-        color: "#f7f7f2",
-        borderRadius: 6,
-        padding: "8px 10px",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 12,
-        whiteSpace: "nowrap"
     },
     group: {
         position: "relative",
@@ -839,6 +805,21 @@ const styles = {
         overflow: "hidden",
         display: "grid"
     },
+    moreMenu: {
+        position: "fixed",
+        top: MORE_MENU_TOP,
+        right: MORE_MENU_RIGHT,
+        left: "auto",
+        minWidth: 240,
+        maxHeight: `calc(100vh - ${MORE_MENU_TOP + PANEL_SECTION_GAP}px)`,
+        overflowY: "auto",
+        zIndex: 13,
+        background: "#20242b",
+        border: "1px solid #3b414a",
+        borderRadius: 8,
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.28)",
+        display: "grid"
+    },
     cloudMenu: {
         position: "absolute",
         top: "calc(100% + 6px)",
@@ -861,6 +842,18 @@ const styles = {
         fontSize: 13
     },
     saveButton: {
+        pointerEvents: "auto",
+        border: "1px solid #8ea0b8",
+        background: "#3a4558",
+        color: "#f7f7f2",
+        borderRadius: 8,
+        padding: "10px 12px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 13,
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+    },
+    actionButton: {
         pointerEvents: "auto",
         border: "1px solid #4b5562",
         background: "#2d3440",

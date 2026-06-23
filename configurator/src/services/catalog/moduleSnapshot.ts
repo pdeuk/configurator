@@ -1,5 +1,5 @@
 import type { ModuleType, StandModule } from "../../models/ModuleModel";
-import { COMPONENT_OPTIONS } from "../../utils/componentCatalog";
+import { COMPONENT_OPTIONS, normalizeWallRotation } from "../../utils/componentCatalog";
 import type {
     CatalogDimensions,
     CatalogItem,
@@ -94,6 +94,10 @@ export function insertCatalogItemIntoProject(
         height: dimensions.height,
         depth: dimensions.depth,
         position: computeInsertPosition(snapshot.type, moduleCount),
+        rotation:
+            snapshot.type === "wall"
+                ? normalizeWallRotation(snapshot.rotation)
+                : snapshot.rotation,
         snappedTo: null
     };
 }

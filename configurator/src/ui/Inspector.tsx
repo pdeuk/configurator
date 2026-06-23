@@ -19,12 +19,13 @@ import {
     melamineBlocksFabricOptions,
     setModuleFabric
 } from "../utils/fabrics";
-import { clampBannerSegmentCount } from "../utils/bannerFabrics";
 import {
     DEFAULT_BANNER_SEGMENT_COUNT,
     MAX_BANNER_SEGMENT_COUNT,
     MIN_BANNER_SEGMENT_COUNT
 } from "../utils/bannerGeometry";
+import { clampBannerSegmentCount } from "../utils/bannerFabrics";
+import { ProjectOverviewPanel } from "./shell/ProjectOverviewPanel";
 
 function formatDpi(value: number) {
     return Number.isFinite(value) ? value.toFixed(1) : "0.0";
@@ -88,6 +89,8 @@ export function Inspector() {
     const selectedModule = useEditorStore(state =>
         selectedId ? state.modulesById[selectedId] : undefined
     );
+    const floorSize = useEditorStore(state => state.floorSize);
+    const moduleCount = useEditorStore(state => state.moduleIds.length);
     const updateModule = useEditorStore(state => state.updateModule);
     const duplicateModule = useEditorStore(state => state.duplicateModule);
     const removeModule = useEditorStore(state => state.removeModule);
@@ -103,8 +106,11 @@ export function Inspector() {
     if (!selectedModule) {
         return (
             <aside style={styles.panel}>
-                <h2 style={styles.heading}>Properties</h2>
-                <p style={styles.empty}>Select a module to edit it.</p>
+                <ProjectOverviewPanel
+                    moduleCount={moduleCount}
+                    floorWidthCm={Math.round(floorSize.width * 100)}
+                    floorDepthCm={Math.round(floorSize.depth * 100)}
+                />
             </aside>
         );
     }
@@ -493,7 +499,11 @@ export function Inspector() {
                             ...styles.button,
                             ...styles.dangerButton
                         }}
-                        onClick={() => removeModule(selectedModule.id)}
+                        onClick={() => {
+                            if (window.confirm("Remove this module from the stand?")) {
+                                removeModule(selectedModule.id);
+                            }
+                        }}
                     >
                         Delete
                     </button>
@@ -503,15 +513,11 @@ export function Inspector() {
     );
 }
 
-const PANEL_INSET = 20;
-
 const styles = {
     panel: {
-        position: "absolute",
-        top: PANEL_INSET,
-        right: PANEL_INSET,
-        width: `min(280px, calc(100vw - ${PANEL_INSET * 2}px))`,
-        maxHeight: `calc(100vh - ${PANEL_INSET * 2}px)`,
+        flex: "1 1 0",
+        minHeight: 0,
+        width: "100%",
         overflowY: "auto",
         overflowX: "hidden",
         overscrollBehavior: "contain",
@@ -522,7 +528,6 @@ const styles = {
         border: "1px solid #3b414a",
         borderRadius: 8,
         padding: 16,
-        zIndex: 10,
         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
         fontFamily: "system-ui, sans-serif"
     },
@@ -547,6 +552,17 @@ const styles = {
         margin: "12px 0 0",
         color: "#aab3bd",
         fontSize: 13
+    },
+    summary: {
+        display: "grid",
+        gap: 6,
+        marginTop: 12,
+        padding: 10,
+        borderRadius: 6,
+        border: "1px solid #3b414a",
+        background: "#171b21",
+        color: "#d7dde5",
+        fontSize: 12
     },
     section: {
         marginTop: 18

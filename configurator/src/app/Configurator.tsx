@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { StandCanvas } from "../scene/StandCanvas";
 import { performanceService } from "../services/system";
 import { isSupabaseConfigured } from "../services/cloud";
@@ -20,6 +20,12 @@ import { useEditorStore } from "../store/editorStore";
 import { ReviewDesignerPanel } from "../ui/reviews";
 import { ARPreviewProvider, useARPreview } from "../ui/ar";
 import { AppShellProvider, useAppShell } from "../ui/shell";
+import { RightPanelColumn } from "../ui/shell/RightPanelColumn";
+import { SelectionActionBar } from "../ui/shell/SelectionActionBar";
+import {
+    PresentationModeProvider,
+    usePresentationMode
+} from "../ui/presentation/PresentationModeContext";
 import { TemplateGallery } from "../ui/templates";
 import { disableLocalDemoMode, isLocalDemoMode } from "./localDemoMode";
 
@@ -29,6 +35,7 @@ function ConfiguratorShell() {
     const { can } = usePermissions();
     const { isOpen: isARPreviewOpen } = useARPreview();
     const { reviewsVisible } = useAppShell();
+    const { isPresentationMode, exitPresentationMode } = usePresentationMode();
     const {
         isTemplateGalleryOpen,
         closeTemplateGallery,
@@ -37,6 +44,8 @@ function ConfiguratorShell() {
         isBusy
     } = useProjectSession();
     const navigate = useNavigate();
+    const [libraryOpen, setLibraryOpen] = useState(false);
+    const [mockupsOpen, setMockupsOpen] = useState(false);
     const showLocalModeBadge = !isSupabaseConfigured() && isLocalDemoMode();
 
     useEffect(() => {
@@ -51,6 +60,12 @@ function ConfiguratorShell() {
         navigate("/", { replace: true });
     };
 
+    const showEditorChrome =
+        !isARPreviewOpen
+        && !isPresentationMode
+        && can("projects.edit")
+        && !artworkEditMode;
+
     return (
         <EditorErrorBoundary>
             <div
@@ -61,36 +76,60 @@ function ConfiguratorShell() {
                     overflow: "hidden"
                 }}
             >
-                {!isARPreviewOpen && (
+                {!isARPreviewOpen && !isPresentationMode && (
                     <div style={styles.workspaceHeader}>
-                        <div style={styles.workspaceMeta}>
-                            <span style={styles.workspaceTitle}>Workspace</span>
-                            {showLocalModeBadge && (
-                                <span style={styles.localBadge}>Local Mode</span>
-                            )}
-                            <Link to="/portal" style={styles.portalLink}>
-                                Customer portal
-                            </Link>
-                        </div>
+                        {showLocalModeBadge && (
+                            <span style={styles.localBadge}>Local mode</span>
+                        )}
                         <button
                             type="button"
                             style={styles.exitWorkspaceButton}
                             onClick={handleExitWorkspace}
+                            title="Return to sign-in"
                         >
-                            Exit workspace
+                            Exit
                         </button>
                     </div>
                 )}
-                {!artworkEditMode && !isARPreviewOpen && can("projects.edit") && <LeftSidebar />}
-                {!artworkEditMode && !isARPreviewOpen && can("projects.edit") && <Inspector />}
-                {!artworkEditMode && !isARPreviewOpen && can("projects.edit") && reviewsVisible && (
-                    <ReviewDesignerPanel />
+
+                {isPresentationMode && (
+                    <div style={styles.presentationBar}>
+                        <span style={styles.presentationLabel}>Presentation preview</span>
+                        <button
+                            type="button"
+                            style={styles.exitPresentationButton}
+                            onClick={exitPresentationMode}
+                        >
+                            Exit presentation mode
+                        </button>
+                    </div>
                 )}
-                {!artworkEditMode && !isARPreviewOpen && can("projects.edit") && <ArtworkDropZone />}
-                {!artworkEditMode && !isARPreviewOpen && can("projects.view") && <ProjectManager />}
-                {!isARPreviewOpen && <ProjectToolbar />}
+
+                {showEditorChrome && (
+                    <LeftSidebar
+                        libraryOpen={libraryOpen}
+                        mockupsOpen={mockupsOpen}
+                        onLibraryOpenChange={setLibraryOpen}
+                        onMockupsOpenChange={setMockupsOpen}
+                    />
+                )}
+                {showEditorChrome && (
+                    <RightPanelColumn>
+                        <Inspector />
+                        {reviewsVisible && <ReviewDesignerPanel />}
+                    </RightPanelColumn>
+                )}
+                {showEditorChrome && <ArtworkDropZone />}
+                {!isARPreviewOpen && !isPresentationMode && can("projects.view") && <ProjectManager />}
+                {!isARPreviewOpen && !isPresentationMode && (
+                    <ProjectToolbar
+                        onOpenComponentLibrary={() => setLibraryOpen(true)}
+                        onOpenMockups={() => setMockupsOpen(true)}
+                    />
+                )}
                 {!isARPreviewOpen && <StandCanvas />}
-                {!isARPreviewOpen && can("projects.edit") && <ArtworkEditor />}
+                {showEditorChrome && <SelectionActionBar />}
+                {!isARPreviewOpen && !isPresentationMode && can("projects.edit") && <ArtworkEditor />}
                 <TemplateGallery
                     isOpen={isTemplateGalleryOpen}
                     onClose={closeTemplateGallery}
@@ -112,11 +151,13 @@ export function Configurator() {
         <SettingsProvider>
             <PermissionsProvider>
                 <ProjectSessionProvider>
-                    <ARPreviewProvider>
-                        <AppShellProvider>
-                            <ConfiguratorShell />
-                        </AppShellProvider>
-                    </ARPreviewProvider>
+                    <PresentationModeProvider>
+                        <ARPreviewProvider>
+                            <AppShellProvider>
+                                <ConfiguratorShell />
+                            </AppShellProvider>
+                        </ARPreviewProvider>
+                    </PresentationModeProvider>
                 </ProjectSessionProvider>
             </PermissionsProvider>
         </SettingsProvider>
@@ -127,24 +168,12 @@ const styles = {
     workspaceHeader: {
         position: "absolute",
         top: 8,
-        right: 20,
+        right: 16,
         zIndex: 14,
         display: "flex",
         alignItems: "center",
-        gap: 12,
+        gap: 8,
         pointerEvents: "none"
-    },
-    workspaceMeta: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        pointerEvents: "auto"
-    },
-    workspaceTitle: {
-        fontSize: 11,
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        color: "#9aa3b2"
     },
     localBadge: {
         fontSize: 11,
@@ -153,12 +182,8 @@ const styles = {
         border: "1px solid #854d0e",
         borderRadius: 999,
         padding: "4px 8px",
-        background: "rgba(66, 32, 6, 0.45)"
-    },
-    portalLink: {
-        fontSize: 12,
-        color: "#93c5fd",
-        textDecoration: "none"
+        background: "rgba(66, 32, 6, 0.45)",
+        pointerEvents: "auto"
     },
     exitWorkspaceButton: {
         border: "1px solid #4b5562",
@@ -170,5 +195,34 @@ const styles = {
         font: "inherit",
         fontSize: 12,
         pointerEvents: "auto"
+    },
+    presentationBar: {
+        position: "absolute",
+        top: 16,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 14,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 14px",
+        borderRadius: 999,
+        border: "1px solid #3b414a",
+        background: "rgba(32, 36, 43, 0.94)",
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+    },
+    presentationLabel: {
+        fontSize: 13,
+        color: "#cbd5e1"
+    },
+    exitPresentationButton: {
+        border: "1px solid #8ea0b8",
+        background: "#3a4558",
+        color: "#f7f7f2",
+        borderRadius: 999,
+        padding: "8px 14px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 13
     }
 } satisfies Record<string, import("react").CSSProperties>;

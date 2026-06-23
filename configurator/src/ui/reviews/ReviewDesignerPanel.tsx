@@ -277,14 +277,10 @@ export function ReviewDesignerPanel() {
     );
 }
 
-const PANEL_INSET = 20;
-
 const styles = {
     panel: {
-        position: "absolute",
-        right: PANEL_INSET,
-        bottom: PANEL_INSET,
-        width: `min(280px, calc(100vw - ${PANEL_INSET * 2}px))`,
+        flexShrink: 0,
+        width: "100%",
         maxHeight: "min(360px, calc(100vh - 240px))",
         overflowY: "auto",
         overflowX: "hidden",
@@ -294,7 +290,6 @@ const styles = {
         border: "1px solid #3b414a",
         borderRadius: 8,
         padding: 16,
-        zIndex: 10,
         display: "grid",
         gap: 10
     },

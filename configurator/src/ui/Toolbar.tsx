@@ -61,20 +61,42 @@ export function Toolbar() {
 
     return (
         <div style={styles.panel}>
+            <h2 style={styles.panelTitle}>Add to stand</h2>
             <label style={styles.field}>
-                <span style={styles.fieldLabel}>Components</span>
+                <span style={styles.fieldLabel}>Component</span>
                 <select
                     style={styles.select}
                     value={componentSelection}
                     onChange={handleComponentChange}
                     disabled={!can("projects.create")}
+                    title="Choose a component to place on the floor"
                 >
-                    <option value="">Add component…</option>
-                    {COMPONENT_OPTIONS.map(option => (
-                        <option key={option.id} value={option.id}>
-                            {option.label}
-                        </option>
-                    ))}
+                    <option value="">Choose component…</option>
+                    <optgroup label="Walls">
+                        {COMPONENT_OPTIONS.filter(option => option.id === "wall").map(option => (
+                            <option key={option.id} value={option.id}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Furniture">
+                        {COMPONENT_OPTIONS.filter(option =>
+                            option.id === "cube" || option.id === "promoStand"
+                        ).map(option => (
+                            <option key={option.id} value={option.id}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Branding">
+                        {COMPONENT_OPTIONS.filter(option =>
+                            option.id === "circularBanner" || option.id === "squareBanner"
+                        ).map(option => (
+                            <option key={option.id} value={option.id}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </optgroup>
                 </select>
             </label>
 
@@ -87,6 +109,7 @@ export function Toolbar() {
                 }}
                 disabled={!canUndo || !can("projects.edit")}
                 onClick={undo}
+                title="Undo last change"
             >
                 Undo
             </button>
@@ -105,7 +128,7 @@ export function Toolbar() {
             </button>
 
             <label style={styles.field}>
-                <span style={styles.fieldLabel}>Floor</span>
+                <span style={styles.fieldLabel}>Floor material</span>
                 <select
                     style={styles.select}
                     value={floorMaterialId}
@@ -165,7 +188,12 @@ const styles = {
         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
         fontFamily: "system-ui, sans-serif",
         display: "grid",
-        gap: 8
+        gap: 10
+    },
+    panelTitle: {
+        margin: 0,
+        fontSize: 14,
+        fontWeight: 700
     },
     button: {
         border: "1px solid #4b5562",

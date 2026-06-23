@@ -17,6 +17,13 @@ export const COMPONENT_OPTIONS: Array<{ id: ComponentType; label: string }> = [
     { id: "squareBanner", label: "Hanging banner (square)" }
 ];
 
+/** Front fabric faces the default camera when a wall is first placed. */
+export const DEFAULT_WALL_ROTATION = Math.PI;
+
+export function normalizeWallRotation(rotation: number): number {
+    return rotation === 0 ? DEFAULT_WALL_ROTATION : rotation;
+}
+
 export function createComponentModule(type: ComponentType, moduleCount: number): StandModule {
     switch (type) {
         case "wall":
@@ -28,7 +35,7 @@ export function createComponentModule(type: ComponentType, moduleCount: number):
                     y: 0,
                     z: 0
                 },
-                rotation: 0,
+                rotation: DEFAULT_WALL_ROTATION,
                 width: 1,
                 height: 2,
                 depth: 0.05,
