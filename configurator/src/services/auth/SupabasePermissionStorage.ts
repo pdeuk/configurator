@@ -1,6 +1,8 @@
 import { getSupabaseClient } from "../cloud/SupabaseClient";
 import {
     isOrganizationRole,
+    type InvitableOrganizationRole,
+    type OrganizationInvite,
     type OrganizationMember,
     type OrganizationMembership,
     type OrganizationRole
@@ -55,6 +57,30 @@ function readProfile(
     }
 
     return profiles;
+}
+
+interface OrganizationInviteRow {
+    id: string;
+    organization_id: string;
+    email: string;
+    role: string;
+    invited_by: string;
+    created_at: string;
+    accepted_at: string | null;
+}
+
+function mapInviteRow(row: OrganizationInviteRow): OrganizationInvite {
+    return {
+        id: row.id,
+        organizationId: row.organization_id,
+        email: row.email,
+        role: (isOrganizationRole(row.role) && row.role !== "owner"
+            ? row.role
+            : "designer") as InvitableOrganizationRole,
+        invitedBy: row.invited_by,
+        createdAt: row.created_at,
+        acceptedAt: row.accepted_at
+    };
 }
 
 function mapMemberRow(row: OrganizationMemberRow): OrganizationMember {
@@ -154,5 +180,104 @@ export class SupabasePermissionStorage implements PermissionStorage {
         if (error) {
             throw error;
         }
+    }
+
+    async listOrganizationInvites(organizationId: string): Promise<OrganizationInvite[]> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            return [];
+        }
+
+        const { data, error } = await client
+            .from("organization_invites")
+            .select("id, organization_id, email, role, invited_by, created_at, accepted_at")
+            .eq("organization_id", organizationId)
+            .is("accepted_at", null)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        return (data as OrganizationInviteRow[]).map(mapInviteRow);
+    }
+
+    async createOrganizationInvite(
+        organizationId: string,
+        email: string,
+        role: InvitableOrganizationRole,
+        invitedBy: string
+    ): Promise<void> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            throw new Error("Supabase is not configured.");
+        }
+
+        const { error } = await client
+            .from("organization_invites")
+            .insert({
+                organization_id: organizationId,
+                email: email.trim().toLowerCase(),
+                role,
+                invited_by: invitedBy
+            });
+
+        if (error) {
+            throw error;
+        }
+    }
+
+    async revokeOrganizationInvite(organizationId: string, inviteId: string): Promise<void> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            throw new Error("Supabase is not configured.");
+        }
+
+        const { error } = await client
+            .from("organization_invites")
+            .delete()
+            .eq("organization_id", organizationId)
+            .eq("id", inviteId);
+
+        if (error) {
+            throw error;
+        }
+    }
+
+    async removeOrganizationMember(organizationId: string, userId: string): Promise<void> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            throw new Error("Supabase is not configured.");
+        }
+
+        const { error } = await client
+            .from("organization_members")
+            .delete()
+            .eq("organization_id", organizationId)
+            .eq("user_id", userId);
+
+        if (error) {
+            throw error;
+        }
+    }
+
+    async claimPendingOrganizationInvite(): Promise<boolean> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            return false;
+        }
+
+        const { data, error } = await client.rpc("claim_pending_organization_invite");
+
+        if (error) {
+            throw error;
+        }
+
+        return Boolean(data);
     }
 }

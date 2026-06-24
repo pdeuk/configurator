@@ -88,6 +88,25 @@ export const ORGANIZATION_ROLES: OrganizationRole[] = [
     "production"
 ];
 
+export type InvitableOrganizationRole = Exclude<OrganizationRole, "owner">;
+
+export const INVITABLE_ORGANIZATION_ROLES: InvitableOrganizationRole[] = [
+    "admin",
+    "sales",
+    "designer",
+    "production"
+];
+
+export interface OrganizationInvite {
+    id: string;
+    organizationId: string;
+    email: string;
+    role: InvitableOrganizationRole;
+    invitedBy: string;
+    createdAt: string;
+    acceptedAt: string | null;
+}
+
 export function isOrganizationRole(value: string): value is OrganizationRole {
     return ORGANIZATION_ROLES.includes(value as OrganizationRole);
 }

@@ -8,7 +8,11 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prepare:floors": "node scripts/prepare-floor-assets.mjs"
+    "prepare:floors": "node scripts/prepare-floor-assets.mjs",
+    "supabase": "supabase",
+    "db:link": "supabase link",
+    "db:push": "supabase db push",
+    "db:status": "supabase migration list"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -36,6 +40,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "sharp": "^0.35.2",
+    "supabase": "^2.107.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"

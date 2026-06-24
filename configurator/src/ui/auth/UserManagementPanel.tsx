@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import {
-    ORGANIZATION_ROLES,
+    INVITABLE_ORGANIZATION_ROLES,
     formatOrganizationRole,
+    type InvitableOrganizationRole,
+    type OrganizationInvite,
     type OrganizationMember,
     type OrganizationRole
 } from "../../services/auth";
@@ -15,13 +17,20 @@ interface UserManagementPanelProps {
 export function UserManagementPanel({ isOpen, onClose }: UserManagementPanelProps) {
     const {
         members,
+        invites,
         isLoading,
         error,
         canManageUsers,
-        updateMemberRole
+        updateMemberRole,
+        createOrganizationInvite,
+        revokeOrganizationInvite,
+        removeOrganizationMember
     } = usePermissions();
     const [draftRoles, setDraftRoles] = useState<Record<string, OrganizationRole>>({});
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteRole, setInviteRole] = useState<InvitableOrganizationRole>("designer");
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
+    const [inviteMessage, setInviteMessage] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isOpen) {
@@ -35,6 +44,10 @@ export function UserManagementPanel({ isOpen, onClose }: UserManagementPanelProp
         }
 
         setDraftRoles(nextDraft);
+        setInviteEmail("");
+        setInviteRole("designer");
+        setSaveMessage(null);
+        setInviteMessage(null);
     }, [isOpen, members]);
 
     if (!isOpen) {
@@ -52,6 +65,43 @@ export function UserManagementPanel({ isOpen, onClose }: UserManagementPanelProp
         setSaveMessage(`Updated ${member.name}`);
     };
 
+    const handleInvite = async () => {
+        const email = inviteEmail.trim().toLowerCase();
+
+        if (!email) {
+            setInviteMessage("Enter an email address.");
+            return;
+        }
+
+        try {
+            await createOrganizationInvite(email, inviteRole);
+            setInviteEmail("");
+            setInviteMessage(`Invited ${email} as ${formatOrganizationRole(inviteRole)}.`);
+        } catch (inviteError) {
+            setInviteMessage(
+                inviteError instanceof Error
+                    ? inviteError.message
+                    : "Unable to send invite."
+            );
+        }
+    };
+
+    const handleRevokeInvite = async (invite: OrganizationInvite) => {
+        await revokeOrganizationInvite(invite.id);
+        setInviteMessage(`Revoked invite for ${invite.email}.`);
+    };
+
+    const handleRemoveMember = async (member: OrganizationMember) => {
+        const confirmed = window.confirm(`Remove ${member.name} from this organization?`);
+
+        if (!confirmed) {
+            return;
+        }
+
+        await removeOrganizationMember(member.userId);
+        setSaveMessage(`Removed ${member.name}`);
+    };
+
     return (
         <div style={styles.backdrop} onClick={onClose}>
             <div
@@ -64,7 +114,7 @@ export function UserManagementPanel({ isOpen, onClose }: UserManagementPanelProp
                 <div style={styles.header}>
                     <div>
                         <h2 id="user-management-title" style={styles.title}>User Management</h2>
-                        <p style={styles.subtitle}>Organization members, emails, and roles.</p>
+                        <p style={styles.subtitle}>Organization members, invites, emails, and roles.</p>
                     </div>
                     <button type="button" style={styles.iconButton} onClick={onClose} aria-label="Close">
                         ×
@@ -75,45 +125,115 @@ export function UserManagementPanel({ isOpen, onClose }: UserManagementPanelProp
                     <p style={styles.empty}>Only owners and admins can manage organization users.</p>
                 )}
 
-                {isLoading ? (
-                    <p style={styles.empty}>Loading members…</p>
-                ) : (
-                    <div style={styles.list}>
-                        {members.map(member => (
-                            <div key={member.userId} style={styles.row}>
-                                <div style={styles.memberMain}>
-                                    <div style={styles.memberName}>{member.name}</div>
-                                    <div style={styles.memberEmail}>{member.email}</div>
-                                </div>
-                                <select
-                                    style={styles.select}
-                                    value={draftRoles[member.userId] ?? member.role}
-                                    disabled={!canManageUsers || member.role === "owner"}
-                                    onChange={event =>
-                                        setDraftRoles(current => ({
-                                            ...current,
-                                            [member.userId]: event.target.value as OrganizationRole
-                                        }))
-                                    }
-                                >
-                                    {ORGANIZATION_ROLES.map(roleOption => (
-                                        <option key={roleOption} value={roleOption}>
-                                            {formatOrganizationRole(roleOption)}
-                                        </option>
-                                    ))}
-                                </select>
-                                <button
-                                    type="button"
-                                    style={styles.button}
-                                    disabled={!canManageUsers || member.role === "owner"}
-                                    onClick={() => void handleSave(member)}
-                                >
-                                    Save
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                {canManageUsers && (
+                    <section style={styles.section}>
+                        <h3 style={styles.sectionTitle}>Invite user</h3>
+                        <div style={styles.inviteRow}>
+                            <input
+                                type="email"
+                                style={styles.input}
+                                placeholder="teammate@company.com"
+                                value={inviteEmail}
+                                onChange={event => setInviteEmail(event.target.value)}
+                            />
+                            <select
+                                style={styles.select}
+                                value={inviteRole}
+                                onChange={event =>
+                                    setInviteRole(event.target.value as InvitableOrganizationRole)
+                                }
+                            >
+                                {INVITABLE_ORGANIZATION_ROLES.map(roleOption => (
+                                    <option key={roleOption} value={roleOption}>
+                                        {formatOrganizationRole(roleOption)}
+                                    </option>
+                                ))}
+                            </select>
+                            <button type="button" style={styles.primaryButton} onClick={() => void handleInvite()}>
+                                Invite
+                            </button>
+                        </div>
+                        {inviteMessage && <p style={styles.message}>{inviteMessage}</p>}
+                    </section>
                 )}
+
+                {canManageUsers && invites.length > 0 && (
+                    <section style={styles.section}>
+                        <h3 style={styles.sectionTitle}>Pending invites</h3>
+                        <div style={styles.list}>
+                            {invites.map(invite => (
+                                <div key={invite.id} style={styles.row}>
+                                    <div style={styles.memberMain}>
+                                        <div style={styles.memberName}>{invite.email}</div>
+                                        <div style={styles.memberEmail}>
+                                            {formatOrganizationRole(invite.role)} · pending signup
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        style={styles.dangerButton}
+                                        onClick={() => void handleRevokeInvite(invite)}
+                                    >
+                                        Revoke
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                <section style={styles.section}>
+                    <h3 style={styles.sectionTitle}>Members</h3>
+                    {isLoading ? (
+                        <p style={styles.empty}>Loading members…</p>
+                    ) : (
+                        <div style={styles.list}>
+                            {members.map(member => (
+                                <div key={member.userId} style={styles.row}>
+                                    <div style={styles.memberMain}>
+                                        <div style={styles.memberName}>{member.name}</div>
+                                        <div style={styles.memberEmail}>{member.email}</div>
+                                    </div>
+                                    <select
+                                        style={styles.select}
+                                        value={draftRoles[member.userId] ?? member.role}
+                                        disabled={!canManageUsers || member.role === "owner"}
+                                        onChange={event =>
+                                            setDraftRoles(current => ({
+                                                ...current,
+                                                [member.userId]: event.target.value as OrganizationRole
+                                            }))
+                                        }
+                                    >
+                                        {INVITABLE_ORGANIZATION_ROLES.map(roleOption => (
+                                            <option key={roleOption} value={roleOption}>
+                                                {formatOrganizationRole(roleOption)}
+                                            </option>
+                                        ))}
+                                        <option value="owner">{formatOrganizationRole("owner")}</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        style={styles.button}
+                                        disabled={!canManageUsers || member.role === "owner"}
+                                        onClick={() => void handleSave(member)}
+                                    >
+                                        Save
+                                    </button>
+                                    {canManageUsers && member.role !== "owner" && (
+                                        <button
+                                            type="button"
+                                            style={styles.dangerButton}
+                                            onClick={() => void handleRemoveMember(member)}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </section>
 
                 {saveMessage && <p style={styles.message}>{saveMessage}</p>}
                 {error && <p style={styles.error}>{error}</p>}
@@ -161,6 +281,18 @@ const styles = {
         color: "#9aa3b2",
         fontSize: 13
     },
+    section: {
+        display: "grid",
+        gap: 10
+    },
+    sectionTitle: {
+        margin: 0,
+        fontSize: 12,
+        fontWeight: 700,
+        color: "#cbd3dc",
+        textTransform: "uppercase",
+        letterSpacing: "0.04em"
+    },
     iconButton: {
         border: "1px solid #4b5562",
         background: "#2d3440",
@@ -171,13 +303,19 @@ const styles = {
         cursor: "pointer",
         fontSize: 20
     },
+    inviteRow: {
+        display: "grid",
+        gridTemplateColumns: "1fr 160px 90px",
+        gap: 10,
+        alignItems: "center"
+    },
     list: {
         display: "grid",
         gap: 10
     },
     row: {
         display: "grid",
-        gridTemplateColumns: "1fr 160px 80px",
+        gridTemplateColumns: "1fr 160px 80px 90px",
         gap: 10,
         alignItems: "center",
         padding: "10px 12px",
@@ -200,6 +338,15 @@ const styles = {
         overflow: "hidden",
         textOverflow: "ellipsis"
     },
+    input: {
+        border: "1px solid #4b5562",
+        background: "#171b21",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "8px 10px",
+        font: "inherit",
+        fontSize: 13
+    },
     select: {
         border: "1px solid #4b5562",
         background: "#171b21",
@@ -213,6 +360,26 @@ const styles = {
         border: "1px solid #4b5562",
         background: "#2d3440",
         color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "8px 10px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 12
+    },
+    primaryButton: {
+        border: "1px solid #8ea0b8",
+        background: "#3a4558",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "8px 10px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 12
+    },
+    dangerButton: {
+        border: "1px solid #7f1d1d",
+        background: "#3f1d24",
+        color: "#fecaca",
         borderRadius: 6,
         padding: "8px 10px",
         cursor: "pointer",

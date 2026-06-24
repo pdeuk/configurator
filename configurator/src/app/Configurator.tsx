@@ -19,8 +19,10 @@ import {
 import { useEditorStore } from "../store/editorStore";
 import { ReviewDesignerPanel } from "../ui/reviews";
 import { ARPreviewProvider, useARPreview } from "../ui/ar";
-import { AppShellProvider, useAppShell } from "../ui/shell";
+import { AppShellProvider, ComponentRowAlignProvider, useAppShell } from "../ui/shell";
+import { useComponentRowAlign } from "../ui/shell/ComponentRowAlign";
 import { RightPanelColumn } from "../ui/shell/RightPanelColumn";
+import { WorkspaceChrome } from "../ui/shell/WorkspaceChrome";
 import { SelectionActionBar } from "../ui/shell/SelectionActionBar";
 import {
     PresentationModeProvider,
@@ -30,6 +32,7 @@ import { TemplateGallery } from "../ui/templates";
 import { disableLocalDemoMode, isLocalDemoMode } from "./localDemoMode";
 
 function ConfiguratorShell() {
+    const { registerViewport } = useComponentRowAlign();
     const artworkEditMode = useEditorStore(state => state.artworkEditMode);
     const modulesById = useEditorStore(state => state.modulesById);
     const { can } = usePermissions();
@@ -69,6 +72,7 @@ function ConfiguratorShell() {
     return (
         <EditorErrorBoundary>
             <div
+                ref={registerViewport}
                 style={{
                     width: "100vw",
                     height: "100vh",
@@ -119,12 +123,18 @@ function ConfiguratorShell() {
                         {reviewsVisible && <ReviewDesignerPanel />}
                     </RightPanelColumn>
                 )}
-                {showEditorChrome && <ArtworkDropZone />}
                 {!isARPreviewOpen && !isPresentationMode && can("projects.view") && <ProjectManager />}
                 {!isARPreviewOpen && !isPresentationMode && (
                     <ProjectToolbar
                         onOpenComponentLibrary={() => setLibraryOpen(true)}
                         onOpenMockups={() => setMockupsOpen(true)}
+                        renderLayout={(left, right) => (
+                            <WorkspaceChrome
+                                left={left}
+                                center={showEditorChrome ? <ArtworkDropZone /> : null}
+                                right={right}
+                            />
+                        )}
                     />
                 )}
                 {!isARPreviewOpen && <StandCanvas />}
@@ -154,7 +164,9 @@ export function Configurator() {
                     <PresentationModeProvider>
                         <ARPreviewProvider>
                             <AppShellProvider>
-                                <ConfiguratorShell />
+                                <ComponentRowAlignProvider>
+                                    <ConfiguratorShell />
+                                </ComponentRowAlignProvider>
                             </AppShellProvider>
                         </ARPreviewProvider>
                     </PresentationModeProvider>

@@ -1,9 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useComponentRowAlign } from "./ComponentRowAlign";
 import {
     PANEL_INSET,
     PANEL_SECTION_GAP,
-    RIGHT_PANEL_WIDTH,
-    TOP_CONTENT_OFFSET
+    RIGHT_PANEL_WIDTH
 } from "./layout";
 
 interface RightPanelColumnProps {
@@ -11,13 +11,23 @@ interface RightPanelColumnProps {
 }
 
 export function RightPanelColumn({ children }: RightPanelColumnProps) {
-    return <div style={styles.column}>{children}</div>;
+    const { top } = useComponentRowAlign();
+
+    return (
+        <div
+            style={{
+                ...styles.column,
+                top
+            }}
+        >
+            {children}
+        </div>
+    );
 }
 
 const styles = {
     column: {
         position: "absolute",
-        top: TOP_CONTENT_OFFSET,
         right: PANEL_INSET,
         bottom: PANEL_INSET,
         width: `min(${RIGHT_PANEL_WIDTH}px, calc(100vw - ${PANEL_INSET * 2}px))`,

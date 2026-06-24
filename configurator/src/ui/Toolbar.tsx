@@ -1,7 +1,19 @@
 import type { ChangeEvent } from "react";
 import { useState } from "react";
 import { useEditorStore } from "../store/editorStore";
+import {
+    TOOLBAR_CONTROL_HEIGHT,
+    TOOLBAR_CONTROL_PADDING_X,
+    TOOLBAR_FIELD_INNER_GAP,
+    TOOLBAR_FIELD_LABEL_LINE_HEIGHT,
+    TOOLBAR_FIELD_LABEL_SIZE,
+    TOOLBAR_PANEL_PADDING,
+    TOOLBAR_PANEL_SECTION_GAP,
+    TOOLBAR_PANEL_TITLE_LINE_HEIGHT,
+    TOOLBAR_PANEL_TITLE_SIZE
+} from "./shell/layout";
 import { usePermissions } from "./auth";
+import { useComponentRowAlign } from "./shell/ComponentRowAlign";
 import {
     COMPONENT_OPTIONS,
     createComponentModule,
@@ -19,6 +31,7 @@ const MIN_FLOOR_SIZE_CM = MIN_FLOOR_SIZE * 100;
 
 export function Toolbar() {
     const { can } = usePermissions();
+    const { registerToolbarPanel } = useComponentRowAlign();
     const addModule = useEditorStore(state => state.addModule);
     const undo = useEditorStore(state => state.undo);
     const canUndo = useEditorStore(state => state.history.length > 0);
@@ -60,7 +73,7 @@ export function Toolbar() {
     };
 
     return (
-        <div style={styles.panel}>
+        <div style={styles.panel} ref={registerToolbarPanel}>
             <h2 style={styles.panelTitle}>Add to stand</h2>
             <label style={styles.field}>
                 <span style={styles.fieldLabel}>Component</span>
@@ -181,18 +194,19 @@ export function Toolbar() {
 const styles = {
     panel: {
         background: "#20242b",
-        padding: 15,
+        padding: TOOLBAR_PANEL_PADDING,
         borderRadius: 8,
         color: "#f7f7f2",
         border: "1px solid #3b414a",
         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
         fontFamily: "system-ui, sans-serif",
         display: "grid",
-        gap: 10
+        gap: TOOLBAR_PANEL_SECTION_GAP
     },
     panelTitle: {
         margin: 0,
-        fontSize: 14,
+        fontSize: TOOLBAR_PANEL_TITLE_SIZE,
+        lineHeight: `${TOOLBAR_PANEL_TITLE_LINE_HEIGHT}px`,
         fontWeight: 700
     },
     button: {
@@ -211,10 +225,11 @@ const styles = {
     },
     field: {
         display: "grid",
-        gap: 6
+        gap: TOOLBAR_FIELD_INNER_GAP
     },
     fieldLabel: {
-        fontSize: 13,
+        fontSize: TOOLBAR_FIELD_LABEL_SIZE,
+        lineHeight: `${TOOLBAR_FIELD_LABEL_LINE_HEIGHT}px`,
         fontWeight: 600
     },
     sublabel: {
@@ -226,20 +241,25 @@ const styles = {
         background: "#2d3440",
         color: "#f7f7f2",
         borderRadius: 6,
-        padding: "8px 10px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
+        height: TOOLBAR_CONTROL_HEIGHT,
         font: "inherit",
         fontSize: 13,
+        lineHeight: `${TOOLBAR_CONTROL_HEIGHT - 2}px`,
         cursor: "pointer",
-        width: "100%"
+        width: "100%",
+        boxSizing: "border-box"
     },
     input: {
         border: "1px solid #4b5562",
         background: "#2d3440",
         color: "#f7f7f2",
         borderRadius: 6,
-        padding: "8px 10px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
+        height: TOOLBAR_CONTROL_HEIGHT,
         font: "inherit",
         fontSize: 13,
+        lineHeight: `${TOOLBAR_CONTROL_HEIGHT - 2}px`,
         width: "100%",
         boxSizing: "border-box"
     },

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { formatCloudSyncStatus } from "../../services/cloud";
 import { AsyncErrorTrigger, PdfExportErrorBoundary } from "../system";
@@ -11,26 +12,22 @@ import { usePresentationMode } from "../presentation/PresentationModeContext";
 import { useProjectSession } from "./projectSession";
 import { useProjectQuickActions } from "./useProjectQuickActions";
 import {
-    CHROME_ACTION_ROW_HEIGHT,
-    CHROME_ACTION_ROW_TOP,
-    CHROME_HEADER_ROW_HEIGHT,
-    CHROME_ROW_TOP,
-    LEFT_CHROME_OFFSET,
     MORE_MENU_RIGHT,
     MORE_MENU_TOP,
-    PANEL_INSET,
     PANEL_SECTION_GAP,
-    RIGHT_CHROME_OFFSET
+    TOOLBAR_CONTROL_PADDING_X
 } from "../shell/layout";
 
 interface ProjectToolbarProps {
     onOpenComponentLibrary?: () => void;
     onOpenMockups?: () => void;
+    renderLayout?: (left: ReactNode, right: ReactNode) => ReactNode;
 }
 
 export function ProjectToolbar({
     onOpenComponentLibrary,
-    onOpenMockups
+    onOpenMockups,
+    renderLayout
 }: ProjectToolbarProps) {
     const {
         activeProjectName,
@@ -172,14 +169,8 @@ export function ProjectToolbar({
         };
     }, [cloudMessage, quickActionMessage, revisionMessage, shareMessage]);
 
-    return (
-        <PdfExportErrorBoundary
-            resetKeys={[exportBoundaryError?.message ?? null]}
-            onReset={() => setExportBoundaryError(null)}
-        >
-            <AsyncErrorTrigger error={exportBoundaryError} />
-            <div style={styles.barContainer}>
-                <div style={styles.headerRow}>
+    const leftChrome = (
+        <>
                 <div style={styles.group} ref={containerRef}>
                     <button
                         type="button"
@@ -348,55 +339,11 @@ export function ProjectToolbar({
                             ?? quickActionMessage}
                     </span>
                 )}
+        </>
+    );
 
-                {isConfigured && (
-                    <div style={{ ...styles.group, marginLeft: "auto" }} ref={cloudContainerRef}>
-                        <button
-                            type="button"
-                            style={styles.cloudButton}
-                            disabled={isBusy}
-                            onClick={() => {
-                                setMenuOpen(false);
-                                setMoreMenuOpen(false);
-                                setCloudMenuOpen(current => !current);
-                            }}
-                            aria-haspopup="menu"
-                            aria-expanded={cloudMenuOpen}
-                            title="Account and sync"
-                        >
-                            <span style={styles.cloudLabel}>Account</span>
-                            <span style={styles.cloudValue}>
-                                {user?.email || "Sign in"}
-                            </span>
-                            <span style={styles.syncBadge} data-status={syncStatus}>
-                                {formatCloudSyncStatus(syncStatus)}
-                            </span>
-                        </button>
-
-                        {cloudMenuOpen && (
-                            <div style={styles.cloudMenu}>
-                                <AuthPanel onClose={closeMenus} />
-                                {user && (
-                                    <button
-                                        type="button"
-                                        style={styles.menuItem}
-                                        disabled={isBusy}
-                                        onClick={() => {
-                                            closeMenus();
-                                            void handleImportToCloud();
-                                        }}
-                                    >
-                                        Import to cloud
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-                </div>
-            </div>
-
-            <div style={styles.actionToolbar}>
+    const rightChrome = (
+        <>
                 <div style={styles.primaryActions}>
                     <PermissionGuard action="projects.edit">
                         <button
@@ -672,83 +619,116 @@ export function ProjectToolbar({
                         )}
                     </div>
                 </div>
-            </div>
+
+                {isConfigured && (
+                    <div style={styles.group} ref={cloudContainerRef}>
+                        <button
+                            type="button"
+                            style={styles.cloudButton}
+                            disabled={isBusy}
+                            onClick={() => {
+                                setMenuOpen(false);
+                                setMoreMenuOpen(false);
+                                setCloudMenuOpen(current => !current);
+                            }}
+                            aria-haspopup="menu"
+                            aria-expanded={cloudMenuOpen}
+                            title="Account and sync"
+                        >
+                            <span style={styles.cloudLabel}>Account</span>
+                            <span style={styles.cloudValue}>
+                                {user?.email || "Sign in"}
+                            </span>
+                            <span style={styles.syncBadge} data-status={syncStatus}>
+                                {formatCloudSyncStatus(syncStatus)}
+                            </span>
+                        </button>
+
+                        {cloudMenuOpen && (
+                            <div style={styles.cloudMenu}>
+                                <AuthPanel onClose={closeMenus} />
+                                {user && (
+                                    <button
+                                        type="button"
+                                        style={styles.menuItem}
+                                        disabled={isBusy}
+                                        onClick={() => {
+                                            closeMenus();
+                                            void handleImportToCloud();
+                                        }}
+                                    >
+                                        Import to cloud
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+        </>
+    );
+
+    const chrome = renderLayout
+        ? renderLayout(leftChrome, rightChrome)
+        : (
+            <>
+                <div className="project-chrome-left">{leftChrome}</div>
+                <div className="project-chrome-right">{rightChrome}</div>
+            </>
+        );
+
+    return (
+        <PdfExportErrorBoundary
+            resetKeys={[exportBoundaryError?.message ?? null]}
+            onReset={() => setExportBoundaryError(null)}
+        >
+            <AsyncErrorTrigger error={exportBoundaryError} />
+            {chrome}
         </PdfExportErrorBoundary>
     );
 }
 
 const styles = {
-    barContainer: {
-        position: "absolute",
-        top: CHROME_ROW_TOP,
-        left: LEFT_CHROME_OFFSET,
-        right: RIGHT_CHROME_OFFSET,
-        zIndex: 12,
-        display: "flex",
-        alignItems: "center",
-        minHeight: CHROME_HEADER_ROW_HEIGHT,
-        pointerEvents: "none"
-    },
-    headerRow: {
-        display: "flex",
-        alignItems: "center",
-        flexWrap: "wrap",
-        gap: 10,
-        width: "100%",
-        pointerEvents: "none"
-    },
-    actionToolbar: {
-        position: "absolute",
-        top: CHROME_ACTION_ROW_TOP,
-        right: PANEL_INSET,
-        zIndex: 12,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        minHeight: CHROME_ACTION_ROW_HEIGHT,
-        maxWidth: `calc(100vw - ${LEFT_CHROME_OFFSET + PANEL_INSET}px)`,
-        pointerEvents: "none"
-    },
     primaryActions: {
         display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 8,
-        pointerEvents: "auto"
+        flexWrap: "nowrap",
+        alignItems: "stretch",
+        gap: 6,
+        height: "100%"
     },
     group: {
-        position: "relative",
-        pointerEvents: "auto"
+        position: "relative"
     },
     projectButton: {
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        minWidth: 240,
-        maxWidth: "min(420px, calc(100vw - 520px))",
+        gap: 8,
+        minWidth: 0,
+        maxWidth: "min(360px, 100%)",
         border: "1px solid #3b414a",
         background: "#20242b",
         color: "#f7f7f2",
         borderRadius: 8,
-        padding: "10px 12px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
         cursor: "pointer",
         font: "inherit",
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+        boxSizing: "border-box"
     },
     cloudButton: {
         display: "flex",
         alignItems: "center",
-        gap: 8,
-        minWidth: 220,
-        maxWidth: "min(320px, calc(100vw - 720px))",
+        gap: 6,
+        minWidth: 0,
+        maxWidth: "min(280px, 100%)",
         border: "1px solid #3b414a",
         background: "#20242b",
         color: "#f7f7f2",
         borderRadius: 8,
-        padding: "10px 12px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
         cursor: "pointer",
         font: "inherit",
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+        boxSizing: "border-box"
     },
     projectLabel: {
         fontSize: 11,
@@ -842,52 +822,52 @@ const styles = {
         fontSize: 13
     },
     saveButton: {
-        pointerEvents: "auto",
         border: "1px solid #8ea0b8",
         background: "#3a4558",
         color: "#f7f7f2",
         borderRadius: 8,
-        padding: "10px 12px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
         cursor: "pointer",
         font: "inherit",
-        fontSize: 13,
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+        fontSize: 12,
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+        boxSizing: "border-box"
     },
     actionButton: {
-        pointerEvents: "auto",
         border: "1px solid #4b5562",
         background: "#2d3440",
         color: "#f7f7f2",
         borderRadius: 8,
-        padding: "10px 12px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
         cursor: "pointer",
         font: "inherit",
-        fontSize: 13,
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+        fontSize: 12,
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+        boxSizing: "border-box"
     },
     shareButton: {
-        pointerEvents: "auto",
         border: "1px solid #4b5562",
         background: "#253040",
         color: "#f7f7f2",
         borderRadius: 8,
-        padding: "10px 12px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
         cursor: "pointer",
         font: "inherit",
-        fontSize: 13,
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+        fontSize: 12,
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+        boxSizing: "border-box"
     },
     revisionButton: {
-        pointerEvents: "auto",
         border: "1px solid #4b5562",
         background: "#2a3340",
         color: "#f7f7f2",
         borderRadius: 8,
-        padding: "10px 12px",
+        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
         cursor: "pointer",
         font: "inherit",
-        fontSize: 13,
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+        fontSize: 12,
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
+        boxSizing: "border-box"
     },
     shareMessage: {
         pointerEvents: "none",

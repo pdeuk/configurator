@@ -6,6 +6,8 @@ import { LOCAL_ORGANIZATION_ID } from "../settings/SettingsStorage";
 import {
     canManageOrganizationUsers,
     roleHasPermission,
+    type InvitableOrganizationRole,
+    type OrganizationInvite,
     type OrganizationMember,
     type OrganizationMembership,
     type OrganizationRole,
@@ -91,6 +93,69 @@ export class PermissionService {
         }
 
         window.dispatchEvent(new Event("configurator:permissions-updated"));
+    }
+
+    async listOrganizationInvites(): Promise<OrganizationInvite[]> {
+        const membership = await this.getMembership();
+        return getStorage().listOrganizationInvites(membership.organizationId);
+    }
+
+    async createOrganizationInvite(
+        email: string,
+        role: InvitableOrganizationRole
+    ): Promise<void> {
+        const membership = await this.getMembership();
+
+        if (!canManageOrganizationUsers(membership.role)) {
+            throw new Error("You do not have permission to invite users.");
+        }
+
+        await getStorage().createOrganizationInvite(
+            membership.organizationId,
+            email,
+            role,
+            membership.userId
+        );
+
+        window.dispatchEvent(new Event("configurator:permissions-updated"));
+    }
+
+    async revokeOrganizationInvite(inviteId: string): Promise<void> {
+        const membership = await this.getMembership();
+
+        if (!canManageOrganizationUsers(membership.role)) {
+            throw new Error("You do not have permission to manage invites.");
+        }
+
+        await getStorage().revokeOrganizationInvite(membership.organizationId, inviteId);
+        window.dispatchEvent(new Event("configurator:permissions-updated"));
+    }
+
+    async removeOrganizationMember(userId: string): Promise<void> {
+        const membership = await this.getMembership();
+
+        if (!canManageOrganizationUsers(membership.role)) {
+            throw new Error("You do not have permission to remove users.");
+        }
+
+        if (userId === membership.userId) {
+            throw new Error("You cannot remove yourself.");
+        }
+
+        await getStorage().removeOrganizationMember(membership.organizationId, userId);
+        window.dispatchEvent(new Event("configurator:permissions-updated"));
+    }
+
+    async claimPendingOrganizationInvite(): Promise<boolean> {
+        const claimed = await getStorage().claimPendingOrganizationInvite();
+
+        if (claimed) {
+            cachedMembership = null;
+            cachedUserId = null;
+            window.dispatchEvent(new Event("configurator:permissions-updated"));
+        }
+
+        return claimed;
     }
 
     clearCache(): void {

@@ -10,6 +10,8 @@ import {
 import {
     clearPermissionCache,
     permissionService,
+    type InvitableOrganizationRole,
+    type OrganizationInvite,
     type OrganizationMember,
     type OrganizationRole,
     type PermissionAction
@@ -20,12 +22,16 @@ import { useCloudSession } from "../cloud";
 interface PermissionsContextValue {
     role: OrganizationRole;
     members: OrganizationMember[];
+    invites: OrganizationInvite[];
     isLoading: boolean;
     error: string | null;
     can: (action: PermissionAction) => boolean;
     canManageUsers: boolean;
     refreshPermissions: () => Promise<void>;
     updateMemberRole: (userId: string, role: OrganizationRole) => Promise<void>;
+    createOrganizationInvite: (email: string, role: InvitableOrganizationRole) => Promise<void>;
+    revokeOrganizationInvite: (inviteId: string) => Promise<void>;
+    removeOrganizationMember: (userId: string) => Promise<void>;
 }
 
 const PermissionsContext = createContext<PermissionsContextValue | null>(null);
@@ -48,6 +54,7 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
     const { user } = useCloudSession();
     const [role, setRole] = useState<OrganizationRole>("owner");
     const [members, setMembers] = useState<OrganizationMember[]>([]);
+    const [invites, setInvites] = useState<OrganizationInvite[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -57,12 +64,17 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
 
         try {
             clearPermissionCache();
+            await permissionService.claimPendingOrganizationInvite();
             const membership = await permissionService.getMembership(user);
             setRole(membership.role);
 
             if (permissionService.canManageUsers(membership.role)) {
-                const nextMembers = await permissionService.listOrganizationMembers();
+                const [nextMembers, nextInvites] = await Promise.all([
+                    permissionService.listOrganizationMembers(),
+                    permissionService.listOrganizationInvites()
+                ]);
                 setMembers(nextMembers);
+                setInvites(nextInvites);
             } else {
                 setMembers([
                     {
@@ -73,6 +85,7 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
                         role: membership.role
                     }
                 ]);
+                setInvites([]);
             }
         } catch (loadError) {
             console.warn("Permission load failed.", loadError);
@@ -115,22 +128,48 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
         await refreshPermissions();
     }, [refreshPermissions]);
 
+    const createOrganizationInvite = useCallback(
+        async (email: string, inviteRole: InvitableOrganizationRole) => {
+            await permissionService.createOrganizationInvite(email, inviteRole);
+            await refreshPermissions();
+        },
+        [refreshPermissions]
+    );
+
+    const revokeOrganizationInvite = useCallback(async (inviteId: string) => {
+        await permissionService.revokeOrganizationInvite(inviteId);
+        await refreshPermissions();
+    }, [refreshPermissions]);
+
+    const removeOrganizationMember = useCallback(async (userId: string) => {
+        await permissionService.removeOrganizationMember(userId);
+        await refreshPermissions();
+    }, [refreshPermissions]);
+
     const value = useMemo<PermissionsContextValue>(() => ({
         role,
         members,
+        invites,
         isLoading,
         error,
         can,
         canManageUsers,
         refreshPermissions,
-        updateMemberRole
+        updateMemberRole,
+        createOrganizationInvite,
+        revokeOrganizationInvite,
+        removeOrganizationMember
     }), [
         can,
         canManageUsers,
+        createOrganizationInvite,
         error,
+        invites,
         isLoading,
         members,
         refreshPermissions,
+        removeOrganizationMember,
+        revokeOrganizationInvite,
         role,
         updateMemberRole
     ]);

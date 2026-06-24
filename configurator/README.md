@@ -1,4 +1,26 @@
-# React + TypeScript + Vite
+# Configurator
+
+React + TypeScript + Vite stand configurator with Supabase auth, roles, and cloud projects.
+
+## Quick start
+
+```bash
+npm install
+cp .env.example .env   # Windows: copy .env.example .env
+# Edit .env with your Supabase URL and anon/publishable key
+npm run dev
+```
+
+## Supabase & Vercel
+
+- Full setup: [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)
+- Link project: `npm run supabase -- login` then `npm run db:link -- --project-ref <ref>`
+- Apply migrations: `npm run db:push`
+- On Vercel, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables before deploy
+
+---
+
+## React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
