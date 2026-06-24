@@ -1,48 +1,23 @@
 {
-  "name": "configurator",
+  "name": "configurator-platform",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "prepare:floors": "node scripts/prepare-floor-assets.mjs",
+    "dev": "npm run dev -w @configurator/stands",
+    "build": "npm run build -w @configurator/stands",
+    "lint": "npm run lint -w @configurator/stands",
+    "preview": "npm run preview -w @configurator/stands",
+    "prepare:floors": "npm run prepare:floors -w @configurator/stands",
     "supabase": "supabase",
     "db:link": "supabase link",
     "db:push": "supabase db push",
     "db:status": "supabase migration list"
   },
-  "dependencies": {
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
-    "@supabase/supabase-js": "^2.108.2",
-    "canvg": "^4.0.3",
-    "jspdf": "^4.2.1",
-    "pdfjs-dist": "^6.0.227",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-router-dom": "^7.18.0",
-    "three": "^0.184.0",
-    "utif": "^3.1.0",
-    "zustand": "^5.0.14"
-  },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^24.12.3",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@types/react-router-dom": "^5.3.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.3.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
-    "sharp": "^0.35.2",
-    "supabase": "^2.107.0",
-    "typescript": "~6.0.2",
-    "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "supabase": "^2.107.0"
   }
 }

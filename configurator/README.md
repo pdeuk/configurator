@@ -1,95 +1,73 @@
-# Configurator
+# Configurator platform
 
-React + TypeScript + Vite stand configurator with Supabase auth, roles, and cloud projects.
+Monorepo for the shared **configurator core** and **per-client apps**.
 
-## Quick start
+## Structure
+
+```text
+configurator-platform/
+├── packages/core/          @configurator/core — shared skeleton (auth, cloud, roles, client profiles)
+├── apps/stands/            @configurator/stands — CLIENT #1 (exhibition stands)
+├── supabase/migrations/    shared database schema (all clients)
+├── docs/
+└── vercel.json             deploy config (builds apps/stands)
+```
+
+## Quick start (client #1 — stands)
 
 ```bash
 npm install
-cp .env.example .env   # Windows: copy .env.example .env
-# Edit .env with your Supabase URL and anon/publishable key
+cp apps/stands/.env.example apps/stands/.env   # Windows: copy ...
+# Edit apps/stands/.env with Supabase URL + anon key
 npm run dev
 ```
 
-## Supabase & Vercel
+Commands run from the **repo root** and target the stands app by default.
 
-- Full setup: [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)
-- Link project: `npm run supabase -- login` then `npm run db:link -- --project-ref <ref>`
-- Apply migrations: `npm run db:push`
-- On Vercel, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables before deploy
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Dev server (stands) |
+| `npm run build` | Production build |
+| `npm run db:push` | Apply Supabase migrations |
+| `npm run db:link -- --project-ref <ref>` | Link Supabase CLI |
+
+## Environment variables
+
+Create `apps/stands/.env` (not committed):
+
+```env
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-key>
+```
+
+On **Vercel**, set the same variables for the project. Root `vercel.json` builds `apps/stands` and outputs `apps/stands/dist`.
+
+If you previously used `.env` at the repo root, move it to `apps/stands/.env`.
+
+## Adding a new client (e.g. furniture)
+
+1. Copy `apps/stands` → `apps/furniture` (or scaffold a thinner app).
+2. Add `"@configurator/furniture": "apps/furniture"` to workspaces (automatic via `apps/*`).
+3. Create `client.config.ts` with features/models for that vertical.
+4. New **Supabase** + **Vercel** project per client.
+5. Keep shared logic in `packages/core`; customize UI, 3D models, and features in the client app.
+
+See `packages/core/src/client/ClientProfile.ts` for feature flags (artwork, DPI, quotes, etc.).
+
+## Supabase
+
+Shared migrations live in `supabase/migrations/`. Full setup: [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+
+## GitHub / Vercel
+
+- Commit the whole monorepo (no `.env` files).
+- Vercel: use the root `vercel.json` **or** set **Root Directory** to `apps/stands` and use `apps/stands/vercel.json`.
+- Install command: `npm install` at repo root (npm workspaces).
 
 ---
 
-## React + TypeScript + Vite
+## Client apps
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+| App | Package | Description |
+|-----|---------|-------------|
+| Stands | `@configurator/stands` | Exhibition stands configurator (client #1) |

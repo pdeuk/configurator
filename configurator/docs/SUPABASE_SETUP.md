@@ -4,7 +4,7 @@ This app uses Supabase for authentication, organizations, roles, and cloud proje
 
 ## 1. Local environment (not committed)
 
-Copy `.env.example` to `.env` and set:
+Copy `apps/stands/.env.example` to `apps/stands/.env` and set:
 
 ```env
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
@@ -40,7 +40,7 @@ npm run db:link -- --project-ref lwswymfezieqrvfqtuqw
 
 ## 4. Apply database migrations
 
-From the project root:
+From the project root (monorepo):
 
 ```bash
 npm run db:push
@@ -108,25 +108,26 @@ Invites cannot assign the `owner` role.
 | designer | Projects only |
 | production | View projects + manufacturing exports |
 
-Frontend: `src/services/auth/RoleModel.ts`  
+Frontend: `packages/core/src/auth/RoleModel.ts`  
 Database RLS: `supabase/migrations/0003_roles.sql`
 
 ## 9. GitHub
 
 Commit these (safe for the repo):
 
-- Application code
+- `packages/core/` — shared skeleton
+- `apps/stands/` — client #1 app
 - `supabase/migrations/` and `supabase/config.toml`
-- `.env.example` (placeholders only)
-- `package.json` / `package-lock.json` (includes the CLI dev dependency)
+- `apps/stands/.env.example` (placeholders only)
+- Root `package.json`, `package-lock.json`, `vercel.json`
 
 Do **not** commit:
 
-- `.env` (real keys)
+- `apps/stands/.env` (real keys)
 - Database password
 - `supabase/.temp/` (gitignored — created by `db:link`)
 
-After cloning on a new machine: `npm install`, copy `.env.example` → `.env`, then `npm run db:link` and `npm run db:push` if the database is not up to date.
+After cloning on a new machine: `npm install`, copy `apps/stands/.env.example` → `apps/stands/.env`, then `npm run db:link` and `npm run db:push` if the database is not up to date.
 
 ## 10. Vercel deployment
 
