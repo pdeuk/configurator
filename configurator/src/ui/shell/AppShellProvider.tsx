@@ -37,7 +37,7 @@ export function useAppShell() {
 }
 
 export function AppShellProvider({ children }: { children: ReactNode }) {
-    const [reviewsVisible, setReviewsVisible] = useState(true);
+    const [reviewsVisible, setReviewsVisible] = useState(false);
     const [adminOpen, setAdminOpen] = useState(false);
     const [adminTab, setAdminTab] = useState<AdminTab>("dashboard");
     const [assignCustomerOpen, setAssignCustomerOpen] = useState(false);

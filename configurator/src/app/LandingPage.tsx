@@ -12,10 +12,8 @@ export function LandingPage() {
         isSessionReady,
         isAuthenticating,
         authError,
-        login,
-        register
+        login
     } = useCloudSession();
-    const [mode, setMode] = useState<"login" | "register">("login");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [message, setMessage] = useState<string | null>(null);
@@ -31,14 +29,8 @@ export function LandingPage() {
         setMessage(null);
 
         try {
-            if (mode === "login") {
-                await login(email, password);
-                setMessage("Signed in. Opening app…");
-            } else {
-                await register(email, password);
-                setMessage("Account created. Opening app…");
-            }
-
+            await login(email, password);
+            setMessage("Signed in. Opening app…");
             navigate("/app", { replace: true });
         } catch {
             // authError is surfaced by context
@@ -65,7 +57,7 @@ export function LandingPage() {
             <div style={styles.card}>
                 <div style={styles.brand}>Stand Configurator</div>
                 <p style={styles.subtitle}>
-                    Configure exhibition stands, quotes, manufacturing exports, and customer reviews.
+                    Configure exhibition stands, quotes, and manufacturing exports.
                 </p>
 
                 {!supabaseConfigured ? (
@@ -93,8 +85,8 @@ export function LandingPage() {
                 ) : (
                     <>
                         <div style={styles.modeBanner}>
-                            <strong>Cloud sign-in</strong>
-                            <span>Sign in to access your organization workspace.</span>
+                            <strong>Organization sign-in</strong>
+                            <span>Access is by invitation only. Sign in with your existing account.</span>
                         </div>
                         <label style={styles.label}>
                             Email
@@ -113,27 +105,23 @@ export function LandingPage() {
                                 value={password}
                                 onChange={event => setPassword(event.target.value)}
                                 style={styles.input}
-                                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                                autoComplete="current-password"
                             />
                         </label>
-                        <div style={styles.actions}>
-                            <button
-                                type="button"
-                                style={styles.primaryButton}
-                                disabled={isAuthenticating || !email || !password}
-                                onClick={() => void handleSubmit()}
-                            >
-                                {mode === "login" ? "Sign in" : "Create account"}
-                            </button>
-                            <button
-                                type="button"
-                                style={styles.secondaryButton}
-                                disabled={isAuthenticating}
-                                onClick={() => setMode(current => current === "login" ? "register" : "login")}
-                            >
-                                {mode === "login" ? "Create an account" : "Use existing account"}
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            style={styles.primaryButton}
+                            disabled={isAuthenticating || !email || !password}
+                            onClick={() => void handleSubmit()}
+                        >
+                            Sign in
+                        </button>
+                        <p style={styles.helper}>
+                            Invited to join?{" "}
+                            <Link to="/join" style={styles.link}>
+                                Create your account
+                            </Link>
+                        </p>
                         {message && <p style={styles.success}>{message}</p>}
                         {authError && <p style={styles.error}>{authError}</p>}
                     </>
@@ -203,10 +191,6 @@ const styles = {
         padding: "10px 12px",
         font: "inherit"
     },
-    actions: {
-        display: "grid",
-        gap: 8
-    },
     primaryButton: {
         border: "1px solid #64748b",
         background: "#334155",
@@ -218,20 +202,9 @@ const styles = {
         fontSize: 14,
         fontWeight: 600
     },
-    secondaryButton: {
-        border: "none",
-        background: "transparent",
-        color: "#cbd5e1",
-        borderRadius: 8,
-        padding: "8px 0",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 13,
-        textAlign: "left"
-    },
     helper: {
         margin: 0,
-        fontSize: 12,
+        fontSize: 13,
         color: "#9aa3b2",
         lineHeight: 1.5
     },

@@ -28,7 +28,7 @@ interface CustomerPortalProps {
 function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortalProps) {
     const navigate = useNavigate();
     const projectId = projectIdProp;
-    const { user, isConfigured, login, register, logout, isAuthenticating, authError } =
+    const { user, isConfigured, login, logout, isAuthenticating, authError } =
         useCloudSession();
     const [customer, setCustomer] = useState<Customer | null>(null);
     const [projects, setProjects] = useState<CustomerProjectSummary[]>([]);
@@ -140,18 +140,6 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
         }
     };
 
-    const handleCloudRegister = async () => {
-        setError(null);
-
-        try {
-            await register(email, password);
-            await loadCustomerState();
-        } catch (registerError) {
-            console.warn("Customer cloud register failed.", registerError);
-            setError("Registration failed.");
-        }
-    };
-
     const handleLogout = async () => {
         customerService.clearPortalSession();
         setCustomer(null);
@@ -210,24 +198,14 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
                     </label>
                     <div style={styles.actions}>
                         {isConfigured ? (
-                            <>
-                                <button
-                                    type="button"
-                                    style={styles.buttonPrimary}
-                                    disabled={isAuthenticating}
-                                    onClick={() => void handleCloudLogin()}
-                                >
-                                    Sign in
-                                </button>
-                                <button
-                                    type="button"
-                                    style={styles.button}
-                                    disabled={isAuthenticating}
-                                    onClick={() => void handleCloudRegister()}
-                                >
-                                    Register
-                                </button>
-                            </>
+                            <button
+                                type="button"
+                                style={styles.buttonPrimary}
+                                disabled={isAuthenticating}
+                                onClick={() => void handleCloudLogin()}
+                            >
+                                Sign in
+                            </button>
                         ) : (
                             <button
                                 type="button"

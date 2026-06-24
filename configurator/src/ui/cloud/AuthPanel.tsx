@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useCloudSession } from "./CloudSessionProvider";
 
 interface AuthPanelProps {
@@ -11,10 +12,8 @@ export function AuthPanel({ onClose }: AuthPanelProps) {
         isAuthenticating,
         authError,
         login,
-        register,
         logout
     } = useCloudSession();
-    const [mode, setMode] = useState<"login" | "register">("login");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [message, setMessage] = useState<string | null>(null);
@@ -23,14 +22,8 @@ export function AuthPanel({ onClose }: AuthPanelProps) {
         setMessage(null);
 
         try {
-            if (mode === "login") {
-                await login(email, password);
-                setMessage("Signed in");
-            } else {
-                await register(email, password);
-                setMessage("Account created");
-            }
-
+            await login(email, password);
+            setMessage("Signed in");
             onClose();
         } catch {
             // authError is set by context
@@ -69,9 +62,7 @@ export function AuthPanel({ onClose }: AuthPanelProps) {
 
     return (
         <div style={styles.panel}>
-            <div style={styles.title}>
-                {mode === "login" ? "Sign in" : "Create account"}
-            </div>
+            <div style={styles.title}>Sign in</div>
             <label style={styles.label}>
                 Email
                 <input
@@ -90,24 +81,20 @@ export function AuthPanel({ onClose }: AuthPanelProps) {
                     style={styles.input}
                 />
             </label>
-            <div style={styles.actions}>
-                <button
-                    type="button"
-                    style={styles.button}
-                    disabled={isAuthenticating || !email || !password}
-                    onClick={() => void handleSubmit()}
-                >
-                    {mode === "login" ? "Sign in" : "Register"}
-                </button>
-                <button
-                    type="button"
-                    style={styles.secondaryButton}
-                    disabled={isAuthenticating}
-                    onClick={() => setMode(current => current === "login" ? "register" : "login")}
-                >
-                    {mode === "login" ? "Create account" : "Use existing account"}
-                </button>
-            </div>
+            <button
+                type="button"
+                style={styles.button}
+                disabled={isAuthenticating || !email || !password}
+                onClick={() => void handleSubmit()}
+            >
+                Sign in
+            </button>
+            <p style={styles.helper}>
+                Invited?{" "}
+                <Link to="/join" style={styles.link} onClick={onClose}>
+                    Create account
+                </Link>
+            </p>
             {authError && <div style={styles.error}>{authError}</div>}
         </div>
     );
@@ -144,10 +131,6 @@ const styles = {
         padding: "8px 10px",
         font: "inherit"
     },
-    actions: {
-        display: "grid",
-        gap: 8
-    },
     button: {
         border: "1px solid #4b5562",
         background: "#2d3440",
@@ -158,16 +141,14 @@ const styles = {
         font: "inherit",
         fontSize: 12
     },
-    secondaryButton: {
-        border: "none",
-        background: "transparent",
-        color: "#cbd5e1",
-        borderRadius: 6,
-        padding: "4px 0",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 12,
-        textAlign: "left"
+    helper: {
+        margin: 0,
+        fontSize: 11,
+        color: "#9aa3b2"
+    },
+    link: {
+        color: "#93c5fd",
+        textDecoration: "none"
     },
     message: {
         fontSize: 12,

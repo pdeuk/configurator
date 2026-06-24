@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ProjectDocument } from "../../models/ProjectModel";
 import { formatProjectSummary, useProjectSession } from "./projectSession";
 import { PermissionGuard } from "../auth";
+import { isSupabaseConfigured } from "../../services/cloud";
+import { useCloudSession } from "../cloud";
 import { VersionHistoryPanel } from "./VersionHistoryPanel";
 
 function formatUpdatedAt(value: string): string {
@@ -29,6 +31,7 @@ export function ProjectManager() {
         renameProject,
         openTemplateGallery
     } = useProjectSession();
+    const { isConfigured } = useCloudSession();
     const [renameTarget, setRenameTarget] = useState<ProjectDocument | null>(null);
     const [renameValue, setRenameValue] = useState("");
     const [newProjectMenuOpen, setNewProjectMenuOpen] = useState(false);
@@ -103,7 +106,9 @@ export function ProjectManager() {
                             Project Manager
                         </h2>
                         <p style={styles.subtitle}>
-                            Manage saved stand layouts stored on this device.
+                            {isConfigured && isSupabaseConfigured()
+                                ? "Projects saved on this device and synced to your organization cloud."
+                                : "Manage saved stand layouts stored on this device."}
                         </p>
                     </div>
                     <button

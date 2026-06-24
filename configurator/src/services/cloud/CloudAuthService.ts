@@ -39,6 +39,24 @@ export class CloudAuthService {
         return mapUser(session?.user ?? null);
     }
 
+    async hasPendingOrganizationInvite(email: string): Promise<boolean> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            return false;
+        }
+
+        const { data, error } = await client.rpc("has_pending_organization_invite", {
+            p_email: email.trim().toLowerCase()
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        return Boolean(data);
+    }
+
     async register(email: string, password: string): Promise<AuthUser> {
         const client = getSupabaseClient();
 
@@ -46,13 +64,28 @@ export class CloudAuthService {
             throw new Error("Supabase is not configured.");
         }
 
+        const normalizedEmail = email.trim().toLowerCase();
+        const invited = await this.hasPendingOrganizationInvite(normalizedEmail);
+
+        if (!invited) {
+            throw new Error(
+                "This email does not have a pending invitation. Ask your organization admin for access."
+            );
+        }
+
         const { data, error } = await client.auth.signUp({
-            email,
+            email: normalizedEmail,
             password
         });
 
         if (error) {
             throw error;
+        }
+
+        if (!data.session && data.user && !data.user.confirmed_at) {
+            throw new Error(
+                "Account created. Check your email to confirm your address, then sign in."
+            );
         }
 
         const user = mapUser(data.user);
@@ -129,6 +162,10 @@ export async function login(email: string, password: string): Promise<AuthUser> 
 
 export async function register(email: string, password: string): Promise<AuthUser> {
     return cloudAuthService.register(email, password);
+}
+
+export async function hasPendingOrganizationInvite(email: string): Promise<boolean> {
+    return cloudAuthService.hasPendingOrganizationInvite(email);
 }
 
 export async function logout(): Promise<void> {

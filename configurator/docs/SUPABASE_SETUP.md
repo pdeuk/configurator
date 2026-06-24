@@ -63,6 +63,8 @@ Migrations run in order from `supabase/migrations/`:
 7. `0007_reviews.sql` — review workflow
 8. `0008_analytics.sql` — analytics events
 9. `0009_organization_invites.sql` — email invites and join-on-signup
+10. `0010_fix_profile_org_trigger.sql` — fixes signup failing with HTTP 500
+11. `0011_invite_only_signup.sql` — blocks registration without a pending invite
 
 If `db push` fails on a fresh project, run the same files manually in the Supabase SQL editor in that order.
 
@@ -73,6 +75,7 @@ In **Authentication → Providers**:
 - Enable **Email**
 - Set **Site URL** to your dev URL (e.g. `http://localhost:5173`)
 - Add redirect URLs if needed
+- For development, you can disable **Confirm email** under Email provider settings so signup works without inbox confirmation
 
 ## 6. First user
 
@@ -80,11 +83,18 @@ In **Authentication → Providers**:
 2. **Register** on the landing page — you become **owner** of a new organization
 3. Open **More → Users & roles** to invite teammates by email and role
 
-## 7. Invites
+## 7. Invites (invite-only access)
+
+The organization workspace is **invite-only**. The home page is sign-in only.
+
+1. Owner/admin invites a teammate in **More → Users & roles**
+2. Teammate opens **`/join`** (e.g. `https://your-app.vercel.app/join`)
+3. They register with the **same email** that was invited
+4. They sign in on the home page after that
 
 Owners and admins can invite `admin`, `sales`, `designer`, or `production` by email.
 
-- **New users**: on signup they join your organization with the invited role
+- **New users**: on signup at `/join` they join your organization with the invited role
 - **Existing users**: on next login the app calls `claim_pending_organization_invite()` to join
 
 Invites cannot assign the `owner` role.

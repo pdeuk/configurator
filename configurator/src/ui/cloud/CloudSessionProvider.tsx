@@ -37,6 +37,17 @@ interface CloudSessionContextValue {
 
 const CloudSessionContext = createContext<CloudSessionContextValue | null>(null);
 
+function formatAuthError(error: unknown, fallback: string): string {
+    if (error && typeof error === "object") {
+        const message = "message" in error ? error.message : null;
+        if (typeof message === "string" && message.trim().length > 0) {
+            return message;
+        }
+    }
+
+    return fallback;
+}
+
 export function useCloudSession() {
     const context = useContext(CloudSessionContext);
 
@@ -105,7 +116,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
         try {
             await cloudAuthService.login(email, password);
         } catch (error) {
-            setAuthError(error instanceof Error ? error.message : "Login failed.");
+            setAuthError(formatAuthError(error, "Login failed."));
             throw error;
         } finally {
             setIsAuthenticating(false);
@@ -119,7 +130,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
         try {
             await cloudAuthService.register(email, password);
         } catch (error) {
-            setAuthError(error instanceof Error ? error.message : "Registration failed.");
+            setAuthError(formatAuthError(error, "Registration failed."));
             throw error;
         } finally {
             setIsAuthenticating(false);
@@ -134,7 +145,7 @@ export function CloudSessionProvider({ children }: CloudSessionProviderProps) {
             await cloudAuthService.logout();
             setCloudSyncStatus("local");
         } catch (error) {
-            setAuthError(error instanceof Error ? error.message : "Logout failed.");
+            setAuthError(formatAuthError(error, "Logout failed."));
             throw error;
         } finally {
             setIsAuthenticating(false);

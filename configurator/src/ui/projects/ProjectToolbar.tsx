@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { formatCloudSyncStatus } from "../../services/cloud";
 import { AsyncErrorTrigger, PdfExportErrorBoundary } from "../system";
 import { PermissionGuard, usePermissions } from "../auth";
-import { AuthPanel, useCloudSession } from "../cloud";
 import { useARPreview } from "../ar";
 import { useAppShell } from "../shell";
 import { EditorModeIndicator } from "../shell/EditorModeIndicator";
@@ -42,12 +40,6 @@ export function ProjectToolbar({
         deleteProject,
         renameProject
     } = useProjectSession();
-    const {
-        isConfigured,
-        user,
-        syncStatus,
-        importLocalProjects
-    } = useCloudSession();
     const { canManageUsers } = usePermissions();
     const { openARPreview } = useARPreview();
     const { enterPresentationMode } = usePresentationMode();
@@ -66,19 +58,15 @@ export function ProjectToolbar({
     } = useProjectQuickActions();
     const [menuOpen, setMenuOpen] = useState(false);
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-    const [cloudMenuOpen, setCloudMenuOpen] = useState(false);
     const [shareMessage, setShareMessage] = useState<string | null>(null);
     const [revisionMessage, setRevisionMessage] = useState<string | null>(null);
-    const [cloudMessage, setCloudMessage] = useState<string | null>(null);
     const [exportBoundaryError, setExportBoundaryError] = useState<Error | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const moreContainerRef = useRef<HTMLDivElement>(null);
-    const cloudContainerRef = useRef<HTMLDivElement>(null);
 
     const closeMenus = () => {
         setMenuOpen(false);
         setMoreMenuOpen(false);
-        setCloudMenuOpen(false);
     };
 
     useEffect(() => {
@@ -86,7 +74,7 @@ export function ProjectToolbar({
     }, [refreshProjects]);
 
     useEffect(() => {
-        if (!menuOpen && !moreMenuOpen && !cloudMenuOpen) {
+        if (!menuOpen && !moreMenuOpen) {
             return;
         }
 
@@ -101,10 +89,6 @@ export function ProjectToolbar({
                 return;
             }
 
-            if (cloudContainerRef.current?.contains(target)) {
-                return;
-            }
-
             closeMenus();
         };
 
@@ -113,7 +97,7 @@ export function ProjectToolbar({
         return () => {
             window.removeEventListener("mousedown", handlePointerDown);
         };
-    }, [cloudMenuOpen, menuOpen, moreMenuOpen]);
+    }, [menuOpen, moreMenuOpen]);
 
     const handleRenameProject = async () => {
         const nextName = window.prompt("Rename project", activeProjectName)?.trim();
@@ -138,36 +122,20 @@ export function ProjectToolbar({
         await deleteProject(activeProjectId);
     };
 
-    const handleImportToCloud = async () => {
-        setCloudMessage(null);
-
-        try {
-            const result = await importLocalProjects();
-            setCloudMessage(
-                `Imported ${result.importedProjects} project(s), ${result.importedAssets} asset(s)`
-            );
-            await refreshProjects();
-        } catch (error) {
-            console.warn("Cloud import failed.", error);
-            setCloudMessage("Import failed");
-        }
-    };
-
     useEffect(() => {
-        if (!shareMessage && !revisionMessage && !cloudMessage && !quickActionMessage) {
+        if (!shareMessage && !revisionMessage && !quickActionMessage) {
             return;
         }
 
         const timeout = window.setTimeout(() => {
             setShareMessage(null);
             setRevisionMessage(null);
-            setCloudMessage(null);
         }, 2800);
 
         return () => {
             window.clearTimeout(timeout);
         };
-    }, [cloudMessage, quickActionMessage, revisionMessage, shareMessage]);
+    }, [quickActionMessage, revisionMessage, shareMessage]);
 
     const leftChrome = (
         <>
@@ -178,7 +146,6 @@ export function ProjectToolbar({
                         disabled={isBusy}
                         onClick={() => {
                             setMoreMenuOpen(false);
-                            setCloudMenuOpen(false);
                             setMenuOpen(current => !current);
                         }}
                         aria-haspopup="menu"
@@ -331,11 +298,10 @@ export function ProjectToolbar({
 
                 <EditorModeIndicator />
 
-                {(shareMessage || revisionMessage || cloudMessage || quickActionMessage) && (
+                {(shareMessage || revisionMessage || quickActionMessage) && (
                     <span style={styles.shareMessage}>
                         {shareMessage
                             ?? revisionMessage
-                            ?? cloudMessage
                             ?? quickActionMessage}
                     </span>
                 )}
@@ -401,7 +367,6 @@ export function ProjectToolbar({
                             title="Templates, reviews, admin, and more"
                             onClick={() => {
                                 setMenuOpen(false);
-                                setCloudMenuOpen(false);
                                 setMoreMenuOpen(current => !current);
                             }}
                             aria-haspopup="menu"
@@ -619,51 +584,6 @@ export function ProjectToolbar({
                         )}
                     </div>
                 </div>
-
-                {isConfigured && (
-                    <div style={styles.group} ref={cloudContainerRef}>
-                        <button
-                            type="button"
-                            style={styles.cloudButton}
-                            disabled={isBusy}
-                            onClick={() => {
-                                setMenuOpen(false);
-                                setMoreMenuOpen(false);
-                                setCloudMenuOpen(current => !current);
-                            }}
-                            aria-haspopup="menu"
-                            aria-expanded={cloudMenuOpen}
-                            title="Account and sync"
-                        >
-                            <span style={styles.cloudLabel}>Account</span>
-                            <span style={styles.cloudValue}>
-                                {user?.email || "Sign in"}
-                            </span>
-                            <span style={styles.syncBadge} data-status={syncStatus}>
-                                {formatCloudSyncStatus(syncStatus)}
-                            </span>
-                        </button>
-
-                        {cloudMenuOpen && (
-                            <div style={styles.cloudMenu}>
-                                <AuthPanel onClose={closeMenus} />
-                                {user && (
-                                    <button
-                                        type="button"
-                                        style={styles.menuItem}
-                                        disabled={isBusy}
-                                        onClick={() => {
-                                            closeMenus();
-                                            void handleImportToCloud();
-                                        }}
-                                    >
-                                        Import to cloud
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
         </>
     );
 
@@ -714,29 +634,7 @@ const styles = {
         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
         boxSizing: "border-box"
     },
-    cloudButton: {
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        minWidth: 0,
-        maxWidth: "min(280px, 100%)",
-        border: "1px solid #3b414a",
-        background: "#20242b",
-        color: "#f7f7f2",
-        borderRadius: 8,
-        padding: `0 ${TOOLBAR_CONTROL_PADDING_X}px`,
-        cursor: "pointer",
-        font: "inherit",
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
-        boxSizing: "border-box"
-    },
     projectLabel: {
-        fontSize: 11,
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        color: "#9aa3b2"
-    },
-    cloudLabel: {
         fontSize: 11,
         textTransform: "uppercase",
         letterSpacing: "0.06em",
@@ -749,24 +647,6 @@ const styles = {
         fontWeight: 600,
         overflow: "hidden",
         textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-    },
-    cloudValue: {
-        flex: 1,
-        textAlign: "left",
-        fontSize: 12,
-        fontWeight: 600,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-    },
-    syncBadge: {
-        fontSize: 10,
-        fontWeight: 600,
-        color: "#cbd5e1",
-        border: "1px solid #4b5562",
-        borderRadius: 999,
-        padding: "3px 8px",
         whiteSpace: "nowrap"
     },
     chevron: {
@@ -799,27 +679,6 @@ const styles = {
         borderRadius: 8,
         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.28)",
         display: "grid"
-    },
-    cloudMenu: {
-        position: "absolute",
-        top: "calc(100% + 6px)",
-        right: 0,
-        minWidth: 280,
-        background: "#20242b",
-        border: "1px solid #3b414a",
-        borderRadius: 8,
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.28)",
-        overflow: "hidden"
-    },
-    menuItem: {
-        border: "none",
-        background: "transparent",
-        color: "#f7f7f2",
-        textAlign: "left",
-        padding: "10px 12px",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 13
     },
     saveButton: {
         border: "1px solid #8ea0b8",

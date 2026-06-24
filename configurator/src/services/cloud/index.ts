@@ -15,6 +15,7 @@ export {
 export {
     CloudAuthService,
     cloudAuthService,
+    hasPendingOrganizationInvite,
     login,
     logout,
     register,

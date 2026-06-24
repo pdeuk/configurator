@@ -18,6 +18,7 @@ import {
 } from "../ui/projects";
 import { useEditorStore } from "../store/editorStore";
 import { ReviewDesignerPanel } from "../ui/reviews";
+import { WorkspaceAccountPanel } from "../ui/shell/WorkspaceAccountPanel";
 import { ARPreviewProvider, useARPreview } from "../ui/ar";
 import { AppShellProvider, ComponentRowAlignProvider, useAppShell } from "../ui/shell";
 import { useComponentRowAlign } from "../ui/shell/ComponentRowAlign";
@@ -29,7 +30,7 @@ import {
     usePresentationMode
 } from "../ui/presentation/PresentationModeContext";
 import { TemplateGallery } from "../ui/templates";
-import { disableLocalDemoMode, isLocalDemoMode } from "./localDemoMode";
+import { disableLocalDemoMode } from "./localDemoMode";
 
 function ConfiguratorShell() {
     const { registerViewport } = useComponentRowAlign();
@@ -49,7 +50,6 @@ function ConfiguratorShell() {
     const navigate = useNavigate();
     const [libraryOpen, setLibraryOpen] = useState(false);
     const [mockupsOpen, setMockupsOpen] = useState(false);
-    const showLocalModeBadge = !isSupabaseConfigured() && isLocalDemoMode();
 
     useEffect(() => {
         performanceService.recordSceneObjectCount(Object.keys(modulesById).length);
@@ -63,9 +63,13 @@ function ConfiguratorShell() {
         navigate("/", { replace: true });
     };
 
-    const showEditorChrome =
+    const showRightPanel =
         !isARPreviewOpen
         && !isPresentationMode
+        && can("projects.view");
+
+    const showEditorChrome =
+        showRightPanel
         && can("projects.edit")
         && !artworkEditMode;
 
@@ -80,22 +84,6 @@ function ConfiguratorShell() {
                     overflow: "hidden"
                 }}
             >
-                {!isARPreviewOpen && !isPresentationMode && (
-                    <div style={styles.workspaceHeader}>
-                        {showLocalModeBadge && (
-                            <span style={styles.localBadge}>Local mode</span>
-                        )}
-                        <button
-                            type="button"
-                            style={styles.exitWorkspaceButton}
-                            onClick={handleExitWorkspace}
-                            title="Return to sign-in"
-                        >
-                            Exit
-                        </button>
-                    </div>
-                )}
-
                 {isPresentationMode && (
                     <div style={styles.presentationBar}>
                         <span style={styles.presentationLabel}>Presentation preview</span>
@@ -117,10 +105,11 @@ function ConfiguratorShell() {
                         onMockupsOpenChange={setMockupsOpen}
                     />
                 )}
-                {showEditorChrome && (
+                {showRightPanel && (
                     <RightPanelColumn>
-                        <Inspector />
-                        {reviewsVisible && <ReviewDesignerPanel />}
+                        {showEditorChrome && <Inspector />}
+                        <WorkspaceAccountPanel onExit={handleExitWorkspace} />
+                        {showEditorChrome && reviewsVisible && <ReviewDesignerPanel />}
                     </RightPanelColumn>
                 )}
                 {!isARPreviewOpen && !isPresentationMode && can("projects.view") && <ProjectManager />}
@@ -177,37 +166,6 @@ export function Configurator() {
 }
 
 const styles = {
-    workspaceHeader: {
-        position: "absolute",
-        top: 8,
-        right: 16,
-        zIndex: 14,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        pointerEvents: "none"
-    },
-    localBadge: {
-        fontSize: 11,
-        fontWeight: 600,
-        color: "#fde68a",
-        border: "1px solid #854d0e",
-        borderRadius: 999,
-        padding: "4px 8px",
-        background: "rgba(66, 32, 6, 0.45)",
-        pointerEvents: "auto"
-    },
-    exitWorkspaceButton: {
-        border: "1px solid #4b5562",
-        background: "rgba(45, 52, 64, 0.92)",
-        color: "#f7f7f2",
-        borderRadius: 6,
-        padding: "6px 10px",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 12,
-        pointerEvents: "auto"
-    },
     presentationBar: {
         position: "absolute",
         top: 16,

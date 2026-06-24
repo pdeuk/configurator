@@ -76,7 +76,9 @@ export function UserManagementPanel({ isOpen, onClose }: UserManagementPanelProp
         try {
             await createOrganizationInvite(email, inviteRole);
             setInviteEmail("");
-            setInviteMessage(`Invited ${email} as ${formatOrganizationRole(inviteRole)}.`);
+            setInviteMessage(
+                `Invited ${email} as ${formatOrganizationRole(inviteRole)}. They can sign up at /join using that email.`
+            );
         } catch (inviteError) {
             setInviteMessage(
                 inviteError instanceof Error
@@ -114,7 +116,9 @@ export function UserManagementPanel({ isOpen, onClose }: UserManagementPanelProp
                 <div style={styles.header}>
                     <div>
                         <h2 id="user-management-title" style={styles.title}>User Management</h2>
-                        <p style={styles.subtitle}>Organization members, invites, emails, and roles.</p>
+                        <p style={styles.subtitle}>
+                            Invite teammates by email. They create an account at /join with the invited address.
+                        </p>
                     </div>
                     <button type="button" style={styles.iconButton} onClick={onClose} aria-label="Close">
                         ×
