@@ -1,4 +1,7 @@
 {
+  "installCommand": "npm install --prefix ../..",
+  "buildCommand": "npm run build:stands --prefix ../..",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/((?!assets/).*)",

@@ -1,0 +1,11 @@
+{
+  "installCommand": "npm install --prefix ../..",
+  "buildCommand": "npm run build:furniture --prefix ../..",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

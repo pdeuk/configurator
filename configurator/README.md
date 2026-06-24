@@ -71,3 +71,4 @@ Shared migrations live in `supabase/migrations/`. Full setup: [docs/SUPABASE_SET
 | App | Package | Description |
 |-----|---------|-------------|
 | Stands | `@configurator/stands` | Exhibition stands configurator (client #1) |
+| Furniture | `@configurator/furniture` | Furniture & room layout (client #2) — see [docs/FURNITURE_DEPLOY.md](docs/FURNITURE_DEPLOY.md) |

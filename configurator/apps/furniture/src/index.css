@@ -1,0 +1,203 @@
+html,
+body,
+#root {
+
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+}
+
+.workspace-chrome {
+    position: absolute;
+    z-index: 12;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 280px) minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    box-sizing: border-box;
+    pointer-events: none;
+    padding: 0;
+}
+
+.project-chrome-left,
+.project-chrome-right,
+.artwork-chrome-center {
+    min-width: 0;
+}
+
+.project-chrome-left {
+    grid-column: 1;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-start;
+    pointer-events: none;
+    min-width: 0;
+}
+
+.artwork-chrome-center {
+    grid-column: 2;
+    justify-self: stretch;
+    pointer-events: auto;
+    display: flex;
+    min-width: 0;
+}
+
+.project-chrome-right {
+    grid-column: 3;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    pointer-events: none;
+    min-width: 0;
+}
+
+.project-chrome-left > *,
+.project-chrome-right > * {
+    pointer-events: auto;
+}
+
+.project-chrome-left > div,
+.project-chrome-right > div {
+    display: flex;
+    align-items: center;
+}
+
+.project-chrome-left button,
+.project-chrome-right button {
+    height: 36px;
+    box-sizing: border-box;
+}
+
+.project-chrome-left > :not(button),
+.project-chrome-right > :not(button) {
+    align-self: center;
+}
+
+.artwork-drop-zone {
+    position: relative;
+    width: 100%;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px dashed #707987;
+    background: rgba(32, 36, 43, 0.92);
+    color: #f7f7f2;
+    font-family: system-ui, sans-serif;
+    box-sizing: border-box;
+}
+
+.artwork-drop-zone--active {
+    border-color: #ff4db8;
+    background: rgba(47, 34, 52, 0.96);
+}
+
+.artwork-drop-zone-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.artwork-drop-zone-title {
+    flex: 0 0 auto;
+    font-size: 12px;
+}
+
+.artwork-drop-zone-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #cbd3dc;
+    font-size: 12px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.artwork-drop-zone-button {
+    flex: 0 0 auto;
+    border: 1px solid #4b5562;
+    background: #2d3440;
+    color: #f7f7f2;
+    border-radius: 6px;
+    padding: 0 8px;
+    height: 28px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.artwork-drop-zone-message {
+    color: #ffcc7a;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+    .workspace-chrome {
+        grid-template-columns: minmax(0, 1fr) minmax(140px, 220px) minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 1080px) {
+    .workspace-chrome {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        row-gap: 8px;
+        height: auto;
+        min-height: var(--chrome-inline-height);
+    }
+
+    .project-chrome-left {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .artwork-chrome-center {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .project-chrome-right {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 720px) {
+    .workspace-chrome {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(3, auto);
+        height: auto;
+        min-height: var(--chrome-inline-height);
+    }
+
+    .project-chrome-left,
+    .artwork-chrome-center,
+    .project-chrome-right {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .project-chrome-right {
+        justify-content: flex-start;
+    }
+
+    .artwork-drop-zone-row {
+        flex-wrap: wrap;
+    }
+}

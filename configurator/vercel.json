@@ -1,7 +1,4 @@
 {
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "outputDirectory": "apps/stands/dist",
   "rewrites": [
     {
       "source": "/((?!assets/).*)",
