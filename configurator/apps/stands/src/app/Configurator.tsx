@@ -22,6 +22,9 @@ import { WorkspaceAccountPanel } from "../ui/shell/WorkspaceAccountPanel";
 import { ARPreviewProvider, useARPreview } from "../ui/ar";
 import { AppShellProvider, ComponentRowAlignProvider, useAppShell } from "../ui/shell";
 import { useComponentRowAlign } from "../ui/shell/ComponentRowAlign";
+import { MobileChrome } from "../ui/shell/MobileChrome";
+import { MobileWorkspace } from "../ui/shell/MobileWorkspace";
+import { useIsMobile } from "../ui/shell/useIsMobile";
 import { RightPanelColumn } from "../ui/shell/RightPanelColumn";
 import { WorkspaceChrome } from "../ui/shell/WorkspaceChrome";
 import { SelectionActionBar } from "../ui/shell/SelectionActionBar";
@@ -48,6 +51,7 @@ function ConfiguratorShell() {
         isBusy
     } = useProjectSession();
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const [libraryOpen, setLibraryOpen] = useState(false);
     const [mockupsOpen, setMockupsOpen] = useState(false);
 
@@ -97,35 +101,44 @@ function ConfiguratorShell() {
                     </div>
                 )}
 
-                {showEditorChrome && (
-                    <LeftSidebar
-                        libraryOpen={libraryOpen}
-                        mockupsOpen={mockupsOpen}
-                        onLibraryOpenChange={setLibraryOpen}
-                        onMockupsOpenChange={setMockupsOpen}
-                    />
-                )}
-                {showRightPanel && (
-                    <RightPanelColumn>
-                        {showEditorChrome && <Inspector />}
-                        <WorkspaceAccountPanel onExit={handleExitWorkspace} />
-                        {showEditorChrome && reviewsVisible && <ReviewDesignerPanel />}
-                    </RightPanelColumn>
-                )}
-                {!isARPreviewOpen && !isPresentationMode && can("projects.view") && <ProjectManager />}
-                {!isARPreviewOpen && !isPresentationMode && (
-                    <ProjectToolbar
-                        onOpenComponentLibrary={() => setLibraryOpen(true)}
-                        onOpenMockups={() => setMockupsOpen(true)}
-                        renderLayout={(left, right) => (
-                            <WorkspaceChrome
-                                left={left}
-                                center={showEditorChrome ? <ArtworkDropZone /> : null}
-                                right={right}
+                {!isMobile && (
+                    <>
+                        {showEditorChrome && (
+                            <LeftSidebar
+                                libraryOpen={libraryOpen}
+                                mockupsOpen={mockupsOpen}
+                                onLibraryOpenChange={setLibraryOpen}
+                                onMockupsOpenChange={setMockupsOpen}
                             />
                         )}
-                    />
+                        {showRightPanel && (
+                            <RightPanelColumn>
+                                {showEditorChrome && <Inspector />}
+                                <WorkspaceAccountPanel onExit={handleExitWorkspace} />
+                                {showEditorChrome && reviewsVisible && <ReviewDesignerPanel />}
+                            </RightPanelColumn>
+                        )}
+                        {!isARPreviewOpen && !isPresentationMode && (
+                            <ProjectToolbar
+                                onOpenComponentLibrary={() => setLibraryOpen(true)}
+                                onOpenMockups={() => setMockupsOpen(true)}
+                                renderLayout={(left, right) => (
+                                    <WorkspaceChrome
+                                        left={left}
+                                        center={showEditorChrome ? <ArtworkDropZone /> : null}
+                                        right={right}
+                                    />
+                                )}
+                            />
+                        )}
+                    </>
                 )}
+                {isMobile && !isARPreviewOpen && !isPresentationMode && can("projects.view") && (
+                    <MobileChrome>
+                        <MobileWorkspace onExit={handleExitWorkspace} />
+                    </MobileChrome>
+                )}
+                {!isARPreviewOpen && !isPresentationMode && can("projects.view") && <ProjectManager />}
                 {!isARPreviewOpen && <StandCanvas />}
                 {showEditorChrome && <SelectionActionBar />}
                 {!isARPreviewOpen && !isPresentationMode && can("projects.edit") && <ArtworkEditor />}

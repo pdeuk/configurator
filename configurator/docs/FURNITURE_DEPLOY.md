@@ -36,36 +36,52 @@ Open the URL Vite prints (usually `http://localhost:5173`).
 
 ## 3. Vercel (new project)
 
-Create a **second** Vercel project from the **same** GitHub repository.
+Create a **second** Vercel project from the **same** GitHub repository (`pdeuk/configurator`).
+
+> **Important:** On GitHub the monorepo lives inside a `configurator/` folder (not at the repo root).  
+> Paths below include that prefix. If you omit it, the deploy can show **Ready** but the site returns **404**.
+
+**Fastest fix:** open your **stands** Vercel project → **Settings → General** and note its **Root Directory** (likely `configurator`). Copy those settings to the furniture project, then only change the build script and output folder.
 
 ### Recommended settings (pick one approach)
 
-**Option A — Root Directory = `apps/furniture`** (uses `apps/furniture/vercel.json` in the repo)
+**Option A — Root Directory = `configurator/apps/furniture`** (uses `vercel.json` in that folder)
 
 | Setting | Value |
 |---------|--------|
 | Framework | Other |
-| Root Directory | `apps/furniture` |
-| Install / Build / Output | Leave empty — `apps/furniture/vercel.json` sets these |
+| Root Directory | `configurator/apps/furniture` |
+| Install / Build / Output | Leave empty — `vercel.json` sets these |
 
-**Option B — Root Directory = repo root**
+**Option B — Root Directory = `configurator`**
 
 | Setting | Value |
 |---------|--------|
 | Framework | Other |
-| Root Directory | `.` (empty / repo root) |
+| Root Directory | `configurator` |
 | Install Command | `npm install` |
 | Build Command | `npm run build:furniture` |
 | Output Directory | `apps/furniture/dist` |
 
-Do **not** mix Option A and B (e.g. Root = `apps/furniture` **and** Output = `apps/furniture/dist` — that double path causes **404**).
+Do **not** use `apps/furniture` as Root Directory (missing `configurator/` prefix).
 
-### If you see `404: NOT_FOUND`
+### If build fails: `No Output Directory named "public" found`
 
-1. Vercel → your **furniture** project → **Deployments** — open the latest deploy. If it failed, fix the build error first.
-2. **Settings → General → Root Directory**: use `apps/furniture` (Option A) **or** repo root (Option B), not both styles at once.
-3. **Settings → Build & Development**: confirm Output Directory is `dist` (Option A) or `apps/furniture/dist` (Option B).
-4. **Redeploy** after changing settings (Deployments → ⋯ → Redeploy).
+Vercel is using the wrong output folder. Fix **one** of these:
+
+| Root Directory | Output Directory (in Settings → Build) |
+|----------------|------------------------------------------|
+| `configurator/apps/furniture` | leave empty (or `dist`) |
+| `configurator` | **`apps/furniture/dist`** (not `public`, not `dist` alone) |
+
+Also set **Framework Preset** to **Vite** or **Other** — not a static/HTML preset that expects `public/`.  
+Do **not** mix Option A and B (e.g. Root = `configurator/apps/furniture` **and** Output = `apps/furniture/dist`).
+
+### If you see `404: NOT_FOUND` but deployment is Ready
+
+1. **Settings → General → Root Directory** — must be `configurator` or `configurator/apps/furniture` (see above).
+2. Open the deployment → **Build logs** — confirm you see `npm run build:furniture` and `apps/furniture/dist` (or `dist` with Option A).
+3. **Redeploy** after fixing settings.
 
 **Environment variables** (Production + Preview):
 
