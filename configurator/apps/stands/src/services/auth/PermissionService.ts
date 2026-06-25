@@ -42,12 +42,7 @@ function getStorage(): PermissionStorage {
 }
 
 export class PermissionService {
-    async getUserRole(user?: AuthUser | null): Promise<OrganizationRole> {
-        const membership = await this.getMembership(user);
-        return membership.role;
-    }
-
-    async getMembership(user?: AuthUser | null): Promise<OrganizationMembership> {
+    async getStaffMembership(user?: AuthUser | null): Promise<OrganizationMembership | null> {
         const userId = user?.id ?? resolveActiveUserId();
 
         if (cachedMembership && cachedUserId === userId) {
@@ -55,18 +50,47 @@ export class PermissionService {
         }
 
         const membership = await getStorage().getMembership(userId);
-        cachedMembership = membership;
-        cachedUserId = userId;
+
+        if (membership) {
+            cachedMembership = membership;
+            cachedUserId = userId;
+        }
+
+        return membership;
+    }
+
+    async getUserRole(user?: AuthUser | null): Promise<OrganizationRole> {
+        const membership = await this.getMembership(user);
+        return membership.role;
+    }
+
+    async getMembership(user?: AuthUser | null): Promise<OrganizationMembership> {
+        const membership = await this.getStaffMembership(user);
+
+        if (!membership) {
+            throw new Error("No organization membership found for this account.");
+        }
+
         return membership;
     }
 
     can(action: PermissionAction, role?: OrganizationRole): boolean {
-        const effectiveRole = role ?? cachedMembership?.role ?? "owner";
+        const effectiveRole = role ?? cachedMembership?.role;
+
+        if (!effectiveRole) {
+            return false;
+        }
+
         return roleHasPermission(effectiveRole, action);
     }
 
     canManageUsers(role?: OrganizationRole): boolean {
-        const effectiveRole = role ?? cachedMembership?.role ?? "owner";
+        const effectiveRole = role ?? cachedMembership?.role;
+
+        if (!effectiveRole) {
+            return false;
+        }
+
         return canManageOrganizationUsers(effectiveRole);
     }
 

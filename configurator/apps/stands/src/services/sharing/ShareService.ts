@@ -51,6 +51,7 @@ export class ShareService {
             id: crypto.randomUUID(),
             projectId: projectDocument.id,
             shareToken: crypto.randomUUID(),
+            shareKind: options.shareKind ?? "customer_review",
             createdAt,
             expiresAt: options.expiresAt
                 ?? new Date(Date.now() + DEFAULT_SHARE_TTL_MS).toISOString(),

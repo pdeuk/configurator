@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { hydrateModulesArtwork } from "../lib/artworkAssetHydration";
 import { projectDocumentToPersistableState } from "../lib/projectSerialization";
+import type { ProjectDocument } from "../models/ProjectModel";
+import { resolveAuthPrincipal } from "../services/auth/resolveAuthPrincipal";
 import { customerService, type CustomerProjectPermissions } from "../services/customer";
+import { getProjectStorage } from "../services/cloud";
 import { loadSharedProject } from "../services/sharing";
 import { ARScene } from "../scene/ARScene";
 import { StandCanvas } from "../scene/StandCanvas";
 import { exitAR } from "../services/ar";
 import { useEditorStore } from "../store/editorStore";
+import { useCloudSession } from "../ui/cloud";
 import { ReviewSidebar } from "../ui/reviews";
 
 interface SharedProjectViewerProps {
@@ -15,15 +19,24 @@ interface SharedProjectViewerProps {
     portalProjectId?: string;
     customerId?: string;
     permissions?: CustomerProjectPermissions;
+    allowGuestClaim?: boolean;
 }
 
 export function SharedProjectViewer(props: SharedProjectViewerProps = {}) {
+    const navigate = useNavigate();
     const routeParams = useParams<{ token?: string; projectId?: string }>();
     const shareToken = props.shareToken ?? routeParams.token;
     const portalProjectId = props.portalProjectId ?? routeParams.projectId;
     const customerId = props.customerId;
     const permissions = props.permissions;
+    const allowGuestClaim = props.allowGuestClaim ?? false;
+    const { user } = useCloudSession();
     const [projectName, setProjectName] = useState("Shared project");
+    const [loadedProject, setLoadedProject] = useState<ProjectDocument | null>(null);
+    const [shareKind, setShareKind] = useState<"customer_review" | "guest_handoff" | null>(null);
+    const [canClaimGuestProject, setCanClaimGuestProject] = useState(false);
+    const [isClaiming, setIsClaiming] = useState(false);
+    const [claimMessage, setClaimMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isARPreviewOpen, setIsARPreviewOpen] = useState(false);
@@ -51,6 +64,8 @@ export function SharedProjectViewer(props: SharedProjectViewerProps = {}) {
                     }
 
                     project = result.project;
+                    setLoadedProject(project);
+                    setShareKind(result.shared.shareKind ?? "customer_review");
                 } else if (portalProjectId && customerId) {
                     project = await customerService.loadProjectForCustomer(
                         customerId,
@@ -102,6 +117,42 @@ export function SharedProjectViewer(props: SharedProjectViewerProps = {}) {
         };
     }, [shareToken, portalProjectId, customerId]);
 
+    useEffect(() => {
+        if (!allowGuestClaim || !user || shareKind !== "guest_handoff") {
+            setCanClaimGuestProject(false);
+            return;
+        }
+
+        void resolveAuthPrincipal(user).then(principal => {
+            setCanClaimGuestProject(principal.type === "staff");
+        });
+    }, [allowGuestClaim, shareKind, user]);
+
+    const handleClaimGuestProject = async () => {
+        if (!loadedProject || isClaiming) {
+            return;
+        }
+
+        setIsClaiming(true);
+        setClaimMessage(null);
+
+        try {
+            await getProjectStorage().saveProject(loadedProject);
+            useEditorStore.getState().loadProjectDocument(loadedProject);
+            setClaimMessage("Project imported. Opening workspace…");
+            navigate("/app", { replace: true });
+        } catch (claimError) {
+            console.warn("Guest project import failed.", claimError);
+            setClaimMessage("Could not import this guest project.");
+        } finally {
+            setIsClaiming(false);
+        }
+    };
+
+    const showReviewSidebar =
+        !isARPreviewOpen
+        && (Boolean(customerId) || (Boolean(shareToken) && shareKind === "customer_review"));
+
     if (isLoading) {
         return (
             <div style={styles.page}>
@@ -131,30 +182,47 @@ export function SharedProjectViewer(props: SharedProjectViewerProps = {}) {
                     <div style={styles.headerTitle}>{projectName}</div>
                 </div>
                 <div style={styles.headerActions}>
-                    <Link to="/portal" style={styles.portalLink}>
-                        Customer portal
-                    </Link>
-                    <button
-                        type="button"
-                        style={styles.arButton}
-                        onClick={() => setIsARPreviewOpen(true)}
-                    >
-                        View in AR
-                    </button>
+                    {canClaimGuestProject && (
+                        <button
+                            type="button"
+                            style={styles.claimButton}
+                            disabled={isClaiming}
+                            onClick={() => void handleClaimGuestProject()}
+                        >
+                            {isClaiming ? "Importing…" : "Import to workspace"}
+                        </button>
+                    )}
+                    {!canClaimGuestProject && (
+                        <Link to="/portal" style={styles.portalLink}>
+                            Customer portal
+                        </Link>
+                    )}
+                    {!canClaimGuestProject && (
+                        <button
+                            type="button"
+                            style={styles.arButton}
+                            onClick={() => setIsARPreviewOpen(true)}
+                        >
+                            View in AR
+                        </button>
+                    )}
                     <div style={styles.viewOnlyBadge}>
                         {customerId && permissions?.comment
                             ? permissions.approve
                                 ? "Review & approve"
                                 : "Review"
-                            : "View only"}
+                            : canClaimGuestProject
+                                ? "Guest design"
+                                : "View only"}
                     </div>
                 </div>
             </header>
+            {claimMessage && <div style={styles.claimMessage}>{claimMessage}</div>}
             <div style={styles.layout}>
                 <div style={styles.canvasShell}>
                     {!isARPreviewOpen && <StandCanvas />}
                 </div>
-                {!isARPreviewOpen && (
+                {!isARPreviewOpen && showReviewSidebar && (
                     <ReviewSidebar
                         {...(shareToken ? { shareToken } : {})}
                         {...(portalProjectId ? { projectId: portalProjectId } : {})}
@@ -215,6 +283,28 @@ const styles = {
         alignItems: "center",
         gap: 10,
         pointerEvents: "auto"
+    },
+    claimButton: {
+        border: "1px solid #8ea0b8",
+        background: "#3a4558",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "8px 12px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 13
+    },
+    claimMessage: {
+        position: "absolute",
+        top: 88,
+        left: 20,
+        zIndex: 13,
+        padding: "8px 12px",
+        borderRadius: 6,
+        border: "1px solid #3b414a",
+        background: "rgba(32, 36, 43, 0.94)",
+        color: "#d1d5db",
+        fontSize: 13
     },
     arButton: {
         border: "1px solid #4b5562",

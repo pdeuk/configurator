@@ -8,6 +8,7 @@ interface ShareLinkRow {
     id: string;
     project_id: string;
     share_token: string;
+    share_kind: "customer_review" | "guest_handoff" | null;
     project_snapshot: ProjectDocument;
     permissions: Partial<SharePermissions> | null;
     created_at: string;
@@ -54,6 +55,7 @@ export class SupabaseShareStorage implements ShareStorage {
             organization_id: organizationId,
             project_id: shared.projectId,
             share_token: shared.shareToken,
+            share_kind: shared.shareKind,
             project_snapshot: projectSnapshot,
             permissions: shared.permissions,
             created_by: user.id,
@@ -88,6 +90,7 @@ export class SupabaseShareStorage implements ShareStorage {
                 id: row.id,
                 projectId: row.project_id,
                 shareToken: row.share_token,
+                shareKind: row.share_kind ?? "customer_review",
                 createdAt: row.created_at,
                 expiresAt: row.expires_at ?? "",
                 permissions: {

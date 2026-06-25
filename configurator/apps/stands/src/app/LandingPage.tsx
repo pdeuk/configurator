@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { isSupabaseConfigured } from "../services/cloud";
+import { cloudAuthService, isSupabaseConfigured } from "../services/cloud";
+import { resolveAuthPrincipal } from "../services/auth/resolveAuthPrincipal";
 import { useCloudSession } from "../ui/cloud";
 import { standsClientProfile } from "../../client.config";
 import { enableLocalDemoMode } from "./localDemoMode";
+
+async function resolvePostLoginPath(): Promise<string> {
+    const user = await cloudAuthService.getCurrentUser();
+    const principal = await resolveAuthPrincipal(user);
+    return principal.type === "customer" ? "/portal" : "/app";
+}
 
 export function LandingPage() {
     const navigate = useNavigate();
@@ -21,9 +28,13 @@ export function LandingPage() {
     const supabaseConfigured = isSupabaseConfigured();
 
     useEffect(() => {
-        if (isSessionReady && isConfigured && user) {
-            navigate("/app", { replace: true });
+        if (!isSessionReady || !isConfigured || !user) {
+            return;
         }
+
+        void resolvePostLoginPath().then(path => {
+            navigate(path, { replace: true });
+        });
     }, [isConfigured, isSessionReady, navigate, user]);
 
     const handleSubmit = async () => {
@@ -31,8 +42,9 @@ export function LandingPage() {
 
         try {
             await login(email, password);
-            setMessage("Signed in. Opening app…");
-            navigate("/app", { replace: true });
+            const path = await resolvePostLoginPath();
+            setMessage(path === "/portal" ? "Signed in. Opening customer portal…" : "Signed in. Opening app…");
+            navigate(path, { replace: true });
         } catch {
             // authError is surfaced by context
         }
@@ -131,6 +143,9 @@ export function LandingPage() {
                 <div style={styles.links}>
                     <Link to="/portal" style={styles.link}>
                         Customer portal
+                    </Link>
+                    <Link to="/guest" style={styles.link}>
+                        Design as guest
                     </Link>
                 </div>
             </div>

@@ -5,10 +5,13 @@ export interface SharePermissions {
     duplicate: boolean;
 }
 
+export type ShareKind = "customer_review" | "guest_handoff";
+
 export interface SharedProject {
     id: string;
     projectId: ProjectDocument["id"];
     shareToken: string;
+    shareKind: ShareKind;
     createdAt: string;
     expiresAt: string;
     permissions: SharePermissions;
@@ -28,6 +31,7 @@ export interface SharedProjectLoadResult {
 export interface CreateShareLinkOptions {
     expiresAt?: string;
     permissions?: Partial<SharePermissions>;
+    shareKind?: ShareKind;
 }
 
 /** Reserved for Supabase `public_projects` / share links table migration. */

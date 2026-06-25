@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
     buildPortalProjectPath,
     customerService,
@@ -18,6 +18,7 @@ import {
 } from "../services/settings";
 import { ProjectService } from "../services/ProjectService";
 import { cloudAuthService, getProjectStorage } from "../services/cloud";
+import { loadSharedProject } from "../services/sharing";
 import { useCloudSession } from "../ui/cloud";
 import { SharedProjectViewer } from "./SharedProjectViewer";
 
@@ -27,6 +28,8 @@ interface CustomerPortalProps {
 
 function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortalProps) {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const shareToken = searchParams.get("shareToken");
     const projectId = projectIdProp;
     const { user, isConfigured, login, logout, isAuthenticating, authError } =
         useCloudSession();
@@ -136,6 +139,31 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
         void loadCustomerState();
     }, [user]);
 
+    useEffect(() => {
+        if (!customer || !shareToken || projectId) {
+            return;
+        }
+
+        void (async () => {
+            try {
+                const result = await loadSharedProject(shareToken);
+
+                if (!result) {
+                    return;
+                }
+
+                const projects = await customerService.getCustomerProjects(customer.id);
+                const hasAccess = projects.some(entry => entry.projectId === result.project.id);
+
+                if (hasAccess) {
+                    navigate(buildPortalProjectPath(result.project.id), { replace: true });
+                }
+            } catch (redirectError) {
+                console.warn("Share token redirect failed.", redirectError);
+            }
+        })();
+    }, [customer, navigate, projectId, shareToken]);
+
     const handleLocalLogin = async () => {
         setError(null);
 
@@ -226,9 +254,11 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
                 <div style={styles.loginCard}>
                     <h1 style={styles.title}>Customer Portal</h1>
                     <p style={styles.subtitle}>
-                        {isConfigured && authMode === "register"
-                            ? "Create your account with the email your project contact used to add you."
-                            : "Sign in to view assigned projects, quotes, and approval status."}
+                        {shareToken
+                            ? "Sign in to review the project your supplier shared with you."
+                            : isConfigured && authMode === "register"
+                                ? "Create your account with the email your project contact used to add you."
+                                : "Sign in to view assigned projects, quotes, and approval status."}
                     </p>
                     <label style={styles.field}>
                         <span style={styles.label}>Email</span>

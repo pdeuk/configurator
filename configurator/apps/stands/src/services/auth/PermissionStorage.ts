@@ -7,7 +7,7 @@ import type {
 } from "@configurator/core/auth";
 
 export interface PermissionStorage {
-    getMembership(userId: string): Promise<OrganizationMembership>;
+    getMembership(userId: string): Promise<OrganizationMembership | null>;
     listOrganizationMembers(organizationId: string): Promise<OrganizationMember[]>;
     updateMemberRole(
         organizationId: string,
@@ -30,7 +30,7 @@ const LOCAL_ROLE_KEY = "configurator:auth:role";
 const LOCAL_INVITES_KEY = "configurator:auth:invites";
 
 export class LocalPermissionStorage implements PermissionStorage {
-    async getMembership(userId: string): Promise<OrganizationMembership> {
+    async getMembership(userId: string): Promise<OrganizationMembership | null> {
         const storedRole = localStorage.getItem(LOCAL_ROLE_KEY);
         const role: OrganizationRole =
             storedRole === "admin"
@@ -49,6 +49,10 @@ export class LocalPermissionStorage implements PermissionStorage {
 
     async listOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
         const membership = await this.getMembership(organizationId === "local" ? "local" : organizationId);
+
+        if (!membership) {
+            return [];
+        }
 
         return [
             {

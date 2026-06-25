@@ -35,7 +35,13 @@ export class LocalShareStorage implements ShareStorage {
                 return null;
             }
 
-            return parsed;
+            return {
+                ...parsed,
+                shared: {
+                    ...parsed.shared,
+                    shareKind: parsed.shared.shareKind ?? "customer_review"
+                }
+            };
         } catch {
             return null;
         }

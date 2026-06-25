@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
     clearPermissionCache,
+    guestCan,
     permissionService,
     type InvitableOrganizationRole,
     type OrganizationInvite,
@@ -21,6 +22,7 @@ import { useCloudSession } from "../cloud";
 
 interface PermissionsContextValue {
     role: OrganizationRole;
+    isGuestMode: boolean;
     members: OrganizationMember[];
     invites: OrganizationInvite[];
     isLoading: boolean;
@@ -48,9 +50,10 @@ export function usePermissions() {
 
 interface PermissionsProviderProps {
     children: ReactNode;
+    guestMode?: boolean;
 }
 
-export function PermissionsProvider({ children }: PermissionsProviderProps) {
+export function PermissionsProvider({ children, guestMode = false }: PermissionsProviderProps) {
     const { user } = useCloudSession();
     const [role, setRole] = useState<OrganizationRole>("owner");
     const [members, setMembers] = useState<OrganizationMember[]>([]);
@@ -61,6 +64,14 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
     const refreshPermissions = useCallback(async () => {
         setIsLoading(true);
         setError(null);
+
+        if (guestMode) {
+            setRole("designer");
+            setMembers([]);
+            setInvites([]);
+            setIsLoading(false);
+            return;
+        }
 
         try {
             clearPermissionCache();
@@ -90,17 +101,21 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
         } catch (loadError) {
             console.warn("Permission load failed.", loadError);
             setError("Unable to load organization permissions.");
-            setRole("owner");
+            setRole("production");
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [guestMode, user]);
 
     useEffect(() => {
         void refreshPermissions();
     }, [refreshPermissions]);
 
     useEffect(() => {
+        if (guestMode) {
+            return;
+        }
+
         const handleUpdated = () => {
             void refreshPermissions();
         };
@@ -110,11 +125,17 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
         return () => {
             window.removeEventListener("configurator:permissions-updated", handleUpdated);
         };
-    }, [refreshPermissions]);
+    }, [guestMode, refreshPermissions]);
 
     const can = useCallback(
-        (action: PermissionAction) => permissionService.can(action, role),
-        [role]
+        (action: PermissionAction) => {
+            if (guestMode) {
+                return guestCan(action);
+            }
+
+            return permissionService.can(action, role);
+        },
+        [guestMode, role]
     );
 
     const canManageUsers = permissionService.canManageUsers(role);
@@ -148,6 +169,7 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
 
     const value = useMemo<PermissionsContextValue>(() => ({
         role,
+        isGuestMode: guestMode,
         members,
         invites,
         isLoading,
@@ -164,6 +186,7 @@ export function PermissionsProvider({ children }: PermissionsProviderProps) {
         canManageUsers,
         createOrganizationInvite,
         error,
+        guestMode,
         invites,
         isLoading,
         members,

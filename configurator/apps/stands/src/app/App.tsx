@@ -1,10 +1,11 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { CloudSessionProvider } from "../ui/cloud";
 import { CustomerPortal } from "./CustomerPortal";
+import { GuestEditorRoute } from "./GuestEditorRoute";
 import { InviteSignupPage } from "./InviteSignupPage";
 import { LandingPage } from "./LandingPage";
 import { ProtectedAppRoute } from "./ProtectedAppRoute";
-import { SharedProjectViewer } from "./SharedProjectViewer";
+import { ShareLinkEntry } from "./ShareLinkEntry";
 
 export function App() {
     return (
@@ -14,7 +15,8 @@ export function App() {
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/join" element={<InviteSignupPage />} />
                     <Route path="/app" element={<ProtectedAppRoute />} />
-                    <Route path="/share/:token" element={<SharedProjectViewer />} />
+                    <Route path="/guest" element={<GuestEditorRoute />} />
+                    <Route path="/share/:token" element={<ShareLinkEntry />} />
                     <Route path="/portal" element={<CustomerPortal />} />
                     <Route path="/portal/project/:projectId" element={<CustomerPortal />} />
                     <Route path="*" element={<Navigate to="/" replace />} />

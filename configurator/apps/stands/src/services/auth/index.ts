@@ -20,6 +20,8 @@ export {
     type PermissionStorage
 } from "./PermissionStorage";
 export { SupabasePermissionStorage } from "./SupabasePermissionStorage";
+export { guestCan, GUEST_PERMISSIONS } from "./guestPermissions";
+export { resolveAuthPrincipal, type AuthPrincipal } from "./resolveAuthPrincipal";
 export {
     PermissionService,
     can,

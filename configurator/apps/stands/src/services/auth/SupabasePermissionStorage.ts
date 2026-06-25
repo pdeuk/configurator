@@ -104,7 +104,7 @@ export class SupabasePermissionStorage implements PermissionStorage {
         this.userId = userId;
     }
 
-    async getMembership(_userId: string): Promise<OrganizationMembership> {
+    async getMembership(_userId: string): Promise<OrganizationMembership | null> {
         const client = getSupabaseClient();
 
         if (!client) {
@@ -124,11 +124,7 @@ export class SupabasePermissionStorage implements PermissionStorage {
         }
 
         if (!data) {
-            return {
-                organizationId,
-                userId: this.userId,
-                role: "owner"
-            };
+            return null;
         }
 
         const role = isOrganizationRole(data.role) ? data.role : "designer";

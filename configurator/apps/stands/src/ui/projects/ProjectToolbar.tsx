@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { AsyncErrorTrigger, PdfExportErrorBoundary } from "../system";
 import { PermissionGuard, usePermissions } from "../auth";
+import { NotificationBell } from "../notifications/NotificationBell";
 import { useARPreview } from "../ar";
 import { useAppShell } from "../shell";
 import { EditorModeIndicator } from "../shell/EditorModeIndicator";
@@ -40,7 +41,7 @@ export function ProjectToolbar({
         deleteProject,
         renameProject
     } = useProjectSession();
-    const { canManageUsers } = usePermissions();
+    const { canManageUsers, isGuestMode } = usePermissions();
     const { openARPreview } = useARPreview();
     const { enterPresentationMode } = usePresentationMode();
     const {
@@ -358,6 +359,8 @@ export function ProjectToolbar({
                             Preview
                         </button>
                     </PermissionGuard>
+
+                    {!isGuestMode && <NotificationBell />}
 
                     <div style={styles.group} ref={moreContainerRef}>
                         <button

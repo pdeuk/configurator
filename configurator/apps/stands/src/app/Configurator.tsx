@@ -39,7 +39,7 @@ function ConfiguratorShell() {
     const { registerViewport } = useComponentRowAlign();
     const artworkEditMode = useEditorStore(state => state.artworkEditMode);
     const modulesById = useEditorStore(state => state.modulesById);
-    const { can } = usePermissions();
+    const { can, isGuestMode } = usePermissions();
     const { isOpen: isARPreviewOpen } = useARPreview();
     const { reviewsVisible } = useAppShell();
     const { isPresentationMode, exitPresentationMode } = usePresentationMode();
@@ -115,7 +115,7 @@ function ConfiguratorShell() {
                             <RightPanelColumn>
                                 {showEditorChrome && <Inspector />}
                                 <WorkspaceAccountPanel onExit={handleExitWorkspace} />
-                                {showEditorChrome && reviewsVisible && <ReviewDesignerPanel />}
+                                {showEditorChrome && !isGuestMode && reviewsVisible && <ReviewDesignerPanel />}
                             </RightPanelColumn>
                         )}
                         {!isARPreviewOpen && !isPresentationMode && (
@@ -158,10 +158,10 @@ function ConfiguratorShell() {
     );
 }
 
-export function Configurator() {
+export function Configurator({ guestMode = false }: { guestMode?: boolean }) {
     return (
         <SettingsProvider>
-            <PermissionsProvider>
+            <PermissionsProvider guestMode={guestMode}>
                 <ProjectSessionProvider>
                     <PresentationModeProvider>
                         <ARPreviewProvider>

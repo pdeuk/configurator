@@ -18,6 +18,7 @@ import {
 } from "../../services/system";
 import { trackEvent } from "../../services/analytics";
 import { useSettings } from "../settings";
+import { usePermissions } from "../auth";
 import { useCloudSession } from "../cloud";
 import { useProjectSession } from "./projectSession";
 
@@ -25,6 +26,7 @@ export function useProjectQuickActions() {
     const { saveActiveProject, isBusy } = useProjectSession();
     const { settings, materialCatalog } = useSettings();
     const { user } = useCloudSession();
+    const { isGuestMode } = usePermissions();
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
     const handleShare = useCallback(async () => {
@@ -32,22 +34,26 @@ export function useProjectQuickActions() {
 
         try {
             const document = await saveActiveProject();
-            const shared = await shareService.createShareLink(document);
+            const shared = await shareService.createShareLink(document, {
+                shareKind: isGuestMode ? "guest_handoff" : "customer_review"
+            });
             const shareUrl = buildShareUrl(shared.shareToken);
 
-            await reviewService.sendForReview(
-                document.id,
-                shared.shareToken,
-                user?.id ?? null
-            );
+            if (!isGuestMode) {
+                await reviewService.sendForReview(
+                    document.id,
+                    shared.shareToken,
+                    user?.id ?? null
+                );
+            }
 
             await navigator.clipboard.writeText(shareUrl);
-            setStatusMessage("Share link copied");
+            setStatusMessage(isGuestMode ? "Design link copied for your supplier" : "Share link copied");
         } catch (error) {
             console.warn("Share link creation failed.", error);
             setStatusMessage("Share failed");
         }
-    }, [saveActiveProject, user?.id]);
+    }, [isGuestMode, saveActiveProject, user?.id]);
 
     const handleExportQuotePdf = useCallback(async () => {
         setStatusMessage(null);
