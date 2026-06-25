@@ -23,6 +23,7 @@ export function WorkspaceAccountPanel({ onExit }: WorkspaceAccountPanelProps) {
     const { refreshProjects, openManager } = useProjectSession();
     const { role } = usePermissions();
     const [message, setMessage] = useState<string | null>(null);
+    const [expanded, setExpanded] = useState(false);
     const showLocalModeBadge = !isSupabaseConfigured() && isLocalDemoMode();
 
     const handleSignOut = async () => {
@@ -58,19 +59,32 @@ export function WorkspaceAccountPanel({ onExit }: WorkspaceAccountPanelProps) {
     };
 
     return (
-        <aside style={styles.panel}>
-            <div style={styles.header}>
+        <aside style={expanded ? { ...styles.panel, ...styles.panelExpanded } : styles.panel}>
+            <button
+                type="button"
+                style={styles.header}
+                onClick={() => setExpanded(current => !current)}
+                aria-expanded={expanded}
+                title={expanded ? "Collapse account panel" : "Expand account panel"}
+            >
                 <div>
                     <div style={styles.headerLabel}>Account</div>
                     <h2 style={styles.heading}>Workspace</h2>
                 </div>
-                {isConfigured && (
-                    <span style={styles.syncBadge} data-status={syncStatus}>
-                        {formatCloudSyncStatus(syncStatus)}
+                <div style={styles.headerRight}>
+                    {isConfigured && (
+                        <span style={styles.syncBadge} data-status={syncStatus}>
+                            {formatCloudSyncStatus(syncStatus)}
+                        </span>
+                    )}
+                    <span style={styles.chevron} aria-hidden="true">
+                        {expanded ? "▾" : "▸"}
                     </span>
-                )}
-            </div>
+                </div>
+            </button>
 
+            {expanded && (
+            <>
             {showLocalModeBadge && (
                 <div style={styles.localBanner}>
                     <strong>Local mode</strong>
@@ -129,6 +143,8 @@ export function WorkspaceAccountPanel({ onExit }: WorkspaceAccountPanelProps) {
             >
                 Exit
             </button>
+            </>
+            )}
         </aside>
     );
 }
@@ -146,11 +162,34 @@ const styles = {
         display: "grid",
         gap: 12
     },
+    panelExpanded: {
+        maxHeight: "min(420px, calc(100vh - 240px))",
+        overflowY: "auto"
+    },
     header: {
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "space-between",
-        gap: 12
+        gap: 12,
+        width: "100%",
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        margin: 0,
+        cursor: "pointer",
+        font: "inherit",
+        color: "inherit",
+        textAlign: "left"
+    },
+    headerRight: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8
+    },
+    chevron: {
+        fontSize: 12,
+        color: "#9aa3b2",
+        lineHeight: 1
     },
     headerLabel: {
         fontSize: 11,
