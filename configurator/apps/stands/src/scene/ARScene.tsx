@@ -22,6 +22,14 @@ type ARSessionInitWithOverlay = XRSessionInit & {
     domOverlay?: { root: Element };
 };
 
+interface PlacementTarget {
+    position: [number, number, number];
+    rotationY: number;
+    valid: boolean;
+}
+
+type PlacementTargetRef = RefObject<PlacementTarget>;
+
 function ARProjectGroup() {
     const [session, setSession] = useState<ARSession>(() => arService.getSession());
     const [anchor, setAnchor] = useState(() => arService.getAnchor());
@@ -81,10 +89,12 @@ function ARFallbackPlacement() {
 
 function ARXRPlacement({
     renderer,
-    reticleRef
+    reticleRef,
+    placementTargetRef
 }: {
     renderer: WebGLRenderer;
     reticleRef: RefObject<Mesh | null>;
+    placementTargetRef: PlacementTargetRef;
 }) {
     const [placed, setPlaced] = useState(() => arService.getSession().placed);
     const hitTestSourceRef = useRef<XRHitTestSource | null>(null);
@@ -135,15 +145,15 @@ function ARXRPlacement({
         })();
 
         const handleSelect = () => {
-            if (placed || !reticleRef.current || !reticleRef.current.visible) {
+            const target = placementTargetRef.current;
+
+            if (placed || !target || !target.valid) {
                 return;
             }
 
-            reticleRef.current.getWorldPosition(reticlePosition);
-
             placeProject({
-                position: [reticlePosition.x, reticlePosition.y, reticlePosition.z],
-                rotationY: reticleRef.current.rotation.y
+                position: target.position,
+                rotationY: target.rotationY
             });
         };
 
@@ -156,7 +166,7 @@ function ARXRPlacement({
             hitTestSourceRef.current = null;
             referenceSpaceRef.current = null;
         };
-    }, [placed, renderer, reticlePosition, reticleRef]);
+    }, [placed, renderer, reticleRef, placementTargetRef]);
 
     useFrame((_state, _delta, frame) => {
         if (placed || !frame || !referenceSpaceRef.current || !reticleRef.current) {
@@ -168,27 +178,35 @@ function ARXRPlacement({
             const results = frame.getHitTestResults(hitTestSourceRef.current);
             const pose = results[0]?.getPose(referenceSpaceRef.current);
 
-            if (!pose) {
-                reticleRef.current.visible = false;
+            if (pose) {
+                tempMatrix.fromArray(pose.transform.matrix);
+                tempMatrix.decompose(
+                    reticleRef.current.position,
+                    reticleRef.current.quaternion,
+                    reticleRef.current.scale
+                );
+                reticleRef.current.visible = true;
+                reticleRef.current.getWorldPosition(reticlePosition);
+
+                if (placementTargetRef.current) {
+                    placementTargetRef.current.position = [
+                        reticlePosition.x,
+                        reticlePosition.y,
+                        reticlePosition.z
+                    ];
+                    placementTargetRef.current.rotationY = reticleRef.current.rotation.y;
+                    placementTargetRef.current.valid = true;
+                }
+
                 return;
             }
-
-            tempMatrix.fromArray(pose.transform.matrix);
-            tempMatrix.decompose(
-                reticleRef.current.position,
-                reticleRef.current.quaternion,
-                reticleRef.current.scale
-            );
-            reticleRef.current.visible = true;
-            return;
         }
 
-        // Fallback: no hit-test — project a target ~1.6m in front of the viewer,
-        // dropped to floor level so the stand still sits on the ground.
+        // Fallback (no hit-test, or no surface yet): project a target ~1.6m in
+        // front of the viewer, dropped to floor level, so placement always works.
         const viewerPose = frame.getViewerPose(referenceSpaceRef.current);
 
         if (!viewerPose) {
-            reticleRef.current.visible = false;
             return;
         }
 
@@ -199,14 +217,18 @@ function ARXRPlacement({
             .normalize();
 
         const floorY = usingLocalFloorRef.current ? 0 : viewerPosition.y - 1.4;
+        const targetX = viewerPosition.x + forwardVector.x * 1.6;
+        const targetZ = viewerPosition.z + forwardVector.z * 1.6;
 
-        reticleRef.current.position.set(
-            viewerPosition.x + forwardVector.x * 1.6,
-            floorY,
-            viewerPosition.z + forwardVector.z * 1.6
-        );
+        reticleRef.current.position.set(targetX, floorY, targetZ);
         reticleRef.current.quaternion.set(0, 0, 0, 1);
         reticleRef.current.visible = true;
+
+        if (placementTargetRef.current) {
+            placementTargetRef.current.position = [targetX, floorY, targetZ];
+            placementTargetRef.current.rotationY = 0;
+            placementTargetRef.current.valid = true;
+        }
     });
 
     if (placed) {
@@ -221,7 +243,13 @@ function ARXRPlacement({
     );
 }
 
-function ARSceneController({ mode }: { mode: "xr" | "fallback" }) {
+function ARSceneController({
+    mode,
+    placementTargetRef
+}: {
+    mode: "xr" | "fallback";
+    placementTargetRef: PlacementTargetRef;
+}) {
     const { gl } = useThree();
     const [placed, setPlaced] = useState(() => arService.getSession().placed);
     const reticleRef = useRef<Mesh>(null);
@@ -237,7 +265,11 @@ function ARSceneController({ mode }: { mode: "xr" | "fallback" }) {
             {mode === "fallback" && !placed && <ARFallbackPlacement />}
             {mode === "fallback" && <ClampedOrbitControls enabled={!placed} />}
             {mode === "xr" && !placed && (
-                <ARXRPlacement renderer={gl} reticleRef={reticleRef} />
+                <ARXRPlacement
+                    renderer={gl}
+                    reticleRef={reticleRef}
+                    placementTargetRef={placementTargetRef}
+                />
             )}
             <ARProjectGroup />
         </>
@@ -253,6 +285,11 @@ export function ARScene({ onExit }: ARSceneProps) {
     const glRef = useRef<WebGLRenderer | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const xrSessionRef = useRef<XRSession | null>(null);
+    const placementTargetRef = useRef<PlacementTarget>({
+        position: [0, 0, 0],
+        rotationY: 0,
+        valid: false
+    });
 
     useLayoutEffect(() => {
         RectAreaLightUniformsLib.init();
@@ -340,6 +377,24 @@ export function ARScene({ onExit }: ARSceneProps) {
         onExit();
     };
 
+    const handlePlaceHere = () => {
+        const target = placementTargetRef.current;
+
+        if (!target.valid) {
+            return;
+        }
+
+        placeProject({
+            position: target.position,
+            rotationY: target.rotationY
+        });
+    };
+
+    const handleReposition = () => {
+        placementTargetRef.current.valid = false;
+        startARSession();
+    };
+
     const hudLabel =
         mode === "xr" ? "AR Preview" : supported ? "Ready for AR" : "3D Preview";
 
@@ -347,7 +402,7 @@ export function ARScene({ onExit }: ARSceneProps) {
         mode === "xr"
             ? session.placed
                 ? "Placed — walk around to view it at real size"
-                : "Move your phone to scan the floor, then tap to place"
+                : "Aim at the floor, then tap the screen or “Place here”"
             : supported
                 ? "Tap “Start AR” to place the stand in your room"
                 : session.placed
@@ -370,6 +425,24 @@ export function ARScene({ onExit }: ARSceneProps) {
                             disabled={isStarting}
                         >
                             {isStarting ? "Starting…" : "Start AR"}
+                        </button>
+                    )}
+                    {mode === "xr" && !session.placed && (
+                        <button
+                            type="button"
+                            style={styles.startButton}
+                            onClick={handlePlaceHere}
+                        >
+                            Place here
+                        </button>
+                    )}
+                    {mode === "xr" && session.placed && (
+                        <button
+                            type="button"
+                            style={styles.exitButton}
+                            onClick={handleReposition}
+                        >
+                            Reposition
                         </button>
                     )}
                     <button type="button" style={styles.exitButton} onClick={handleExit}>
@@ -401,7 +474,7 @@ export function ARScene({ onExit }: ARSceneProps) {
                 {mode === "fallback" && (
                     <color attach="background" args={["#525862"]} />
                 )}
-                <ARSceneController mode={mode} />
+                <ARSceneController mode={mode} placementTargetRef={placementTargetRef} />
             </Canvas>
         </div>
     );
