@@ -81,7 +81,22 @@ export class SupabaseSettingsStorage implements SettingsStorage {
 
         if (!data) {
             const defaults = createDefaultCompanySettings(organizationId);
-            await this.updateSettings(organizationId, defaults);
+            const { error: insertError } = await client
+                .from("company_settings")
+                .upsert(
+                    {
+                        id: defaults.id,
+                        organization_id: organizationId,
+                        settings_json: defaults,
+                        updated_at: new Date().toISOString()
+                    },
+                    { onConflict: "organization_id" }
+                );
+
+            if (insertError) {
+                throw insertError;
+            }
+
             return defaults;
         }
 
@@ -152,7 +167,22 @@ export class SupabaseSettingsStorage implements SettingsStorage {
 
         if (!data) {
             const defaults = createDefaultMaterialCatalog(organizationId);
-            await this.updateMaterialCatalog(organizationId, defaults);
+            const { error: insertError } = await client
+                .from("material_catalogs")
+                .upsert(
+                    {
+                        id: defaults.id,
+                        organization_id: organizationId,
+                        catalog_json: defaults,
+                        updated_at: new Date().toISOString()
+                    },
+                    { onConflict: "organization_id" }
+                );
+
+            if (insertError) {
+                throw insertError;
+            }
+
             return defaults;
         }
 

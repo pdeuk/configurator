@@ -69,42 +69,61 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
                 user: null
             });
 
-            const nextProjects = await customerService.getCustomerProjects(nextCustomer.id);
+            let nextProjects: CustomerProjectSummary[] = [];
+
+            try {
+                nextProjects = await customerService.getCustomerProjects(nextCustomer.id);
+            } catch (projectsError) {
+                console.warn("Customer projects load failed.", projectsError);
+            }
+
             setProjects(nextProjects);
 
-            const [settings, catalog] = await Promise.all([
-                getSettings(),
-                getMaterialCatalog()
-            ]);
-            const projectService = new ProjectService(getProjectStorage());
-            const quotes = await Promise.all(
-                nextProjects.map(async (summary: CustomerProjectSummary) => {
-                    const project = await projectService.load(summary.projectId);
+            // Quote summaries depend on organization settings/catalog, which a
+            // customer may not be able to read. Best-effort only — never block.
+            try {
+                const [settings, catalog] = await Promise.all([
+                    getSettings(),
+                    getMaterialCatalog()
+                ]);
+                const projectService = new ProjectService(getProjectStorage());
+                const quotes = await Promise.all(
+                    nextProjects.map(async (summary: CustomerProjectSummary) => {
+                        const project = await projectService.load(summary.projectId);
 
-                    if (!project) {
-                        return null;
-                    }
+                        if (!project) {
+                            return null;
+                        }
 
-                    const quote = generateOrganizationQuote(project, settings, catalog);
-                    return {
-                        projectId: summary.projectId,
-                        total: quote.pricing.total,
-                        currency: quote.pricing.currency
-                    };
-                })
-            );
-            setQuoteSummaries(quotes.filter((entry): entry is { projectId: string; total: number; currency: string } => entry !== null));
+                        const quote = generateOrganizationQuote(project, settings, catalog);
+                        return {
+                            projectId: summary.projectId,
+                            total: quote.pricing.total,
+                            currency: quote.pricing.currency
+                        };
+                    })
+                );
+                setQuoteSummaries(quotes.filter((entry): entry is { projectId: string; total: number; currency: string } => entry !== null));
+            } catch (quotesError) {
+                console.warn("Customer quote summaries unavailable.", quotesError);
+                setQuoteSummaries([]);
+            }
 
-            const withReviewStatus = await Promise.all(
-                nextProjects.map(async (summary: CustomerProjectSummary) => {
-                    const review = await reviewService.getReviewByProjectId(summary.projectId);
-                    return {
-                        ...summary,
-                        reviewStatus: review ? formatReviewStatus(review.status) : "Not sent"
-                    };
-                })
-            );
-            setProjects(withReviewStatus);
+            // Review status is also best-effort.
+            try {
+                const withReviewStatus = await Promise.all(
+                    nextProjects.map(async (summary: CustomerProjectSummary) => {
+                        const review = await reviewService.getReviewByProjectId(summary.projectId);
+                        return {
+                            ...summary,
+                            reviewStatus: review ? formatReviewStatus(review.status) : "Not sent"
+                        };
+                    })
+                );
+                setProjects(withReviewStatus);
+            } catch (reviewError) {
+                console.warn("Customer review status unavailable.", reviewError);
+            }
         } catch (loadError) {
             console.warn("Customer portal load failed.", loadError);
             setError("Unable to load customer portal.");
