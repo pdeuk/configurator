@@ -8,10 +8,12 @@ export {
 export {
     CloudAuthService,
     cloudAuthService,
+    hasCustomerAccount,
     hasPendingOrganizationInvite,
     login,
     logout,
     register,
+    registerCustomer,
     type AuthUser
 } from "./CloudAuthService";
 export {

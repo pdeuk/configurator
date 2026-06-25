@@ -97,6 +97,64 @@ export class CloudAuthService {
         return user;
     }
 
+    async hasCustomerAccount(email: string): Promise<boolean> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            return false;
+        }
+
+        const { data, error } = await client.rpc("has_customer_account", {
+            p_email: email.trim().toLowerCase()
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        return Boolean(data);
+    }
+
+    /**
+     * Customer portal self-registration. Requires an existing customer record
+     * (created by the organization) matching the email. The database trigger
+     * links the new auth user to that customer on signup.
+     */
+    async registerCustomer(
+        email: string,
+        password: string
+    ): Promise<{ user: AuthUser | null; needsConfirmation: boolean }> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            throw new Error("Supabase is not configured.");
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const known = await this.hasCustomerAccount(normalizedEmail);
+
+        if (!known) {
+            throw new Error(
+                "No customer account exists for this email. Ask your project contact to add you first."
+            );
+        }
+
+        const { data, error } = await client.auth.signUp({
+            email: normalizedEmail,
+            password
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        if (!data.session && data.user && !data.user.confirmed_at) {
+            return { user: mapUser(data.user), needsConfirmation: true };
+        }
+
+        return { user: mapUser(data.user), needsConfirmation: false };
+    }
+
     async login(email: string, password: string): Promise<AuthUser> {
         const client = getSupabaseClient();
 
@@ -166,6 +224,17 @@ export async function register(email: string, password: string): Promise<AuthUse
 
 export async function hasPendingOrganizationInvite(email: string): Promise<boolean> {
     return cloudAuthService.hasPendingOrganizationInvite(email);
+}
+
+export async function hasCustomerAccount(email: string): Promise<boolean> {
+    return cloudAuthService.hasCustomerAccount(email);
+}
+
+export async function registerCustomer(
+    email: string,
+    password: string
+): Promise<{ user: AuthUser | null; needsConfirmation: boolean }> {
+    return cloudAuthService.registerCustomer(email, password);
 }
 
 export async function logout(): Promise<void> {

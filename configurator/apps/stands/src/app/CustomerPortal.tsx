@@ -17,7 +17,7 @@ import {
     setSettingsContext
 } from "../services/settings";
 import { ProjectService } from "../services/ProjectService";
-import { getProjectStorage } from "../services/cloud";
+import { cloudAuthService, getProjectStorage } from "../services/cloud";
 import { useCloudSession } from "../ui/cloud";
 import { SharedProjectViewer } from "./SharedProjectViewer";
 
@@ -36,6 +36,8 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
+    const [authMode, setAuthMode] = useState<"signin" | "register">("signin");
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"projects" | "quotes" | "reviews">("projects");
 
@@ -130,13 +132,41 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
 
     const handleCloudLogin = async () => {
         setError(null);
+        setNotice(null);
 
         try {
             await login(email, password);
             await loadCustomerState();
         } catch (loginError) {
             console.warn("Customer cloud login failed.", loginError);
-            setError("Cloud login failed.");
+            setError(loginError instanceof Error ? loginError.message : "Cloud login failed.");
+        }
+    };
+
+    const handleCloudRegister = async () => {
+        setError(null);
+        setNotice(null);
+
+        try {
+            const result = await cloudAuthService.registerCustomer(email, password);
+
+            if (result.needsConfirmation) {
+                setNotice(
+                    "Account created. Check your email to confirm your address, then sign in."
+                );
+                setAuthMode("signin");
+                setPassword("");
+                return;
+            }
+
+            await loadCustomerState();
+        } catch (registerError) {
+            console.warn("Customer registration failed.", registerError);
+            setError(
+                registerError instanceof Error
+                    ? registerError.message
+                    : "Could not create your account."
+            );
         }
     };
 
@@ -177,12 +207,16 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
                 <div style={styles.loginCard}>
                     <h1 style={styles.title}>Customer Portal</h1>
                     <p style={styles.subtitle}>
-                        Sign in to view assigned projects, quotes, and approval status.
+                        {isConfigured && authMode === "register"
+                            ? "Create your account with the email your project contact used to add you."
+                            : "Sign in to view assigned projects, quotes, and approval status."}
                     </p>
                     <label style={styles.field}>
                         <span style={styles.label}>Email</span>
                         <input
                             style={styles.input}
+                            type="email"
+                            autoComplete="email"
                             value={email}
                             onChange={event => setEmail(event.target.value)}
                         />
@@ -192,12 +226,32 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
                         <input
                             style={styles.input}
                             type="password"
+                            autoComplete={
+                                authMode === "register" ? "new-password" : "current-password"
+                            }
                             value={password}
                             onChange={event => setPassword(event.target.value)}
                         />
                     </label>
                     <div style={styles.actions}>
-                        {isConfigured ? (
+                        {!isConfigured ? (
+                            <button
+                                type="button"
+                                style={styles.buttonPrimary}
+                                onClick={() => void handleLocalLogin()}
+                            >
+                                Sign in
+                            </button>
+                        ) : authMode === "register" ? (
+                            <button
+                                type="button"
+                                style={styles.buttonPrimary}
+                                disabled={isAuthenticating}
+                                onClick={() => void handleCloudRegister()}
+                            >
+                                Create account
+                            </button>
+                        ) : (
                             <button
                                 type="button"
                                 style={styles.buttonPrimary}
@@ -206,16 +260,24 @@ function CustomerPortalShell({ projectId: projectIdProp = null }: CustomerPortal
                             >
                                 Sign in
                             </button>
-                        ) : (
-                            <button
-                                type="button"
-                                style={styles.buttonPrimary}
-                                onClick={() => void handleLocalLogin()}
-                            >
-                                Sign in
-                            </button>
                         )}
                     </div>
+                    {isConfigured && (
+                        <button
+                            type="button"
+                            style={styles.linkButton}
+                            onClick={() => {
+                                setAuthMode(authMode === "signin" ? "register" : "signin");
+                                setError(null);
+                                setNotice(null);
+                            }}
+                        >
+                            {authMode === "signin"
+                                ? "First time here? Create your account"
+                                : "Already have an account? Sign in"}
+                        </button>
+                    )}
+                    {notice && <p style={styles.notice}>{notice}</p>}
                     {(error || authError) && <p style={styles.error}>{error ?? authError}</p>}
                     <p style={styles.backLinkRow}>
                         <Link to="/" style={styles.backLink}>
@@ -488,6 +550,22 @@ const styles = {
         margin: 0,
         color: "#fca5a5",
         fontSize: 12
+    },
+    notice: {
+        margin: 0,
+        color: "#86efac",
+        fontSize: 12
+    },
+    linkButton: {
+        border: "none",
+        background: "transparent",
+        color: "#93c5fd",
+        font: "inherit",
+        fontSize: 13,
+        padding: 0,
+        cursor: "pointer",
+        textAlign: "left" as const,
+        justifySelf: "start"
     },
     backLinkRow: {
         margin: "8px 0 0",

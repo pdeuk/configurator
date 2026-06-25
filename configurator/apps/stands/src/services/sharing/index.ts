@@ -19,6 +19,10 @@ export {
     type ShareStorage
 } from "./ShareStorage";
 export {
+    SupabaseShareStorage,
+    supabaseShareStorage
+} from "./SupabaseShareStorage";
+export {
     ShareService,
     createShareLink,
     disableShareLink,

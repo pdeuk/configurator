@@ -10,16 +10,36 @@ import {
     DEFAULT_SHARE_TTL_MS
 } from "./ShareModel";
 import { localShareStorage, type ShareStorage } from "./ShareStorage";
+import { SupabaseShareStorage } from "./SupabaseShareStorage";
+import { isSupabaseConfigured } from "@configurator/core/cloud";
 
 function isShareExpired(expiresAt: string, now = Date.now()): boolean {
-    return new Date(expiresAt).getTime() <= now;
+    const timestamp = new Date(expiresAt).getTime();
+
+    if (Number.isNaN(timestamp)) {
+        return false;
+    }
+
+    return timestamp <= now;
+}
+
+/**
+ * Use cloud storage whenever Supabase is configured so links resolve on other
+ * devices. Reading a share works anonymously; creating one requires sign-in.
+ */
+function resolveDefaultStorage(): ShareStorage {
+    return isSupabaseConfigured() ? new SupabaseShareStorage() : localShareStorage;
 }
 
 export class ShareService {
-    private readonly storage: ShareStorage;
+    private readonly storageOverride: ShareStorage | null;
 
-    constructor(storage: ShareStorage = localShareStorage) {
-        this.storage = storage;
+    constructor(storage?: ShareStorage) {
+        this.storageOverride = storage ?? null;
+    }
+
+    private get storage(): ShareStorage {
+        return this.storageOverride ?? resolveDefaultStorage();
     }
 
     async createShareLink(
