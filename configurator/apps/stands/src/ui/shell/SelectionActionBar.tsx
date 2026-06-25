@@ -1,5 +1,6 @@
 import { useEditorStore } from "../../store/editorStore";
 import { PermissionGuard } from "../auth";
+import { useIsMobile } from "./useIsMobile";
 
 export function SelectionActionBar() {
     const selectedId = useEditorStore(state => state.selectedId);
@@ -7,13 +8,18 @@ export function SelectionActionBar() {
     const canUndo = useEditorStore(state => state.history.length > 0);
     const duplicateModule = useEditorStore(state => state.duplicateModule);
     const removeModule = useEditorStore(state => state.removeModule);
+    const isMobile = useIsMobile();
 
     if (!selectedId) {
         return null;
     }
 
     return (
-        <div style={styles.bar} role="toolbar" aria-label="Selection actions">
+        <div
+            style={{ ...styles.bar, ...(isMobile ? styles.barMobile : undefined) }}
+            role="toolbar"
+            aria-label="Selection actions"
+        >
             <PermissionGuard action="projects.edit">
                 <button
                     type="button"
@@ -72,6 +78,9 @@ const styles = {
         border: "1px solid #3b414a",
         background: "rgba(32, 36, 43, 0.94)",
         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)"
+    },
+    barMobile: {
+        bottom: "calc(96px + env(safe-area-inset-bottom, 0px))"
     },
     button: {
         border: "1px solid #4b5562",
