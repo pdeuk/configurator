@@ -277,7 +277,13 @@ export function ARScene({ onExit }: ARSceneProps) {
             );
         } catch (error) {
             console.warn("WebXR AR session failed.", error);
-            setMessage("Couldn't start camera AR. Showing 3D preview instead.");
+
+            const detail =
+                error instanceof Error
+                    ? `${error.name}: ${error.message}`
+                    : String(error);
+
+            setMessage(`Couldn't start camera AR (${detail}). Showing 3D preview instead.`);
             setMode("fallback");
         } finally {
             setIsStarting(false);
