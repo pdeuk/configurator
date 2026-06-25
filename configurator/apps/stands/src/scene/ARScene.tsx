@@ -1,6 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { DoubleSide, Matrix4, Vector3, type Mesh, type WebGLRenderer } from "three";
+import {
+    DoubleSide,
+    Matrix4,
+    Vector3,
+    type Group,
+    type MeshBasicMaterial,
+    type WebGLRenderer
+} from "three";
 import { ClampedOrbitControls } from "./ClampedOrbitControls";
 import { StandSceneContent } from "./StandSceneContent";
 import { useEditorStore } from "../store/editorStore";
@@ -87,13 +94,18 @@ function ARFallbackPlacement() {
     );
 }
 
+const RETICLE_COLOR_SURFACE = "#34d399";
+const RETICLE_COLOR_ESTIMATED = "#f59e0b";
+
 function ARXRPlacement({
     renderer,
     reticleRef,
+    ringMaterialRef,
     placementTargetRef
 }: {
     renderer: WebGLRenderer;
-    reticleRef: RefObject<Mesh | null>;
+    reticleRef: RefObject<Group | null>;
+    ringMaterialRef: RefObject<MeshBasicMaterial | null>;
     placementTargetRef: PlacementTargetRef;
 }) {
     const [placed, setPlaced] = useState(() => arService.getSession().placed);
@@ -104,6 +116,10 @@ function ARXRPlacement({
     const reticlePosition = useMemo(() => new Vector3(), []);
     const viewerPosition = useMemo(() => new Vector3(), []);
     const forwardVector = useMemo(() => new Vector3(), []);
+
+    const setReticleColor = (color: string) => {
+        ringMaterialRef.current?.color.set(color);
+    };
 
     useEffect(() => arService.subscribe(session => setPlaced(session.placed)), []);
 
@@ -186,6 +202,7 @@ function ARXRPlacement({
                     reticleRef.current.scale
                 );
                 reticleRef.current.visible = true;
+                setReticleColor(RETICLE_COLOR_SURFACE);
                 reticleRef.current.getWorldPosition(reticlePosition);
 
                 if (placementTargetRef.current) {
@@ -223,6 +240,7 @@ function ARXRPlacement({
         reticleRef.current.position.set(targetX, floorY, targetZ);
         reticleRef.current.quaternion.set(0, 0, 0, 1);
         reticleRef.current.visible = true;
+        setReticleColor(RETICLE_COLOR_ESTIMATED);
 
         if (placementTargetRef.current) {
             placementTargetRef.current.position = [targetX, floorY, targetZ];
@@ -236,10 +254,31 @@ function ARXRPlacement({
     }
 
     return (
-        <mesh ref={reticleRef} visible={false}>
-            <ringGeometry args={[0.12, 0.16, 32]} />
-            <meshBasicMaterial color="#60a5fa" transparent opacity={0.85} side={DoubleSide} />
-        </mesh>
+        <group ref={reticleRef} visible={false}>
+            {/* Outer ring laid flat on the surface (XZ plane). */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.1, 0.16, 48]} />
+                <meshBasicMaterial
+                    ref={ringMaterialRef}
+                    color={RETICLE_COLOR_SURFACE}
+                    transparent
+                    opacity={0.95}
+                    side={DoubleSide}
+                    depthTest={false}
+                />
+            </mesh>
+            {/* Center dot, lifted slightly along the surface normal. */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+                <circleGeometry args={[0.035, 32]} />
+                <meshBasicMaterial
+                    color="#ffffff"
+                    transparent
+                    opacity={0.85}
+                    side={DoubleSide}
+                    depthTest={false}
+                />
+            </mesh>
+        </group>
     );
 }
 
@@ -252,7 +291,8 @@ function ARSceneController({
 }) {
     const { gl } = useThree();
     const [placed, setPlaced] = useState(() => arService.getSession().placed);
-    const reticleRef = useRef<Mesh>(null);
+    const reticleRef = useRef<Group>(null);
+    const ringMaterialRef = useRef<MeshBasicMaterial>(null);
 
     useEffect(() => {
         useEditorStore.getState().setReadOnly(true);
@@ -268,6 +308,7 @@ function ARSceneController({
                 <ARXRPlacement
                     renderer={gl}
                     reticleRef={reticleRef}
+                    ringMaterialRef={ringMaterialRef}
                     placementTargetRef={placementTargetRef}
                 />
             )}

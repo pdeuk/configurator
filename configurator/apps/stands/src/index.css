@@ -317,6 +317,16 @@ body,
     min-height: 44px;
 }
 
+/* Panels like the Inspector are flex-grow scroll areas on desktop (they fill the
+   right column). Inside the accordion that collapses them to a tiny scroll box,
+   so let them size to their content and let the whole drawer scroll instead. */
+.mobile-chrome-drawer-body aside {
+    flex: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+}
+
 /* The accordion section header is itself a button — keep it compact. */
 .mobile-chrome-drawer-body section > button {
     min-height: 52px;

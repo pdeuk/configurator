@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-const MOBILE_QUERY = "(max-width: 768px)";
+// A phone in any orientation has both dimensions under ~960px and a coarse
+// (touch) pointer. Checking both width AND height keeps the drawer active in
+// landscape too, while excluding tablets (one dimension >= ~1024) and desktops
+// (fine pointer). Falls back to a plain width check if pointer media is absent.
+const MOBILE_QUERY =
+    "(pointer: coarse) and (max-width: 960px) and (max-height: 960px), (max-width: 768px)";
 
 /** Tracks whether the viewport is phone-sized. Updates on resize/orientation change. */
 export function useIsMobile(): boolean {
