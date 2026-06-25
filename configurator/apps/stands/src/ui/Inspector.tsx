@@ -35,8 +35,21 @@ function formatEffectiveDpi(value: number) {
     return Number.isFinite(value) ? Math.floor(value).toString() : "0";
 }
 
-const ROTATION_STEP = Math.PI / 2;
+const ROTATION_STEP_DEG = 10;
+const ROTATION_STEP_RAD = (ROTATION_STEP_DEG * Math.PI) / 180;
 const MIN_DIMENSION = 0.05;
+
+function metersToCm(value: number): number {
+    return Math.round(value * 100);
+}
+
+function cmToMeters(value: number): number {
+    return value / 100;
+}
+
+function cmStep(meters: number): number {
+    return Math.round(meters * 100);
+}
 
 interface NumberFieldProps {
     label: string;
@@ -249,19 +262,21 @@ export function Inspector() {
                     ) : (
                         <>
                             <NumberField
-                                label="W"
-                                value={selectedModule.width}
-                                min={MIN_DIMENSION}
+                                label="Width (cm)"
+                                value={metersToCm(selectedModule.width)}
+                                step={1}
+                                min={cmStep(MIN_DIMENSION)}
                                 onChange={width => updateDimensions({
-                                    width: Math.max(width, MIN_DIMENSION)
+                                    width: Math.max(cmToMeters(width), MIN_DIMENSION)
                                 })}
                             />
                             <NumberField
-                                label="H"
-                                value={selectedModule.height}
-                                min={MIN_DIMENSION}
+                                label="Height (cm)"
+                                value={metersToCm(selectedModule.height)}
+                                step={1}
+                                min={cmStep(MIN_DIMENSION)}
                                 onChange={height => updateDimensions({
-                                    height: Math.max(height, MIN_DIMENSION)
+                                    height: Math.max(cmToMeters(height), MIN_DIMENSION)
                                 })}
                             />
                             <NumberField
@@ -481,14 +496,26 @@ export function Inspector() {
                         type="button"
                         style={styles.button}
                         onClick={() => updateModule(selectedModule.id, {
-                            rotation: selectedModule.rotation + ROTATION_STEP
+                            rotation: selectedModule.rotation + ROTATION_STEP_RAD
                         })}
                     >
-                        Rotate 90
+                        Rotate 10 +
                     </button>
                     <button
                         type="button"
                         style={styles.button}
+                        onClick={() => updateModule(selectedModule.id, {
+                            rotation: selectedModule.rotation - ROTATION_STEP_RAD
+                        })}
+                    >
+                        Rotate 10 -
+                    </button>
+                    <button
+                        type="button"
+                        style={{
+                            ...styles.button,
+                            ...styles.fullWidthButton
+                        }}
                         onClick={() => duplicateModule(selectedModule.id)}
                     >
                         Duplicate
@@ -695,6 +722,9 @@ const styles = {
     disabledButton: {
         opacity: 0.45,
         cursor: "not-allowed"
+    },
+    fullWidthButton: {
+        gridColumn: "1 / -1"
     },
     dangerButton: {
         gridColumn: "1 / -1",

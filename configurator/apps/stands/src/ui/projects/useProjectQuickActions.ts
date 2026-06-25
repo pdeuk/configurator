@@ -17,6 +17,7 @@ import {
     performanceService
 } from "../../services/system";
 import { trackEvent } from "../../services/analytics";
+import { captureStandSceneViews } from "../../scene/sceneCaptureRegistry";
 import { useSettings } from "../settings";
 import { usePermissions } from "../auth";
 import { useCloudSession } from "../cloud";
@@ -67,39 +68,70 @@ export function useProjectQuickActions() {
             await loadingStateService.run("export", async () => {
                 const startedAt = performance.now();
                 const document = await saveActiveProject();
-                const quote = generateOrganizationQuote(document, settings, materialCatalog);
+                const sceneViews = await captureStandSceneViews();
+                const quoteInput = sceneViews
+                    ? { previewImages: [sceneViews.front, sceneViews.top] as string[] }
+                    : {};
+                const quote = generateOrganizationQuote(
+                    document,
+                    settings,
+                    materialCatalog,
+                    quoteInput
+                );
 
-                await trackEvent({
-                    event: "quote.created",
-                    entityType: "quote",
-                    entityId: quote.id,
-                    metadata: {
-                        projectId: document.id,
-                        total: quote.pricing.total,
-                        currency: settings.quoteDefaults.currency
-                    }
-                });
-
-                await downloadOrganizationQuotePDF(document, settings, materialCatalog, {}, {
+                // Critical path: produce and download the PDF first so a failing
+                // analytics/audit/logging side-effect can never block the export.
+                await downloadOrganizationQuotePDF(
+                    document,
+                    settings,
+                    materialCatalog,
+                    quoteInput,
+                    {
                     fileName: `${document.name.replace(/[^\w\-]+/g, "-").toLowerCase()}-quote.pdf`
                 });
 
-                performanceService.recordExportDuration(
-                    "export.quotePdf",
-                    Math.round(performance.now() - startedAt),
-                    { projectId: document.id }
-                );
+                // Best-effort telemetry — never fail the export because of these.
+                try {
+                    await trackEvent({
+                        event: "quote.created",
+                        entityType: "quote",
+                        entityId: quote.id,
+                        metadata: {
+                            projectId: document.id,
+                            total: quote.pricing.total,
+                            currency: settings.quoteDefaults.currency
+                        }
+                    });
+                } catch (telemetryError) {
+                    console.warn("Quote analytics tracking failed (non-fatal).", telemetryError);
+                }
 
-                await auditService.record({
-                    action: "quote.exported",
-                    entityType: "quote",
-                    entityId: document.id
-                });
+                try {
+                    performanceService.recordExportDuration(
+                        "export.quotePdf",
+                        Math.round(performance.now() - startedAt),
+                        { projectId: document.id }
+                    );
+                } catch (perfError) {
+                    console.warn("Quote performance logging failed (non-fatal).", perfError);
+                }
+
+                try {
+                    await auditService.record({
+                        action: "quote.exported",
+                        entityType: "quote",
+                        entityId: document.id
+                    });
+                } catch (auditError) {
+                    console.warn("Quote audit logging failed (non-fatal).", auditError);
+                }
             });
             setStatusMessage("Quote PDF exported");
         } catch (error) {
             errorTrackingService.captureError(error, { context: "export.quotePdf" });
-            setStatusMessage("Quote export failed");
+            console.error("Quote export failed.", error);
+            const detail = error instanceof Error ? error.message : "";
+            setStatusMessage(detail ? `Quote export failed: ${detail}` : "Quote export failed");
         }
     }, [materialCatalog, saveActiveProject, settings]);
 

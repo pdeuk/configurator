@@ -1,5 +1,4 @@
-import { useState, type CSSProperties } from "react";
-import { ComponentLibraryPanel } from "./catalog";
+import { type CSSProperties } from "react";
 import { MockupPanel } from "./MockupPanel";
 import { Toolbar } from "./Toolbar";
 import {
@@ -8,60 +7,12 @@ import {
     PANEL_SECTION_GAP,
     SIDEBAR_PANEL_WIDTH
 } from "./shell/layout";
-interface LeftSidebarProps {
-    libraryOpen?: boolean;
-    mockupsOpen?: boolean;
-    onLibraryOpenChange?: (open: boolean) => void;
-    onMockupsOpenChange?: (open: boolean) => void;
-}
 
-export function LeftSidebar({
-    libraryOpen: libraryOpenProp,
-    mockupsOpen: mockupsOpenProp,
-    onLibraryOpenChange,
-    onMockupsOpenChange
-}: LeftSidebarProps) {
-    const [libraryOpenLocal, setLibraryOpenLocal] = useState(false);
-    const [mockupsOpenLocal, setMockupsOpenLocal] = useState(false);
-
-    const libraryOpen = libraryOpenProp ?? libraryOpenLocal;
-    const mockupsOpen = mockupsOpenProp ?? mockupsOpenLocal;
-
-    const setLibraryOpen = (open: boolean) => {
-        onLibraryOpenChange?.(open);
-        if (libraryOpenProp === undefined) {
-            setLibraryOpenLocal(open);
-        }
-    };
-
-    const setMockupsOpen = (open: boolean) => {
-        onMockupsOpenChange?.(open);
-        if (mockupsOpenProp === undefined) {
-            setMockupsOpenLocal(open);
-        }
-    };
-
+export function LeftSidebar() {
     return (
         <div style={styles.sidebar}>
             <Toolbar />
-            <button
-                type="button"
-                style={styles.toggle}
-                onClick={() => setLibraryOpen(!libraryOpen)}
-                aria-expanded={libraryOpen}
-            >
-                {libraryOpen ? "Hide component library" : "Component library"}
-            </button>
-            {libraryOpen && <ComponentLibraryPanel />}
-            <button
-                type="button"
-                style={styles.toggle}
-                onClick={() => setMockupsOpen(!mockupsOpen)}
-                aria-expanded={mockupsOpen}
-            >
-                {mockupsOpen ? "Hide mockups" : "Mockups & print preview"}
-            </button>
-            {mockupsOpen && <MockupPanel />}
+            <MockupPanel />
         </div>
     );
 }

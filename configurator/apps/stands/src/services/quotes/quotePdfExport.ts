@@ -74,27 +74,107 @@ function drawSectionTitle(
     return y + 8;
 }
 
-async function drawPreviewImage(
+async function drawPreviewImageInCell(
     pdf: import("jspdf").jsPDF,
     imageUrl: string,
+    x: number,
+    y: number,
+    cellWidth: number,
+    cellHeight: number,
+    label: string
+): Promise<void> {
+    const labelHeight = 5;
+    const imageAreaHeight = cellHeight - labelHeight - 2;
+    const image = await loadImageElement(imageUrl);
+    const format = getImageFormat(imageUrl);
+    const scale = Math.min(
+        (cellWidth - 4) / image.naturalWidth,
+        imageAreaHeight / image.naturalHeight,
+        1
+    );
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    const imageX = x + (cellWidth - width) / 2;
+    const imageY = y + 2 + (imageAreaHeight - height) / 2;
+
+    pdf.addImage(imageUrl, format, imageX, imageY, width, height);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(label, x + cellWidth / 2, y + cellHeight - 1.5, { align: "center" });
+    pdf.setTextColor(0, 0, 0);
+}
+
+function drawPreviewPlaceholderCell(
+    pdf: import("jspdf").jsPDF,
+    x: number,
+    y: number,
+    cellWidth: number,
+    cellHeight: number,
+    label: string
+): void {
+    const labelHeight = 5;
+    const imageAreaHeight = cellHeight - labelHeight - 2;
+
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(x + 1, y + 1, cellWidth - 2, imageAreaHeight, "FD");
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(120, 120, 120);
+    pdf.text("No preview", x + cellWidth / 2, y + 2 + imageAreaHeight / 2, { align: "center" });
+    pdf.setFontSize(8);
+    pdf.text(label, x + cellWidth / 2, y + cellHeight - 1.5, { align: "center" });
+    pdf.setTextColor(0, 0, 0);
+}
+
+async function drawDualPreviewImages(
+    pdf: import("jspdf").jsPDF,
+    frontImageUrl: string | undefined,
+    topImageUrl: string | undefined,
     x: number,
     y: number,
     maxWidth: number,
     maxHeight: number
 ): Promise<number> {
-    const image = await loadImageElement(imageUrl);
-    const format = getImageFormat(imageUrl);
-    const scale = Math.min(
-        maxWidth / image.naturalWidth,
-        maxHeight / image.naturalHeight,
-        1
-    );
-    const width = image.naturalWidth * scale;
-    const height = image.naturalHeight * scale;
+    const gap = 4;
+    const cellWidth = (maxWidth - gap) / 2;
 
-    pdf.addImage(imageUrl, format, x, y, width, height);
+    pdf.setDrawColor(200, 200, 200);
+    pdf.rect(x, y, maxWidth, maxHeight);
 
-    return y + height + 6;
+    if (frontImageUrl) {
+        await drawPreviewImageInCell(
+            pdf,
+            frontImageUrl,
+            x,
+            y,
+            cellWidth,
+            maxHeight,
+            "Front view"
+        );
+    } else {
+        drawPreviewPlaceholderCell(pdf, x, y, cellWidth, maxHeight, "Front view");
+    }
+
+    const topX = x + cellWidth + gap;
+
+    if (topImageUrl) {
+        await drawPreviewImageInCell(
+            pdf,
+            topImageUrl,
+            topX,
+            y,
+            cellWidth,
+            maxHeight,
+            "Top view"
+        );
+    } else {
+        drawPreviewPlaceholderCell(pdf, topX, y, cellWidth, maxHeight, "Top view");
+    }
+
+    return y + maxHeight + 6;
 }
 
 function drawPreviewPlaceholder(
@@ -434,14 +514,16 @@ export async function downloadQuotePDF(
     const contentWidth = pageWidth - PAGE_MARGIN * 2;
     const previewTopY = 78;
     const previewMaxHeight = 70;
-    const previewImageUrl = quote.project.previewImages[0];
+    const frontImageUrl = quote.project.previewImages[0];
+    const topImageUrl = quote.project.previewImages[1];
     let previewBottomY = previewTopY + previewMaxHeight;
 
-    if (previewImageUrl) {
+    if (frontImageUrl || topImageUrl) {
         try {
-            previewBottomY = await drawPreviewImage(
+            previewBottomY = await drawDualPreviewImages(
                 pdf,
-                previewImageUrl,
+                frontImageUrl,
+                topImageUrl,
                 PAGE_MARGIN,
                 previewTopY,
                 contentWidth,

@@ -17,14 +17,10 @@ import {
 } from "../shell/layout";
 
 interface ProjectToolbarProps {
-    onOpenComponentLibrary?: () => void;
-    onOpenMockups?: () => void;
     renderLayout?: (left: ReactNode, right: ReactNode) => ReactNode;
 }
 
 export function ProjectToolbar({
-    onOpenComponentLibrary,
-    onOpenMockups,
     renderLayout
 }: ProjectToolbarProps) {
     const {
@@ -477,33 +473,6 @@ export function ProjectToolbar({
                                         Templates
                                     </button>
                                 </PermissionGuard>
-                                <PermissionGuard action="projects.edit">
-                                    <button
-                                        type="button"
-                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
-                                        disabled={isBusy}
-                                        onClick={() => {
-                                            closeMenus();
-                                            onOpenComponentLibrary?.();
-                                        }}
-                                    >
-                                        Component library
-                                    </button>
-                                </PermissionGuard>
-                                <PermissionGuard action="projects.edit">
-                                    <button
-                                        type="button"
-                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
-                                        disabled={isBusy}
-                                        onClick={() => {
-                                            closeMenus();
-                                            onOpenMockups?.();
-                                        }}
-                                    >
-                                        Mockups
-                                    </button>
-                                </PermissionGuard>
-
                                 <MenuDivider />
                                 <MenuSection label="Collaboration" />
                                 <PermissionGuard action="projects.edit">
@@ -640,19 +609,6 @@ export function ProjectToolbar({
                                         }}
                                     >
                                         Activity logs
-                                    </button>
-                                </PermissionGuard>
-                                <PermissionGuard action="projects.edit">
-                                    <button
-                                        type="button"
-                                        style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
-                                        disabled={isBusy}
-                                        onClick={() => {
-                                            closeMenus();
-                                            openAdmin("components");
-                                        }}
-                                    >
-                                        Catalog management
                                     </button>
                                 </PermissionGuard>
                                 <button

@@ -1,6 +1,5 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { useEditorStore } from "../../store/editorStore";
-import { ComponentLibraryPanel } from "../catalog";
 import { Inspector } from "../Inspector";
 import { MockupPanel } from "../MockupPanel";
 import { Toolbar } from "../Toolbar";
@@ -245,17 +244,6 @@ export function MobileWorkspace({ onExit }: MobileWorkspaceProps) {
                 </Section>
             )}
 
-            {can("projects.edit") && (
-                <Section
-                    id="library"
-                    title="Component library"
-                    isOpen={isOpen("library")}
-                    onToggle={toggleSection}
-                >
-                    <ComponentLibraryPanel />
-                </Section>
-            )}
-
             {can("projects.view") && (
                 <Section
                     id="properties"
@@ -372,9 +360,6 @@ export function MobileWorkspace({ onExit }: MobileWorkspaceProps) {
                         </PermissionGuard>
                         <PermissionGuard action="settings.edit">
                             <ActionButton label="Activity logs" onClick={runAndClose(() => openAdmin("activity"))} />
-                        </PermissionGuard>
-                        <PermissionGuard action="projects.edit">
-                            <ActionButton label="Catalog management" onClick={runAndClose(() => openAdmin("components"))} />
                         </PermissionGuard>
                         <PermissionGuard action="projects.edit">
                             <ActionButton

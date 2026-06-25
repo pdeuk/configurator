@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { StandCanvas } from "../scene/StandCanvas";
 import { performanceService } from "../services/system";
@@ -52,9 +52,6 @@ function ConfiguratorShell() {
     } = useProjectSession();
     const navigate = useNavigate();
     const isMobile = useIsMobile();
-    const [libraryOpen, setLibraryOpen] = useState(false);
-    const [mockupsOpen, setMockupsOpen] = useState(false);
-
     useEffect(() => {
         performanceService.recordSceneObjectCount(Object.keys(modulesById).length);
     }, [modulesById]);
@@ -104,12 +101,7 @@ function ConfiguratorShell() {
                 {!isMobile && (
                     <>
                         {showEditorChrome && (
-                            <LeftSidebar
-                                libraryOpen={libraryOpen}
-                                mockupsOpen={mockupsOpen}
-                                onLibraryOpenChange={setLibraryOpen}
-                                onMockupsOpenChange={setMockupsOpen}
-                            />
+                            <LeftSidebar />
                         )}
                         {showRightPanel && (
                             <RightPanelColumn>
@@ -119,8 +111,6 @@ function ConfiguratorShell() {
                         )}
                         {!isARPreviewOpen && !isPresentationMode && (
                             <ProjectToolbar
-                                onOpenComponentLibrary={() => setLibraryOpen(true)}
-                                onOpenMockups={() => setMockupsOpen(true)}
                                 renderLayout={(left, right) => (
                                     <WorkspaceChrome
                                         left={left}

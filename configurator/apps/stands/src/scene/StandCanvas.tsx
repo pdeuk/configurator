@@ -10,6 +10,8 @@ import { DragController } from "./DragController";
 
 import { FaceEditCamera } from "./FaceEditCamera";
 
+import { SceneCaptureBridge } from "./SceneCaptureBridge";
+
 import { SnapPreview } from "./SnapPreview";
 
 import { StandSceneContent } from "./StandSceneContent";
@@ -87,6 +89,8 @@ export function StandCanvas() {
                 enabled={readOnly || (!isDragging && !artworkEditMode)}
 
             />
+
+            <SceneCaptureBridge />
 
         </Canvas>
 

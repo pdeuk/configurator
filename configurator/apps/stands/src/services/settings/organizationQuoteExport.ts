@@ -42,7 +42,12 @@ export async function buildOrganizationQuotePdfOptions(
     let logoUrl: string | null = null;
 
     if (settings.logoAssetId) {
-        logoUrl = await assetService.createObjectUrl(settings.logoAssetId);
+        try {
+            logoUrl = await assetService.createObjectUrl(settings.logoAssetId);
+        } catch (logoError) {
+            console.warn("Quote logo asset unavailable; exporting without logo.", logoError);
+            logoUrl = null;
+        }
     }
 
     return {
