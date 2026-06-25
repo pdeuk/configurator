@@ -102,16 +102,25 @@ export function ReviewSidebar({
 
     const customerAuthorId = useMemo(() => getCustomerAuthorId(), []);
 
+    const canInteract = Boolean(shareToken || customerId);
+    const canComment = canInteract && permissions.comment;
+    const canApprove = canInteract && permissions.approve;
+
     const loadReview = useCallback(async () => {
         setIsLoading(true);
         setError(null);
 
         try {
-            const nextReview = shareToken
-                ? await reviewService.getReviewByShareToken(shareToken)
-                : projectId
-                    ? await reviewService.getReviewByProjectId(projectId)
-                    : null;
+            let nextReview: ProjectReview | null = null;
+
+            if (customerId && projectId) {
+                nextReview = await reviewService.getReviewForCustomer(customerId, projectId);
+            } else if (shareToken) {
+                nextReview = await reviewService.getReviewByShareToken(shareToken);
+            } else if (projectId) {
+                nextReview = await reviewService.getReviewByProjectId(projectId);
+            }
+
             setReview(nextReview);
         } catch (loadError) {
             console.warn("Review load failed.", loadError);
@@ -119,7 +128,7 @@ export function ReviewSidebar({
         } finally {
             setIsLoading(false);
         }
-    }, [shareToken, projectId]);
+    }, [shareToken, projectId, customerId]);
 
     useEffect(() => {
         void loadReview();
@@ -141,7 +150,7 @@ export function ReviewSidebar({
 
         const trimmed = message.trim();
 
-        if (!trimmed || !review || isSubmitting) {
+        if (!trimmed || isSubmitting || !canComment) {
             return;
         }
 
@@ -151,7 +160,7 @@ export function ReviewSidebar({
         try {
             const authorLabel = customerName.trim() || customerAuthorId;
             const nextReview = await reviewService.addComment(
-                review.id,
+                review?.id ?? "pending",
                 {
                     authorType: "customer",
                     authorId: authorLabel,
@@ -163,14 +172,18 @@ export function ReviewSidebar({
             setMessage("");
         } catch (submitError) {
             console.warn("Comment submit failed.", submitError);
-            setError("Unable to post comment.");
+            setError(
+                submitError instanceof Error
+                    ? submitError.message
+                    : "Unable to post comment."
+            );
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleStatusUpdate = async (status: "changes_requested" | "approved") => {
-        if (!review || isSubmitting) {
+        if (isSubmitting || !canApprove) {
             return;
         }
 
@@ -179,19 +192,19 @@ export function ReviewSidebar({
 
         try {
             const nextReview = await reviewService.updateStatus(
-                review.id,
+                review?.id ?? "pending",
                 status,
                 customerContext
             );
             setReview(nextReview);
 
-            const resolvedProjectId = projectId ?? review.projectId;
+            const resolvedProjectId = projectId ?? nextReview.projectId;
 
             if (status === "approved") {
                 await trackEvent({
                     event: "customer.approved",
                     entityType: "review",
-                    entityId: review.id,
+                    entityId: nextReview.id,
                     metadata: {
                         projectId: resolvedProjectId,
                         ...(customerId ? { customerId } : {})
@@ -201,13 +214,13 @@ export function ReviewSidebar({
                     event: "project.completed",
                     entityType: "project",
                     entityId: resolvedProjectId,
-                    metadata: { projectId: resolvedProjectId, reviewId: review.id }
+                    metadata: { projectId: resolvedProjectId, reviewId: nextReview.id }
                 });
             } else {
                 await trackEvent({
                     event: "customer.requested_changes",
                     entityType: "review",
-                    entityId: review.id,
+                    entityId: nextReview.id,
                     metadata: {
                         projectId: resolvedProjectId,
                         ...(customerId ? { customerId } : {})
@@ -238,67 +251,65 @@ export function ReviewSidebar({
 
             {isLoading ? (
                 <p style={styles.empty}>Loading comments…</p>
-            ) : !review ? (
-                <p style={styles.empty}>
-                    No review thread yet. Your designer can send this project for approval.
-                </p>
             ) : (
                 <>
                     <div style={styles.commentList}>
-                        {review.comments.length === 0 ? (
-                            <p style={styles.empty}>No comments yet.</p>
-                        ) : (
+                        {review && review.comments.length > 0 ? (
                             review.comments.map(comment => (
                                 <CommentItem key={comment.id} comment={comment} />
                             ))
+                        ) : (
+                            <p style={styles.empty}>
+                                {canInteract
+                                    ? "No comments yet. Share your feedback below."
+                                    : "No review thread yet. Your designer can send this project for approval."}
+                            </p>
                         )}
                     </div>
 
-                    <form style={styles.form} onSubmit={event => void handleAddComment(event)}>
-                        {permissions.comment && (
-                            <>
-                                <label style={styles.field}>
-                                    <span style={styles.label}>Your name (optional)</span>
-                                    <input
-                                        type="text"
-                                        value={customerName}
-                                        onChange={event => setCustomerName(event.target.value)}
-                                        style={styles.input}
-                                        placeholder="Customer"
-                                    />
-                                </label>
-                                <label style={styles.field}>
-                                    <span style={styles.label}>Add a comment</span>
-                                    <textarea
-                                        value={message}
-                                        onChange={event => setMessage(event.target.value)}
-                                        style={styles.textarea}
-                                        rows={4}
-                                        placeholder="Share feedback on this design…"
-                                    />
-                                </label>
-                                <button
-                                    type="submit"
-                                    style={{
-                                        ...styles.button,
-                                        ...(message.trim() && !isSubmitting
-                                            ? undefined
-                                            : styles.disabledButton)
-                                    }}
-                                    disabled={!message.trim() || isSubmitting}
-                                >
-                                    Post comment
-                                </button>
-                            </>
-                        )}
-                    </form>
+                    {canComment && (
+                        <form style={styles.form} onSubmit={event => void handleAddComment(event)}>
+                            <label style={styles.field}>
+                                <span style={styles.label}>Your name (optional)</span>
+                                <input
+                                    type="text"
+                                    value={customerName}
+                                    onChange={event => setCustomerName(event.target.value)}
+                                    style={styles.input}
+                                    placeholder="Customer"
+                                />
+                            </label>
+                            <label style={styles.field}>
+                                <span style={styles.label}>Add a comment</span>
+                                <textarea
+                                    value={message}
+                                    onChange={event => setMessage(event.target.value)}
+                                    style={styles.textarea}
+                                    rows={4}
+                                    placeholder="Share feedback on this design…"
+                                />
+                            </label>
+                            <button
+                                type="submit"
+                                style={{
+                                    ...styles.button,
+                                    ...(message.trim() && !isSubmitting
+                                        ? undefined
+                                        : styles.disabledButton)
+                                }}
+                                disabled={!message.trim() || isSubmitting}
+                            >
+                                Post comment
+                            </button>
+                        </form>
+                    )}
 
-                    {permissions.approve && (
+                    {canApprove && (
                         <div style={styles.actions}>
                             <button
                                 type="button"
                                 style={styles.secondaryButton}
-                                disabled={isSubmitting || review.status === "approved"}
+                                disabled={isSubmitting || review?.status === "approved"}
                                 onClick={() => void handleStatusUpdate("changes_requested")}
                             >
                                 Request changes
@@ -306,7 +317,7 @@ export function ReviewSidebar({
                             <button
                                 type="button"
                                 style={styles.primaryButton}
-                                disabled={isSubmitting || review.status === "approved"}
+                                disabled={isSubmitting || review?.status === "approved"}
                                 onClick={() => void handleStatusUpdate("approved")}
                             >
                                 Approve design

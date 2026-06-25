@@ -141,7 +141,13 @@ export function SharedProjectViewer(props: SharedProjectViewerProps = {}) {
                     >
                         View in AR
                     </button>
-                    <div style={styles.viewOnlyBadge}>View only</div>
+                    <div style={styles.viewOnlyBadge}>
+                        {customerId && permissions?.comment
+                            ? permissions.approve
+                                ? "Review & approve"
+                                : "Review"
+                            : "View only"}
+                    </div>
                 </div>
             </header>
             <div style={styles.layout}>

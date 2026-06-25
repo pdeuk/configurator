@@ -377,4 +377,76 @@ export class SupabaseReviewStorage implements ReviewStorage {
 
         return data as ProjectReview;
     }
+
+    async getReviewForCustomer(
+        customerId: string,
+        projectId: string
+    ): Promise<ProjectReview | null> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            return null;
+        }
+
+        const { data, error } = await client.rpc("review_get_for_customer", {
+            p_customer_id: customerId,
+            p_project_id: projectId
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        return (data as ProjectReview | null) ?? null;
+    }
+
+    async addCommentForCustomer(
+        customerId: string,
+        projectId: string,
+        comment: AddReviewCommentInput
+    ): Promise<ProjectReview> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            throw new Error("Supabase is not configured.");
+        }
+
+        const { data, error } = await client.rpc("review_add_comment_for_customer", {
+            p_customer_id: customerId,
+            p_project_id: projectId,
+            p_author_id: comment.authorId,
+            p_message: comment.message,
+            p_position: comment.position ?? null
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        return data as ProjectReview;
+    }
+
+    async updateStatusForCustomer(
+        customerId: string,
+        projectId: string,
+        status: ReviewStatus
+    ): Promise<ProjectReview> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            throw new Error("Supabase is not configured.");
+        }
+
+        const { data, error } = await client.rpc("review_update_status_for_customer", {
+            p_customer_id: customerId,
+            p_project_id: projectId,
+            p_status: status
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        return data as ProjectReview;
+    }
 }

@@ -66,6 +66,24 @@ export class ReviewService {
         return getDesignerStorage().getReviewByProjectId(projectId);
     }
 
+    async getReviewForCustomer(
+        customerId: string,
+        projectId: string
+    ): Promise<ProjectReview | null> {
+        if (isSupabaseConfigured() && isBrowserOnline()) {
+            try {
+                return await new SupabaseReviewStorage().getReviewForCustomer(
+                    customerId,
+                    projectId
+                );
+            } catch (error) {
+                console.warn("Cloud customer review load failed.", error);
+            }
+        }
+
+        return localReviewStorage.getReviewByProjectId(projectId);
+    }
+
     async getReviewByShareToken(shareToken: string): Promise<ProjectReview | null> {
         if (isSupabaseConfigured() && isBrowserOnline()) {
             const cloudReview = await new SupabaseReviewStorage().getReviewByShareToken(
@@ -92,17 +110,29 @@ export class ReviewService {
                 "comment"
             );
 
-            let review = await this.getReviewByProjectId(context.projectId);
-
-            if (!review) {
-                review = await this.createReview(context.projectId);
-                review = await this.updateStatus(review.id, "sent", {
-                    authorType: "designer",
-                    authorId: "system"
-                });
+            if (isSupabaseConfigured() && isBrowserOnline()) {
+                try {
+                    const nextReview = await new SupabaseReviewStorage().addCommentForCustomer(
+                        context.customerId,
+                        context.projectId,
+                        comment
+                    );
+                    notifyReviewEvent("comment", nextReview);
+                    return nextReview;
+                } catch (error) {
+                    console.warn("Cloud customer review comment failed.", error);
+                    throw error;
+                }
             }
 
-            const nextReview = await getDesignerStorage().addComment(review.id, comment);
+            let review = await localReviewStorage.getReviewByProjectId(context.projectId);
+
+            if (!review) {
+                review = await localReviewStorage.createReview(context.projectId);
+                review = await localReviewStorage.updateStatus(review.id, "sent");
+            }
+
+            const nextReview = await localReviewStorage.addComment(review.id, comment);
             notifyReviewEvent("comment", nextReview);
             return nextReview;
         }
@@ -151,13 +181,29 @@ export class ReviewService {
                 "approve"
             );
 
-            let review = await this.getReviewByProjectId(context.projectId);
+            if (isSupabaseConfigured() && isBrowserOnline()) {
+                try {
+                    const nextReview = await new SupabaseReviewStorage().updateStatusForCustomer(
+                        context.customerId,
+                        context.projectId,
+                        status
+                    );
+                    notifyReviewEvent("status", nextReview);
+                    captureReviewRevisionSnapshot(nextReview);
+                    return nextReview;
+                } catch (error) {
+                    console.warn("Cloud customer review status failed.", error);
+                    throw error;
+                }
+            }
+
+            let review = await localReviewStorage.getReviewByProjectId(context.projectId);
 
             if (!review) {
                 throw new Error("Review not found for project.");
             }
 
-            const nextReview = await getDesignerStorage().updateStatus(review.id, status);
+            const nextReview = await localReviewStorage.updateStatus(review.id, status);
             notifyReviewEvent("status", nextReview);
             captureReviewRevisionSnapshot(nextReview);
             return nextReview;
