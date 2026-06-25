@@ -8,7 +8,6 @@ import type {
 import { useSettings } from "./SettingsProvider";
 import { ErpSettingsTab } from "./ErpSettingsTab";
 import { ActivityLogTab } from "./ActivityLogTab";
-import { CatalogAdminTab } from "./CatalogAdminTab";
 import { CustomersAdminTab } from "./CustomersAdminTab";
 import { DashboardTab } from "./DashboardTab";
 
@@ -48,7 +47,7 @@ export function AdminPanel({ isOpen, onClose, initialTab }: AdminPanelProps) {
 
     useEffect(() => {
         if (isOpen && initialTab) {
-            setActiveTab(initialTab);
+            setActiveTab(initialTab === "components" ? "dashboard" : initialTab);
         }
     }, [initialTab, isOpen]);
 
@@ -142,7 +141,7 @@ export function AdminPanel({ isOpen, onClose, initialTab }: AdminPanelProps) {
                 </div>
 
                 <div style={styles.tabs}>
-                    {(["dashboard", "company", "materials", "pricing", "erp", "activity", "components", "customers"] as AdminTab[]).map(tab => (
+                    {(["dashboard", "company", "materials", "pricing", "erp", "activity", "customers"] as AdminTab[]).map(tab => (
                         <button
                             key={tab}
                             type="button"
@@ -164,9 +163,7 @@ export function AdminPanel({ isOpen, onClose, initialTab }: AdminPanelProps) {
                                             ? "ERP Settings"
                                             : tab === "activity"
                                                 ? "Activity Log"
-                                                : tab === "components"
-                                                    ? "Components"
-                                                    : "Customers"}
+                                                : "Customers"}
                         </button>
                     ))}
                 </div>
@@ -321,7 +318,7 @@ export function AdminPanel({ isOpen, onClose, initialTab }: AdminPanelProps) {
                             Save materials
                         </button>
                     </div>
-                ) : (
+                ) : activeTab === "pricing" ? (
                     <div style={styles.form}>
                         <label style={styles.field}>
                             <span style={styles.label}>Currency</span>
@@ -357,13 +354,11 @@ export function AdminPanel({ isOpen, onClose, initialTab }: AdminPanelProps) {
                             Save pricing defaults
                         </button>
                     </div>
-                )}
+                ) : null}
 
                 {activeTab === "erp" && <ErpSettingsTab />}
 
                 {activeTab === "activity" && <ActivityLogTab />}
-
-                {activeTab === "components" && <CatalogAdminTab />}
 
                 {activeTab === "customers" && <CustomersAdminTab />}
 
