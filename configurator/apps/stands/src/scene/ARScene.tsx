@@ -18,6 +18,10 @@ interface ARSceneProps {
     onExit: () => void;
 }
 
+type ARSessionInitWithOverlay = XRSessionInit & {
+    domOverlay?: { root: Element };
+};
+
 function ARProjectGroup() {
     const [session, setSession] = useState<ARSession>(() => arService.getSession());
     const [anchor, setAnchor] = useState(() => arService.getAnchor());
@@ -117,7 +121,7 @@ function ARXRPlacement({
         })();
 
         const handleSelect = () => {
-            if (placed || !reticleRef.current) {
+            if (placed || !reticleRef.current || !reticleRef.current.visible) {
                 return;
             }
 
@@ -181,13 +185,7 @@ function ARXRPlacement({
     );
 }
 
-function ARSceneController({
-    mode,
-    onFallback
-}: {
-    mode: "xr" | "fallback";
-    onFallback: () => void;
-}) {
+function ARSceneController({ mode }: { mode: "xr" | "fallback" }) {
     const { gl } = useThree();
     const [placed, setPlaced] = useState(() => arService.getSession().placed);
     const reticleRef = useRef<Mesh>(null);
@@ -197,48 +195,6 @@ function ARSceneController({
     }, []);
 
     useEffect(() => arService.subscribe(session => setPlaced(session.placed)), []);
-
-    useEffect(() => {
-        if (mode !== "xr") {
-            return;
-        }
-
-        let cancelled = false;
-
-        void (async () => {
-            if (!navigator.xr) {
-                onFallback();
-                return;
-            }
-
-            try {
-                const session = await navigator.xr.requestSession("immersive-ar", {
-                    requiredFeatures: ["hit-test"],
-                    optionalFeatures: ["local-floor"]
-                });
-
-                if (cancelled) {
-                    await session.end();
-                    return;
-                }
-
-                gl.setClearColor(0x000000, 0);
-                await gl.xr.setSession(session);
-            } catch (error) {
-                console.warn("WebXR AR session failed.", error);
-                onFallback();
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-            const session = gl.xr.getSession();
-
-            if (session) {
-                void session.end();
-            }
-        };
-    }, [gl, mode, onFallback]);
 
     return (
         <>
@@ -255,6 +211,12 @@ function ARSceneController({
 export function ARScene({ onExit }: ARSceneProps) {
     const [session, setSession] = useState<ARSession>(() => arService.getSession());
     const [mode, setMode] = useState<"xr" | "fallback">("fallback");
+    const [supported, setSupported] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const [isStarting, setIsStarting] = useState(false);
+    const glRef = useRef<WebGLRenderer | null>(null);
+    const overlayRef = useRef<HTMLDivElement>(null);
+    const xrSessionRef = useRef<XRSession | null>(null);
 
     useLayoutEffect(() => {
         RectAreaLightUniformsLib.init();
@@ -263,49 +225,128 @@ export function ARScene({ onExit }: ARSceneProps) {
     useEffect(() => {
         void checkARSupport().then(nextSession => {
             setSession(nextSession);
-            setMode(nextSession.supported ? "xr" : "fallback");
+            setSupported(nextSession.supported);
             startARSession();
         });
 
         return arService.subscribe(setSession);
     }, []);
 
+    // The XR session MUST be requested from within the user gesture (the button
+    // tap). Requesting it after async work / re-renders drops the activation and
+    // the request silently fails — which looked like "nothing happens".
+    const handleStartAR = async () => {
+        const gl = glRef.current;
+
+        if (typeof navigator === "undefined" || !navigator.xr || !gl) {
+            setMessage("AR is unavailable on this device. Showing 3D preview.");
+            return;
+        }
+
+        setIsStarting(true);
+        setMessage(null);
+
+        try {
+            const sessionInit: ARSessionInitWithOverlay = {
+                requiredFeatures: ["hit-test"],
+                optionalFeatures: ["local-floor", "dom-overlay"]
+            };
+
+            if (overlayRef.current) {
+                sessionInit.domOverlay = { root: overlayRef.current };
+            }
+
+            const xrSession = await navigator.xr.requestSession("immersive-ar", sessionInit);
+            xrSessionRef.current = xrSession;
+
+            gl.xr.enabled = true;
+            gl.setClearColor(0x000000, 0);
+            await gl.xr.setSession(xrSession);
+
+            startARSession();
+            setMode("xr");
+
+            xrSession.addEventListener(
+                "end",
+                () => {
+                    xrSessionRef.current = null;
+                    exitAR();
+                    onExit();
+                },
+                { once: true }
+            );
+        } catch (error) {
+            console.warn("WebXR AR session failed.", error);
+            setMessage("Couldn't start camera AR. Showing 3D preview instead.");
+            setMode("fallback");
+        } finally {
+            setIsStarting(false);
+        }
+    };
+
     const handleExit = () => {
+        const xrSession = xrSessionRef.current;
+
+        if (xrSession) {
+            xrSessionRef.current = null;
+            void xrSession.end();
+        }
+
         exitAR();
         onExit();
     };
 
+    const hudLabel =
+        mode === "xr" ? "AR Preview" : supported ? "Ready for AR" : "3D Preview";
+
+    const hudTitle =
+        mode === "xr"
+            ? session.placed
+                ? "Placed — walk around to view it at real size"
+                : "Move your phone to scan the floor, then tap to place"
+            : supported
+                ? "Tap “Start AR” to place the stand in your room"
+                : session.placed
+                    ? "Project placed"
+                    : "Drag to orbit, then tap the floor to place";
+
     return (
-        <div style={styles.overlay}>
+        <div ref={overlayRef} style={styles.overlay}>
             <div style={styles.hud}>
-                <div>
-                    <div style={styles.hudLabel}>
-                        {mode === "xr" && session.supported ? "AR Preview" : "3D Preview"}
-                    </div>
-                    <div style={styles.hudTitle}>
-                        {session.placed
-                            ? "Project placed"
-                            : mode === "xr"
-                                ? "Tap the floor to place the stand"
-                                : "Tap the floor or orbit, then tap to place"}
-                    </div>
+                <div style={styles.hudText}>
+                    <div style={styles.hudLabel}>{hudLabel}</div>
+                    <div style={styles.hudTitle}>{hudTitle}</div>
                 </div>
-                <button type="button" style={styles.exitButton} onClick={handleExit}>
-                    Exit
-                </button>
+                <div style={styles.hudActions}>
+                    {supported && mode !== "xr" && (
+                        <button
+                            type="button"
+                            style={styles.startButton}
+                            onClick={() => void handleStartAR()}
+                            disabled={isStarting}
+                        >
+                            {isStarting ? "Starting…" : "Start AR"}
+                        </button>
+                    )}
+                    <button type="button" style={styles.exitButton} onClick={handleExit}>
+                        Exit
+                    </button>
+                </div>
             </div>
 
-            {!session.supported && (
+            {message && <div style={styles.fallbackBanner}>{message}</div>}
+            {!message && !supported && (
                 <div style={styles.fallbackBanner}>
-                    AR is not supported on this device. Showing 3D preview mode instead.
+                    Camera AR isn’t supported by this browser. Showing an interactive 3D
+                    preview instead.
                 </div>
             )}
 
             <Canvas
-                key={mode}
-                gl={{ toneMappingExposure: 1.3, alpha: mode === "xr" }}
+                gl={{ toneMappingExposure: 1.3, alpha: true }}
                 onCreated={({ gl }) => {
-                    gl.xr.enabled = mode === "xr";
+                    glRef.current = gl;
+                    gl.xr.enabled = false;
                 }}
                 camera={{
                     position: [5, 4, 5],
@@ -316,7 +357,7 @@ export function ARScene({ onExit }: ARSceneProps) {
                 {mode === "fallback" && (
                     <color attach="background" args={["#525862"]} />
                 )}
-                <ARSceneController mode={mode} onFallback={() => setMode("fallback")} />
+                <ARSceneController mode={mode} />
             </Canvas>
         </div>
     );
@@ -346,6 +387,9 @@ const styles = {
         boxShadow: "0 12px 30px rgba(0, 0, 0, 0.22)",
         pointerEvents: "auto"
     },
+    hudText: {
+        minWidth: 0
+    },
     hudLabel: {
         fontSize: 11,
         textTransform: "uppercase",
@@ -357,6 +401,23 @@ const styles = {
         fontSize: 14,
         fontWeight: 600,
         color: "#f7f7f2"
+    },
+    hudActions: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexShrink: 0
+    },
+    startButton: {
+        border: "1px solid #8ea0b8",
+        background: "#3a4558",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        padding: "8px 14px",
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 13,
+        fontWeight: 600
     },
     exitButton: {
         border: "1px solid #4b5562",
