@@ -89,8 +89,11 @@ function ARXRPlacement({
     const [placed, setPlaced] = useState(() => arService.getSession().placed);
     const hitTestSourceRef = useRef<XRHitTestSource | null>(null);
     const referenceSpaceRef = useRef<XRReferenceSpace | null>(null);
+    const usingLocalFloorRef = useRef(false);
     const tempMatrix = useMemo(() => new Matrix4(), []);
     const reticlePosition = useMemo(() => new Vector3(), []);
+    const viewerPosition = useMemo(() => new Vector3(), []);
+    const forwardVector = useMemo(() => new Vector3(), []);
 
     useEffect(() => arService.subscribe(session => setPlaced(session.placed)), []);
 
@@ -104,20 +107,31 @@ function ARXRPlacement({
         let cancelled = false;
 
         void (async () => {
-            referenceSpaceRef.current = await session.requestReferenceSpace("local");
+            // Prefer a floor-anchored space; fall back to a generic local space.
+            try {
+                referenceSpaceRef.current = await session.requestReferenceSpace("local-floor");
+                usingLocalFloorRef.current = true;
+            } catch {
+                referenceSpaceRef.current = await session.requestReferenceSpace("local");
+                usingLocalFloorRef.current = false;
+            }
 
             if (cancelled || !referenceSpaceRef.current) {
                 return;
             }
 
-            const viewerSpace = await session.requestReferenceSpace("viewer");
-
-            if (cancelled || typeof session.requestHitTestSource !== "function") {
+            if (typeof session.requestHitTestSource !== "function") {
                 return;
             }
 
-            hitTestSourceRef.current =
-                (await session.requestHitTestSource({ space: viewerSpace })) ?? null;
+            try {
+                const viewerSpace = await session.requestReferenceSpace("viewer");
+                hitTestSourceRef.current =
+                    (await session.requestHitTestSource?.({ space: viewerSpace })) ?? null;
+            } catch {
+                // Device/browser didn't grant hit-test — we'll place in front instead.
+                hitTestSourceRef.current = null;
+            }
         })();
 
         const handleSelect = () => {
@@ -145,31 +159,53 @@ function ARXRPlacement({
     }, [placed, renderer, reticlePosition, reticleRef]);
 
     useFrame((_state, _delta, frame) => {
-        if (placed || !frame || !hitTestSourceRef.current || !referenceSpaceRef.current || !reticleRef.current) {
+        if (placed || !frame || !referenceSpaceRef.current || !reticleRef.current) {
             return;
         }
 
-        const results = frame.getHitTestResults(hitTestSourceRef.current);
+        // Preferred path: real surface detection via hit-test.
+        if (hitTestSourceRef.current) {
+            const results = frame.getHitTestResults(hitTestSourceRef.current);
+            const pose = results[0]?.getPose(referenceSpaceRef.current);
 
-        if (results.length === 0) {
+            if (!pose) {
+                reticleRef.current.visible = false;
+                return;
+            }
+
+            tempMatrix.fromArray(pose.transform.matrix);
+            tempMatrix.decompose(
+                reticleRef.current.position,
+                reticleRef.current.quaternion,
+                reticleRef.current.scale
+            );
+            reticleRef.current.visible = true;
+            return;
+        }
+
+        // Fallback: no hit-test — project a target ~1.6m in front of the viewer,
+        // dropped to floor level so the stand still sits on the ground.
+        const viewerPose = frame.getViewerPose(referenceSpaceRef.current);
+
+        if (!viewerPose) {
             reticleRef.current.visible = false;
             return;
         }
 
-        const pose = results[0]?.getPose(referenceSpaceRef.current);
+        tempMatrix.fromArray(viewerPose.transform.matrix);
+        viewerPosition.setFromMatrixPosition(tempMatrix);
+        forwardVector
+            .set(-tempMatrix.elements[8], 0, -tempMatrix.elements[10])
+            .normalize();
 
-        if (!pose) {
-            reticleRef.current.visible = false;
-            return;
-        }
+        const floorY = usingLocalFloorRef.current ? 0 : viewerPosition.y - 1.4;
 
-        tempMatrix.fromArray(pose.transform.matrix);
-        reticleRef.current.matrix.copy(tempMatrix);
-        reticleRef.current.matrix.decompose(
-            reticleRef.current.position,
-            reticleRef.current.quaternion,
-            reticleRef.current.scale
+        reticleRef.current.position.set(
+            viewerPosition.x + forwardVector.x * 1.6,
+            floorY,
+            viewerPosition.z + forwardVector.z * 1.6
         );
+        reticleRef.current.quaternion.set(0, 0, 0, 1);
         reticleRef.current.visible = true;
     });
 
@@ -247,9 +283,11 @@ export function ARScene({ onExit }: ARSceneProps) {
         setMessage(null);
 
         try {
+            // Keep every feature optional: requiring "hit-test" makes some
+            // ARCore devices reject the whole session with NotSupportedError.
+            // We degrade gracefully if hit-test isn't granted (see ARXRPlacement).
             const sessionInit: ARSessionInitWithOverlay = {
-                requiredFeatures: ["hit-test"],
-                optionalFeatures: ["local-floor", "dom-overlay"]
+                optionalFeatures: ["local-floor", "hit-test", "dom-overlay"]
             };
 
             if (overlayRef.current) {
