@@ -79,7 +79,11 @@ function CommentItem({
     );
 }
 
-export function ReviewDesignerPanel() {
+interface ReviewDesignerPanelProps {
+    onClose?: () => void;
+}
+
+export function ReviewDesignerPanel({ onClose }: ReviewDesignerPanelProps = {}) {
     const { activeProjectId } = useProjectSession();
     const { user } = useCloudSession();
     const [review, setReview] = useState<ProjectReview | null>(null);
@@ -184,17 +188,30 @@ export function ReviewDesignerPanel() {
     const unresolvedCount =
         review?.comments.filter(comment => !comment.resolvedAt).length ?? 0;
     const statusTone = getReviewStatusTone(review?.status ?? "draft");
+    const isFullHeight = Boolean(onClose);
 
     return (
-        <aside style={styles.panel}>
+        <aside style={isFullHeight ? styles.panelFull : styles.panel}>
             <div style={styles.header}>
                 <div>
                     <div style={styles.headerLabel}>Customer review</div>
                     <h2 style={styles.heading}>Comments</h2>
                 </div>
-                <span style={{ ...styles.statusBadge, ...getStatusBadgeStyle(statusTone) }}>
-                    {formatReviewStatus(review?.status ?? "draft")}
-                </span>
+                <div style={styles.headerRight}>
+                    <span style={{ ...styles.statusBadge, ...getStatusBadgeStyle(statusTone) }}>
+                        {formatReviewStatus(review?.status ?? "draft")}
+                    </span>
+                    {onClose && (
+                        <button
+                            type="button"
+                            style={styles.closeButton}
+                            aria-label="Close comments"
+                            onClick={onClose}
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
             </div>
 
             {isLoading ? (
@@ -211,7 +228,7 @@ export function ReviewDesignerPanel() {
                             : "No open comments"}
                     </div>
 
-                    <div style={styles.commentList}>
+                    <div style={isFullHeight ? styles.commentListFull : styles.commentList}>
                         {review.comments.length === 0 ? (
                             <p style={styles.empty}>No comments yet.</p>
                         ) : (
@@ -293,11 +310,43 @@ const styles = {
         display: "grid",
         gap: 10
     },
+    panelFull: {
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+        overflowY: "auto",
+        overflowX: "hidden",
+        boxSizing: "border-box",
+        background: "#20242b",
+        color: "#f7f7f2",
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10
+    },
     header: {
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "space-between",
         gap: 12
+    },
+    headerRight: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8
+    },
+    closeButton: {
+        border: "1px solid #4b5562",
+        background: "#2d3440",
+        color: "#f7f7f2",
+        borderRadius: 6,
+        width: 30,
+        height: 30,
+        cursor: "pointer",
+        font: "inherit",
+        fontSize: 13,
+        lineHeight: 1,
+        flexShrink: 0
     },
     headerLabel: {
         fontSize: 11,
@@ -345,6 +394,14 @@ const styles = {
         display: "grid",
         gap: 8,
         maxHeight: 160,
+        overflowY: "auto"
+    },
+    commentListFull: {
+        display: "grid",
+        gap: 8,
+        gridAutoRows: "max-content",
+        flex: "1 1 auto",
+        minHeight: 0,
         overflowY: "auto"
     },
     comment: {

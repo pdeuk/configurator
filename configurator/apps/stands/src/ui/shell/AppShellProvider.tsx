@@ -14,6 +14,7 @@ interface AppShellContextValue {
     reviewsVisible: boolean;
     toggleReviews: () => void;
     showReviews: () => void;
+    hideReviews: () => void;
     openAdmin: (tab?: AdminTab) => void;
     closeAdmin: () => void;
     openAssignCustomer: () => void;
@@ -76,10 +77,15 @@ export function AppShellProvider({ children }: { children: ReactNode }) {
         setReviewsVisible(true);
     }, []);
 
+    const hideReviews = useCallback(() => {
+        setReviewsVisible(false);
+    }, []);
+
     const value = useMemo<AppShellContextValue>(() => ({
         reviewsVisible,
         toggleReviews,
         showReviews,
+        hideReviews,
         openAdmin,
         closeAdmin,
         openAssignCustomer,
@@ -99,6 +105,7 @@ export function AppShellProvider({ children }: { children: ReactNode }) {
         openUsers,
         reviewsVisible,
         showReviews,
+        hideReviews,
         toggleReviews
     ]);
 

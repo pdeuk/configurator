@@ -11,7 +11,6 @@ import { usePresentationMode } from "../presentation/PresentationModeContext";
 import { useProjectSession } from "./projectSession";
 import { useProjectQuickActions } from "./useProjectQuickActions";
 import {
-    MORE_MENU_RIGHT,
     MORE_MENU_TOP,
     PANEL_SECTION_GAP,
     TOOLBAR_CONTROL_PADDING_X
@@ -48,7 +47,9 @@ export function ProjectToolbar({
         openAdmin,
         openAssignCustomer,
         openUsers,
-        showReviews
+        showReviews,
+        reviewsVisible,
+        toggleReviews
     } = useAppShell();
     const {
         statusMessage: quickActionMessage,
@@ -312,57 +313,81 @@ export function ProjectToolbar({
     const rightChrome = (
         <>
                 <div style={styles.primaryActions}>
-                    <PermissionGuard action="projects.edit">
-                        <button
-                            type="button"
-                            style={styles.saveButton}
-                            disabled={isBusy}
-                            title="Save project"
-                            onClick={() => void saveActiveProject()}
-                        >
-                            Save
-                        </button>
-                    </PermissionGuard>
+                    {!reviewsVisible && (
+                        <>
+                            <PermissionGuard action="projects.edit">
+                                <button
+                                    type="button"
+                                    style={styles.saveButton}
+                                    disabled={isBusy}
+                                    title="Save project"
+                                    onClick={() => void saveActiveProject()}
+                                >
+                                    Save
+                                </button>
+                            </PermissionGuard>
 
-                    <PermissionGuard action="projects.edit">
-                        <button
-                            type="button"
-                            style={styles.shareButton}
-                            disabled={isBusy}
-                            title="Copy client review link"
-                            onClick={() => void handleShare()}
-                        >
-                            Share
-                        </button>
-                    </PermissionGuard>
+                            <PermissionGuard action="projects.edit">
+                                <button
+                                    type="button"
+                                    style={styles.shareButton}
+                                    disabled={isBusy}
+                                    title="Copy client review link"
+                                    onClick={() => void handleShare()}
+                                >
+                                    Share
+                                </button>
+                            </PermissionGuard>
 
-                    <PermissionGuard action="quotes.export">
-                        <button
-                            type="button"
-                            style={styles.actionButton}
-                            disabled={isBusy}
-                            title="Download quote PDF"
-                            onClick={() => void handleExportQuotePdf()}
-                        >
-                            Quote
-                        </button>
-                    </PermissionGuard>
+                            <PermissionGuard action="quotes.export">
+                                <button
+                                    type="button"
+                                    style={styles.actionButton}
+                                    disabled={isBusy}
+                                    title="Download quote PDF"
+                                    onClick={() => void handleExportQuotePdf()}
+                                >
+                                    Quote
+                                </button>
+                            </PermissionGuard>
 
-                    <PermissionGuard action="projects.view">
-                        <button
-                            type="button"
-                            style={styles.actionButton}
-                            disabled={isBusy}
-                            title="Customer-facing presentation preview"
-                            onClick={enterPresentationMode}
-                        >
-                            Preview
-                        </button>
-                    </PermissionGuard>
+                            <PermissionGuard action="projects.view">
+                                <button
+                                    type="button"
+                                    style={styles.actionButton}
+                                    disabled={isBusy}
+                                    title="Customer-facing presentation preview"
+                                    onClick={enterPresentationMode}
+                                >
+                                    Preview
+                                </button>
+                            </PermissionGuard>
 
-                    {!isGuestMode && <NotificationBell />}
+                            {!isGuestMode && <NotificationBell />}
 
-                    <div style={styles.group} ref={moreContainerRef}>
+                            {!isGuestMode && (
+                                <PermissionGuard action="projects.view">
+                                    <button
+                                        type="button"
+                                        style={styles.actionButton}
+                                        disabled={isBusy}
+                                        title="Open customer review comments"
+                                        onClick={() => {
+                                            closeMenus();
+                                            toggleReviews();
+                                        }}
+                                    >
+                                        Comments
+                                    </button>
+                                </PermissionGuard>
+                            )}
+                        </>
+                    )}
+
+                    <div
+                        style={reviewsVisible ? { ...styles.group, ...styles.groupShifted } : styles.group}
+                        ref={moreContainerRef}
+                    >
                         <button
                             type="button"
                             style={styles.actionButton}
@@ -380,6 +405,64 @@ export function ProjectToolbar({
 
                         {moreMenuOpen && (
                             <div style={styles.moreMenu} role="menu">
+                                {reviewsVisible && (
+                                    <>
+                                        <MenuSection label="Quick Actions" />
+                                        <PermissionGuard action="projects.edit">
+                                            <button
+                                                type="button"
+                                                style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                                disabled={isBusy}
+                                                onClick={() => {
+                                                    closeMenus();
+                                                    void saveActiveProject();
+                                                }}
+                                            >
+                                                Save
+                                            </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard action="projects.edit">
+                                            <button
+                                                type="button"
+                                                style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                                disabled={isBusy}
+                                                onClick={() => {
+                                                    closeMenus();
+                                                    void handleShare();
+                                                }}
+                                            >
+                                                Share
+                                            </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard action="quotes.export">
+                                            <button
+                                                type="button"
+                                                style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                                disabled={isBusy}
+                                                onClick={() => {
+                                                    closeMenus();
+                                                    void handleExportQuotePdf();
+                                                }}
+                                            >
+                                                Quote
+                                            </button>
+                                        </PermissionGuard>
+                                        <PermissionGuard action="projects.view">
+                                            <button
+                                                type="button"
+                                                style={{ ...menuStyles.item, ...menuStyles.itemIndented }}
+                                                disabled={isBusy}
+                                                onClick={() => {
+                                                    closeMenus();
+                                                    enterPresentationMode();
+                                                }}
+                                            >
+                                                Preview
+                                            </button>
+                                        </PermissionGuard>
+                                        <MenuDivider />
+                                    </>
+                                )}
                                 <MenuSection label="Design Tools" />
                                 <PermissionGuard action="projects.create">
                                     <button
@@ -621,6 +704,10 @@ const styles = {
     group: {
         position: "relative"
     },
+    groupShifted: {
+        marginRight: "calc(min(380px, 100vw) + 6px - 320px)",
+        transition: "margin-right 0.25s ease"
+    },
     projectButton: {
         display: "flex",
         alignItems: "center",
@@ -669,9 +756,9 @@ const styles = {
         display: "grid"
     },
     moreMenu: {
-        position: "fixed",
-        top: MORE_MENU_TOP,
-        right: MORE_MENU_RIGHT,
+        position: "absolute",
+        top: "calc(100% + 6px)",
+        right: 0,
         left: "auto",
         minWidth: 240,
         maxHeight: `calc(100vh - ${MORE_MENU_TOP + PANEL_SECTION_GAP}px)`,

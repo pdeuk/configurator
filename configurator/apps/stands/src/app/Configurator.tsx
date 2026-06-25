@@ -17,7 +17,7 @@ import {
     useProjectSession
 } from "../ui/projects";
 import { useEditorStore } from "../store/editorStore";
-import { ReviewDesignerPanel } from "../ui/reviews";
+import { ReviewSidePanel } from "../ui/reviews";
 import { WorkspaceAccountPanel } from "../ui/shell/WorkspaceAccountPanel";
 import { ARPreviewProvider, useARPreview } from "../ui/ar";
 import { AppShellProvider, ComponentRowAlignProvider, useAppShell } from "../ui/shell";
@@ -41,7 +41,7 @@ function ConfiguratorShell() {
     const modulesById = useEditorStore(state => state.modulesById);
     const { can, isGuestMode } = usePermissions();
     const { isOpen: isARPreviewOpen } = useARPreview();
-    const { reviewsVisible } = useAppShell();
+    const { reviewsVisible, hideReviews } = useAppShell();
     const { isPresentationMode, exitPresentationMode } = usePresentationMode();
     const {
         isTemplateGalleryOpen,
@@ -115,7 +115,6 @@ function ConfiguratorShell() {
                             <RightPanelColumn>
                                 {showEditorChrome && <Inspector />}
                                 <WorkspaceAccountPanel onExit={handleExitWorkspace} />
-                                {showEditorChrome && !isGuestMode && reviewsVisible && <ReviewDesignerPanel />}
                             </RightPanelColumn>
                         )}
                         {!isARPreviewOpen && !isPresentationMode && (
@@ -132,6 +131,9 @@ function ConfiguratorShell() {
                             />
                         )}
                     </>
+                )}
+                {!isMobile && !isARPreviewOpen && !isPresentationMode && !isGuestMode && can("projects.view") && (
+                    <ReviewSidePanel open={reviewsVisible} onClose={hideReviews} />
                 )}
                 {isMobile && !isARPreviewOpen && !isPresentationMode && can("projects.view") && (
                     <MobileChrome>
