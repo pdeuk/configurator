@@ -119,6 +119,8 @@ export interface ProjectModule {
     segmentCount?: number;
     /** Cube melamine top option. */
     hasMelamineTop?: boolean;
+    /** Wall frame layout variant. */
+    wallLayout?: StandModule["wallLayout"];
     /** Snap connection target module id. */
     snappedTo?: string | null;
     fabrics: ProjectFabricFace[];
@@ -134,6 +136,13 @@ export interface ProjectMetadata {
     ownership: ProjectOwnership;
     quote: ProjectQuoteRef;
     bom: ProjectBomSnapshot;
+}
+
+/** Lightweight project list row; avoids loading the full scene JSON for dashboards. */
+export interface ProjectListItem extends ProjectMetadata {
+    moduleCount: number | null;
+    floorWidth: number | null;
+    floorDepth: number | null;
 }
 
 /** Serializable project document — excludes transient UI/editor session state. */

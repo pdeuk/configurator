@@ -1,13 +1,13 @@
 import type { CSSProperties, ChangeEvent } from "react";
 import type { Position3, StandModule } from "../models/ModuleModel";
-import { isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
+import { isExhibitionWallType, isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import { useEditorStore } from "../store/editorStore";
 import {
     formatFabricSidesLabel
 } from "../utils/applyFabricArtwork";
 import {
-    formatBannerFabricLabel,
+    formatSegmentFabricLabel,
     getActiveFabricArtwork,
     getActiveFabricPrintDimensions,
     getFabricSidesForModule,
@@ -25,6 +25,12 @@ import {
     MIN_BANNER_SEGMENT_COUNT
 } from "../utils/bannerGeometry";
 import { clampBannerSegmentCount } from "../utils/bannerFabrics";
+import {
+    clampExhibitionWallSegmentCount,
+    DEFAULT_EXHIBITION_WALL_SEGMENT_COUNT,
+    MAX_EXHIBITION_WALL_SEGMENT_COUNT,
+    MIN_EXHIBITION_WALL_SEGMENT_COUNT
+} from "../utils/exhibitionWallGeometry";
 import { ProjectOverviewPanel } from "./shell/ProjectOverviewPanel";
 
 function formatDpi(value: number) {
@@ -143,6 +149,7 @@ export function Inspector() {
     const modules = moduleIds.map(id => modulesById[id]).filter(isStandModule);
     const connectionLayout = getFrameConnectionLayout(selectedModule, modules);
     const isHangingBanner = isHangingBannerType(selectedModule.type);
+    const isExhibitionWall = isExhibitionWallType(selectedModule.type);
     const isCube = selectedModule.type === "cube";
     const isPromoStand = isPromoStandType(selectedModule.type);
     const fabricSides = getFabricSidesForModule(selectedModule);
@@ -287,6 +294,18 @@ export function Inspector() {
                                     depth: Math.max(depth, MIN_DIMENSION)
                                 })}
                             />
+                            {isExhibitionWall && (
+                                <NumberField
+                                    label="Faces"
+                                    value={selectedModule.segmentCount ?? DEFAULT_EXHIBITION_WALL_SEGMENT_COUNT}
+                                    step={1}
+                                    min={MIN_EXHIBITION_WALL_SEGMENT_COUNT}
+                                    max={MAX_EXHIBITION_WALL_SEGMENT_COUNT}
+                                    onChange={segmentCount => updateDimensions({
+                                        segmentCount: clampExhibitionWallSegmentCount(segmentCount)
+                                    })}
+                                />
+                            )}
                         </>
                     )}
                 </div>
@@ -316,7 +335,7 @@ export function Inspector() {
                             )}
                         >
                             {isBannerFabricSide(side)
-                                ? formatBannerFabricLabel(side)
+                                ? formatSegmentFabricLabel(side, selectedModule.type)
                                 : side}
                         </button>
                     ))}

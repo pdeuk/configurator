@@ -43,6 +43,25 @@ function buildDefaultStoragePath(
     return `${projectId}/assets/${assetId}/${fileName}`;
 }
 
+function isTransientArtworkUrl(value: string): boolean {
+    return value.startsWith("blob:") || value.startsWith("data:");
+}
+
+function sanitizeSourceArtwork(
+    sourceArtwork: ArtworkInfo["sourceArtwork"]
+): ArtworkInfo["sourceArtwork"] {
+    if (!sourceArtwork) {
+        return undefined;
+    }
+
+    return {
+        ...sourceArtwork,
+        imageUrl: isTransientArtworkUrl(sourceArtwork.imageUrl)
+            ? ""
+            : sourceArtwork.imageUrl
+    };
+}
+
 function toProjectArtworkAsset(
     assetId: string,
     artwork: ArtworkInfo,
@@ -51,6 +70,7 @@ function toProjectArtworkAsset(
 ): ProjectArtworkAsset {
     const isRemoteUrl = artwork.imageUrl.startsWith("http://")
         || artwork.imageUrl.startsWith("https://");
+    const sourceArtwork = sanitizeSourceArtwork(artwork.sourceArtwork);
 
     return {
         id: assetId,
@@ -64,7 +84,7 @@ function toProjectArtworkAsset(
         dpiY: artwork.dpiY,
         effectiveDpi: artwork.effectiveDpi,
         rasters: artwork.rasters,
-        ...(artwork.sourceArtwork ? { sourceArtwork: artwork.sourceArtwork } : {}),
+        ...(sourceArtwork ? { sourceArtwork } : {}),
         storage: {
             bucket: DEFAULT_ARTWORK_BUCKET,
             path: buildDefaultStoragePath(projectId, assetId, artwork.fileName),
@@ -199,6 +219,7 @@ function toProjectModule(
         },
         ...(module.segmentCount !== undefined ? { segmentCount: module.segmentCount } : {}),
         ...(module.hasMelamineTop !== undefined ? { hasMelamineTop: module.hasMelamineTop } : {}),
+        ...(module.wallLayout !== undefined ? { wallLayout: module.wallLayout } : {}),
         snappedTo: module.snappedTo ?? null,
         fabrics: getFabricSidesForModule(module).map(side =>
             toProjectFabricFace(module, side, artworkByRuntimeRef)
@@ -270,6 +291,7 @@ function toStandModule(
         depth: module.dimensions.depth,
         ...(module.segmentCount !== undefined ? { segmentCount: module.segmentCount } : {}),
         ...(module.hasMelamineTop !== undefined ? { hasMelamineTop: module.hasMelamineTop } : {}),
+        ...(module.wallLayout !== undefined ? { wallLayout: module.wallLayout } : {}),
         snappedTo: module.snappedTo ?? null,
         fabrics: applyFabricToModule(module.fabrics, artworkAssetsById) ?? {},
         artwork: primaryArtwork ? toArtworkInfo(primaryArtwork) : null

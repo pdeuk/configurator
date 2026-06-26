@@ -84,24 +84,36 @@ export function Toolbar() {
                     disabled={!can("projects.create")}
                     title="Choose a component to place on the floor"
                 >
-                    <option value="">Choose component…</option>
-                    <optgroup label="Walls">
+                    <option value="">Add Component</option>
+                    <optgroup label="Modular">
+                        {COMPONENT_OPTIONS.filter(option => option.id === "exhibitionWall").map(option => (
+                            <option key={option.id} value={option.id}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Banners">
                         {COMPONENT_OPTIONS.filter(option => option.id === "wall").map(option => (
                             <option key={option.id} value={option.id}>
                                 {option.label}
                             </option>
                         ))}
                     </optgroup>
-                    <optgroup label="Furniture">
-                        {COMPONENT_OPTIONS.filter(option =>
-                            option.id === "cube" || option.id === "promoStand"
-                        ).map(option => (
+                    <optgroup label="Cubes">
+                        {COMPONENT_OPTIONS.filter(option => option.id === "cube").map(option => (
                             <option key={option.id} value={option.id}>
                                 {option.label}
                             </option>
                         ))}
                     </optgroup>
-                    <optgroup label="Branding">
+                    <optgroup label="Promo Stands">
+                        {COMPONENT_OPTIONS.filter(option => option.id === "promoStand").map(option => (
+                            <option key={option.id} value={option.id}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Hanging Stands">
                         {COMPONENT_OPTIONS.filter(option =>
                             option.id === "circularBanner" || option.id === "squareBanner"
                         ).map(option => (

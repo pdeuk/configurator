@@ -7,19 +7,19 @@ import type {
     StandModule
 } from "../models/ModuleModel";
 import type { ProjectDocument } from "../models/ProjectModel";
-import { isHangingBannerType } from "../models/ModuleModel";
+import { usesSegmentedFabricSides } from "../models/ModuleModel";
 import { projectDocumentToPersistableState } from "../services/ProjectService";
 import { getInitialPersistableState } from "../lib/projectPersistence";
 import {
+    clampModuleSegmentCount,
     createDefaultFabrics,
     getFabricSidesForModule,
     getModuleFabric,
+    getModuleSegmentCount,
     recalculateModuleFabrics,
     resizeModuleFabricsForSegmentCount,
     setModuleFabric
 } from "../utils/fabrics";
-import { clampBannerSegmentCount } from "../utils/bannerFabrics";
-import { DEFAULT_BANNER_SEGMENT_COUNT } from "../utils/bannerGeometry";
 import { sanitizeActiveFabricSides } from "../utils/applyFabricArtwork";
 import { getFrameConnectionLayout } from "../scene/frameConnections";
 import {
@@ -27,10 +27,22 @@ import {
     type FloorMaterialId,
     type FloorSize
 } from "../utils/floorMaterials";
+import {
+    createFrameSquareFromExhibitionWall,
+    getNextFrameSquareRotationSteps,
+    isFrameSquareRotationValid,
+    type ExhibitionWallAttachSide
+} from "../utils/wallLayout";
 
 const defaultPersistableState = getInitialPersistableState();
 
 export type ModuleId = StandModule["id"];
+
+export interface FrameSquarePlacement {
+    anchorModuleId: ModuleId;
+    attachSide: ExhibitionWallAttachSide;
+    rotationSteps: number;
+}
 
 export interface DragState {
     id: ModuleId;
@@ -61,8 +73,10 @@ interface EditorState {
     showGrid: boolean;
     readOnly: boolean;
     history: EditorSnapshot[];
+    frameSquarePlacement: FrameSquarePlacement | null;
     select: (id: ModuleId | null) => void;
     addModule: (module: StandModule) => void;
+    addModules: (modules: StandModule[]) => void;
     duplicateModule: (id: ModuleId) => void;
     removeModule: (id: ModuleId) => void;
     undo: () => void;
@@ -97,6 +111,13 @@ interface EditorState {
     setFloorSize: (size: Partial<FloorSize>) => void;
     setShowGrid: (showGrid: boolean) => void;
     setReadOnly: (readOnly: boolean) => void;
+    beginFrameSquarePlacement: (
+        anchorModuleId: ModuleId,
+        attachSide: ExhibitionWallAttachSide
+    ) => void;
+    rotateFrameSquarePlacement: () => void;
+    applyFrameSquarePlacement: () => void;
+    cancelFrameSquarePlacement: () => void;
     loadProjectDocument: (document: ProjectDocument) => void;
 }
 
@@ -124,7 +145,7 @@ function applyFabricUpdates(
 
     return nextModule.fabrics ?? createDefaultFabrics(
         module.type,
-        module.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+        getModuleSegmentCount(module)
     );
 }
 
@@ -141,6 +162,7 @@ export const useEditorStore = create<EditorState>((set) => ({
     showGrid: defaultPersistableState.showGrid,
     readOnly: false,
     history: [],
+    frameSquarePlacement: null,
 
     select: id =>
         set(state => {
@@ -166,6 +188,93 @@ export const useEditorStore = create<EditorState>((set) => ({
             }
         })),
 
+    addModules: modules =>
+        set(state => {
+            if (modules.length === 0) {
+                return state;
+            }
+
+            const modulesById = { ...state.modulesById };
+            const moduleIds = [...state.moduleIds];
+
+            for (const module of modules) {
+                modulesById[module.id] = module;
+                moduleIds.push(module.id);
+            }
+
+            return {
+                history: [...state.history, createSnapshot(state)],
+                moduleIds,
+                modulesById
+            };
+        }),
+
+    beginFrameSquarePlacement: (anchorModuleId, attachSide) =>
+        set({
+            frameSquarePlacement: {
+                anchorModuleId,
+                attachSide,
+                rotationSteps: 0
+            }
+        }),
+
+    rotateFrameSquarePlacement: () =>
+        set(state => {
+            if (!state.frameSquarePlacement) {
+                return state;
+            }
+
+            return {
+                frameSquarePlacement: {
+                    ...state.frameSquarePlacement,
+                    rotationSteps: getNextFrameSquareRotationSteps(
+                        state.frameSquarePlacement.rotationSteps
+                    )
+                }
+            };
+        }),
+
+    applyFrameSquarePlacement: () =>
+        set(state => {
+            const placement = state.frameSquarePlacement;
+
+            if (!placement || !isFrameSquareRotationValid(placement.rotationSteps)) {
+                return state;
+            }
+
+            const anchor = state.modulesById[placement.anchorModuleId];
+
+            if (!anchor) {
+                return {
+                    ...state,
+                    frameSquarePlacement: null
+                };
+            }
+
+            const modules = createFrameSquareFromExhibitionWall(
+                anchor,
+                placement.attachSide,
+                placement.rotationSteps
+            );
+            const modulesById = { ...state.modulesById };
+            const moduleIds = [...state.moduleIds];
+
+            for (const module of modules) {
+                modulesById[module.id] = module;
+                moduleIds.push(module.id);
+            }
+
+            return {
+                history: [...state.history, createSnapshot(state)],
+                moduleIds,
+                modulesById,
+                frameSquarePlacement: null
+            };
+        }),
+
+    cancelFrameSquarePlacement: () =>
+        set({ frameSquarePlacement: null }),
+
     duplicateModule: id =>
         set(state => {
             const source = state.modulesById[id];
@@ -185,7 +294,7 @@ export const useEditorStore = create<EditorState>((set) => ({
                 fabrics: {
                     ...createDefaultFabrics(
                         source.type,
-                        source.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                        getModuleSegmentCount(source)
                     ),
                     ...source.fabrics
                 },
@@ -305,22 +414,25 @@ export const useEditorStore = create<EditorState>((set) => ({
                 ...data
             };
             const segmentCountChanged =
-                isHangingBannerType(updatedModule.type) &&
+                usesSegmentedFabricSides(updatedModule.type) &&
                 data.segmentCount !== undefined &&
-                clampBannerSegmentCount(data.segmentCount) !==
-                    clampBannerSegmentCount(
-                        current.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                clampModuleSegmentCount(updatedModule, data.segmentCount) !==
+                    clampModuleSegmentCount(
+                        current,
+                        current.segmentCount ?? getModuleSegmentCount(current)
                     );
             const moduleWithFabrics = segmentCountChanged
                 ? {
                     ...updatedModule,
-                    segmentCount: clampBannerSegmentCount(
-                        updatedModule.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                    segmentCount: clampModuleSegmentCount(
+                        updatedModule,
+                        updatedModule.segmentCount ?? getModuleSegmentCount(updatedModule)
                     ),
                     fabrics: resizeModuleFabricsForSegmentCount(
                         current,
-                        clampBannerSegmentCount(
-                            updatedModule.segmentCount ?? DEFAULT_BANNER_SEGMENT_COUNT
+                        clampModuleSegmentCount(
+                            updatedModule,
+                            updatedModule.segmentCount ?? getModuleSegmentCount(updatedModule)
                         )
                     )
                 }
@@ -626,6 +738,7 @@ export const useEditorStore = create<EditorState>((set) => ({
                 drag: null,
                 snapPosition: null,
                 artworkEditMode: null,
+                frameSquarePlacement: null,
                 history: []
             };
         })

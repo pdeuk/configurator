@@ -3,7 +3,12 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { useEditorStore } from "../store/editorStore";
 import type { StandModule } from "../models/ModuleModel";
 import { getBannerSelectionHitSize } from "../utils/bannerGeometry";
-import { isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
+import { isBoothDoorWall, isExhibitionWallType, isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
+import { BoothDoorWallFabricSurface } from "./BoothDoorWallFabricSurface";
+import { BoothDoorWallFrame } from "./BoothDoorWallFrame";
+import { ExhibitionWallFabricSurface } from "./ExhibitionWallFabricSurface";
+import { ExhibitionWallFrame } from "./ExhibitionWallFrame";
+import { ExhibitionWallSideHandles } from "./ExhibitionWallSideHandles";
 import { CircularBannerFabricSurface } from "./CircularBannerFabricSurface";
 import { CircularBannerFrame } from "./CircularBannerFrame";
 import { SquareBannerFabricSurface } from "./SquareBannerFabricSurface";
@@ -59,6 +64,8 @@ function ModuleComponent({ module, modules }: Props) {
     const isBoxLike = isCube || isPromoStand;
     const isCircularBanner = module.type === "circularBanner";
     const isSquareBanner = module.type === "squareBanner";
+    const isExhibitionWall = isExhibitionWallType(module.type);
+    const isBoothDoorWallModule = isBoothDoorWall(module);
     const isHangingBanner = isHangingBannerType(module.type);
     const hitSize = isHangingBanner
         ? getBannerSelectionHitSize(module)
@@ -170,10 +177,26 @@ function ModuleComponent({ module, modules }: Props) {
                         color={isSelected ? "orange" : "white"}
                     />
                 </>
+            ) : isExhibitionWall ? (
+                <>
+                    <ExhibitionWallFabricSurface module={module} />
+                    <ExhibitionWallFrame
+                        module={module}
+                        color={isSelected ? "orange" : "white"}
+                    />
+                </>
             ) : isPromoStand ? (
                 <>
                     <PromoStandFabricSurface module={module} />
                     <PromoStandFrame
+                        module={module}
+                        color={isSelected ? "orange" : "white"}
+                    />
+                </>
+            ) : isBoothDoorWallModule ? (
+                <>
+                    <BoothDoorWallFabricSurface module={module} />
+                    <BoothDoorWallFrame
                         module={module}
                         color={isSelected ? "orange" : "white"}
                     />
@@ -230,6 +253,9 @@ function ModuleComponent({ module, modules }: Props) {
                         wireframe
                     />
                 </mesh>
+            )}
+            {isExhibitionWall && isSelected && (
+                <ExhibitionWallSideHandles module={module} />
             )}
         </group>
     );

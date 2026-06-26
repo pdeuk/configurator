@@ -1,4 +1,4 @@
-import type { ProjectDocument } from "../../models/ProjectModel";
+import type { ProjectDocument, ProjectListItem } from "../../models/ProjectModel";
 import type { StorageService } from "../StorageService";
 import { localProjectStorage } from "../StorageService";
 import type { AuthUser } from "@configurator/core/cloud";
@@ -136,6 +136,42 @@ export class HybridProjectStorage implements StorageService {
             );
         } catch (error) {
             console.warn("Cloud project list failed; using local projects.", error);
+            setCloudSyncStatus(isBrowserOnline() ? "error" : "offline");
+            return localProjects;
+        }
+    }
+
+    async listProjectSummaries(): Promise<ProjectListItem[]> {
+        const localProjects = await localProjectStorage.listProjectSummaries();
+        const cloud = getCloudStorage();
+
+        if (!canUseCloudStorage() || !cloud) {
+            return localProjects;
+        }
+
+        try {
+            const cloudProjects = await cloud.listProjectSummaries();
+            const merged = new Map<string, ProjectListItem>();
+
+            for (const project of localProjects) {
+                merged.set(project.id, project);
+            }
+
+            for (const project of cloudProjects) {
+                const existing = merged.get(project.id);
+
+                if (!existing || project.updatedAt >= existing.updatedAt) {
+                    merged.set(project.id, project);
+                }
+            }
+
+            setCloudSyncStatus("synced");
+
+            return [...merged.values()].sort((left, right) =>
+                right.updatedAt.localeCompare(left.updatedAt)
+            );
+        } catch (error) {
+            console.warn("Cloud project summary list failed; using local projects.", error);
             setCloudSyncStatus(isBrowserOnline() ? "error" : "offline");
             return localProjects;
         }

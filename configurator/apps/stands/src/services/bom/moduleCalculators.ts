@@ -1,6 +1,6 @@
 import type { ProjectFabricKind, ProjectModule } from "../../models/ProjectModel";
 import type { FabricSide, StandModule } from "../../models/ModuleModel";
-import { isHangingBannerType, isPromoStandType } from "../../models/ModuleModel";
+import { isExhibitionWallType, isHangingBannerType, isPromoStandType } from "../../models/ModuleModel";
 import {
     getFabricDimensions,
     getFabricSidesForModule,
@@ -10,6 +10,7 @@ import {
     metersToCentimeters
 } from "../../utils/fabrics";
 import { getBannerSegmentCount } from "../../utils/bannerGeometry";
+import { getExhibitionWallSegmentCount } from "../../utils/exhibitionWallGeometry";
 import type { BOMLine, BOMLineDimensions } from "./BOMModel";
 
 export interface ModuleBOMContext {
@@ -28,6 +29,7 @@ export function projectModuleToStandModuleShape(module: ProjectModule): StandMod
         depth: module.dimensions.depth,
         ...(module.segmentCount !== undefined ? { segmentCount: module.segmentCount } : {}),
         ...(module.hasMelamineTop !== undefined ? { hasMelamineTop: module.hasMelamineTop } : {}),
+        ...(module.wallLayout !== undefined ? { wallLayout: module.wallLayout } : {}),
         snappedTo: module.snappedTo ?? null
     };
 }
@@ -240,6 +242,29 @@ export function collectPromoStandLines(context: ModuleBOMContext): BOMLine[] {
     ];
 }
 
+export function collectExhibitionWallLines(context: ModuleBOMContext): BOMLine[] {
+    const { module, moduleShape } = context;
+    const segmentCount = getExhibitionWallSegmentCount(moduleShape);
+    const widthCm = metersToCentimeters(module.dimensions.width);
+    const heightCm = metersToCentimeters(module.dimensions.height);
+
+    return [
+        createLine({
+            category: "frame",
+            name: `${formatSizeLabel(widthCm, heightCm)} Exhibition Wall (${segmentCount} faces)`,
+            quantity: 1,
+            unit: "pcs",
+            dimensions: createDimensions(
+                module.dimensions.width,
+                module.dimensions.height,
+                `${segmentCount} faces`,
+                module.dimensions.depth
+            ),
+            sourceModuleId: module.id
+        })
+    ];
+}
+
 export function collectBannerLines(context: ModuleBOMContext): BOMLine[] {
     const { module, moduleShape } = context;
     const segmentCount = getBannerSegmentCount(moduleShape);
@@ -321,6 +346,10 @@ export function collectModuleLines(context: ModuleBOMContext): BOMLine[] {
 
     if (isPromoStandType(module.type)) {
         return collectPromoStandLines(context);
+    }
+
+    if (isExhibitionWallType(module.type)) {
+        return collectExhibitionWallLines(context);
     }
 
     if (isHangingBannerType(module.type)) {

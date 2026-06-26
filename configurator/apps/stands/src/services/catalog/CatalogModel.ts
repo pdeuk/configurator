@@ -69,6 +69,8 @@ export function inferCatalogCategoryFromModule(module: StandModule): string {
     switch (module.type) {
         case "wall":
             return "wall";
+        case "exhibitionWall":
+            return "wall";
         case "cube":
         case "promoStand":
         case "corner":
@@ -84,6 +86,8 @@ export function inferCatalogCategoryFromModule(module: StandModule): string {
 export function inferDefaultPriceItemId(type: ModuleType): PriceCatalogItemId | null {
     switch (type) {
         case "wall":
+            return "wall-frame";
+        case "exhibitionWall":
             return "wall-frame";
         case "cube":
             return "cube-frame";

@@ -6,7 +6,7 @@ import {
     useState,
     type ReactNode
 } from "react";
-import type { ProjectDocument } from "../../models/ProjectModel";
+import type { ProjectDocument, ProjectListItem } from "../../models/ProjectModel";
 import { useProjectPersistence } from "../../hooks/useProjectPersistence";
 import {
     pickProjectDocumentMetadata,
@@ -27,7 +27,7 @@ import { revisionService, type ProjectRevision } from "../../services/versions";
 import { useEditorStore } from "../../store/editorStore";
 
 interface ProjectSessionContextValue {
-    projects: ProjectDocument[];
+    projects: ProjectListItem[];
     activeProjectId: string;
     activeProjectName: string;
     isManagerOpen: boolean;
@@ -55,7 +55,7 @@ interface ProjectSessionContextValue {
 
 const ProjectSessionContext = createContext<ProjectSessionContextValue | null>(null);
 
-function createUniqueProjectName(projects: ProjectDocument[]): string {
+function createUniqueProjectName(projects: ProjectListItem[]): string {
     const existingNames = new Set(projects.map(project => project.name));
     const baseName = DEFAULT_PROJECT_NAME;
 
@@ -72,14 +72,18 @@ function createUniqueProjectName(projects: ProjectDocument[]): string {
     return `${baseName} ${index}`;
 }
 
-function formatProjectSummary(document: ProjectDocument) {
+function formatProjectSummary(document: ProjectListItem) {
     return {
         id: document.id,
         name: document.name,
         updatedAt: document.updatedAt,
-        moduleCount: document.modules.length,
-        floorWidthCm: Math.round(document.floor.width * 100),
-        floorDepthCm: Math.round(document.floor.depth * 100)
+        moduleCount: document.moduleCount,
+        floorWidthCm: document.floorWidth === null
+            ? null
+            : Math.round(document.floorWidth * 100),
+        floorDepthCm: document.floorDepth === null
+            ? null
+            : Math.round(document.floorDepth * 100)
     };
 }
 
@@ -104,7 +108,7 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
     const initialDocument = readProjectDocumentOrDefault(initialProjectId);
     const [activeProjectId, setActiveProjectId] = useState(initialProjectId);
     const [activeProjectName, setActiveProjectName] = useState(initialDocument.name);
-    const [projects, setProjects] = useState<ProjectDocument[]>([]);
+    const [projects, setProjects] = useState<ProjectListItem[]>([]);
     const [isManagerOpen, setIsManagerOpen] = useState(false);
     const [isTemplateGalleryOpen, setIsTemplateGalleryOpen] = useState(false);
     const [isBusy, setIsBusy] = useState(false);
@@ -125,7 +129,7 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
     });
 
     const refreshProjects = useCallback(async () => {
-        const nextProjects = await projectService.listProjects();
+        const nextProjects = await projectService.listProjectSummaries();
         setProjects(nextProjects);
     }, [projectService]);
 
@@ -148,7 +152,7 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
         try {
             await saveProject();
 
-            const nextProjects = await projectService.listProjects();
+            const nextProjects = await projectService.listProjectSummaries();
             const id = crypto.randomUUID();
             const name = createUniqueProjectName(nextProjects);
             const document = createDefaultProjectDocument({ id, name });
@@ -181,7 +185,7 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
         try {
             await saveProject();
 
-            const nextProjects = await projectService.listProjects();
+            const nextProjects = await projectService.listProjectSummaries();
             const document = await templateService.instantiateTemplate(templateId, {
                 name: name ?? createUniqueProjectName(nextProjects)
             });
@@ -297,7 +301,7 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
                 entityId: projectId
             });
 
-            const remaining = await projectService.listProjects();
+            const remaining = await projectService.listProjectSummaries();
             setProjects(remaining);
 
             if (projectId !== activeProjectId) {
@@ -305,12 +309,16 @@ export function ProjectSessionProvider({ children }: ProjectSessionProviderProps
             }
 
             if (remaining.length > 0) {
-                const nextProject = remaining[0]!;
-                setActiveProjectId(nextProject.id);
-                setActiveProjectName(nextProject.name);
-                hydrateProjectDocument(nextProject);
-                writeActiveProjectId(nextProject.id);
-                return;
+                const nextProjectSummary = remaining[0]!;
+                const nextProject = await projectService.load(nextProjectSummary.id);
+
+                if (nextProject) {
+                    setActiveProjectId(nextProject.id);
+                    setActiveProjectName(nextProject.name);
+                    hydrateProjectDocument(nextProject);
+                    writeActiveProjectId(nextProject.id);
+                    return;
+                }
             }
 
             const document = createDefaultProjectDocument({

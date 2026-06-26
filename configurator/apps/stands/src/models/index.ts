@@ -46,7 +46,10 @@ export type {
     StandModule
 } from "./ModuleModel";
 export {
+    isBoothDoorWall,
     isBoxLikeModuleType,
+    isExhibitionWallType,
     isHangingBannerType,
-    isPromoStandType
+    isPromoStandType,
+    usesSegmentedFabricSides
 } from "./ModuleModel";

@@ -7,6 +7,7 @@ import {
     getBannerRingThickness,
     isSquareBannerCornerDivider
 } from "../utils/bannerGeometry";
+import { FrameMaterial } from "./FrameMaterial";
 import { ignoreRaycast } from "./raycast";
 
 interface SquareBannerFrameProps {
@@ -24,7 +25,7 @@ function Rail({ size, position, color }: RailProps) {
     return (
         <mesh position={position} raycast={ignoreRaycast}>
             <boxGeometry args={size} />
-            <meshStandardMaterial color={color} />
+            <FrameMaterial color={color} />
         </mesh>
     );
 }
@@ -113,7 +114,7 @@ export function SquareBannerFrame({
                         raycast={ignoreRaycast}
                     >
                         <boxGeometry args={[rail, module.height, ringThickness]} />
-                        <meshStandardMaterial color={color} />
+                        <FrameMaterial color={color} />
                     </mesh>
                 );
             })}

@@ -1,5 +1,6 @@
 import type { StandModule } from "../models/ModuleModel";
 import { getRailThickness } from "../utils/fabrics";
+import { FrameMaterial } from "./FrameMaterial";
 import { ignoreRaycast } from "./raycast";
 
 interface PromoStandFrameProps {
@@ -17,7 +18,7 @@ function Rail({ size, position, color }: RailProps) {
     return (
         <mesh position={position} raycast={ignoreRaycast}>
             <boxGeometry args={size} />
-            <meshStandardMaterial color={color} />
+            <FrameMaterial color={color} />
         </mesh>
     );
 }

@@ -1,6 +1,6 @@
 import { Euler, Quaternion, Vector3 } from "three";
 import type { FabricSide, StandModule } from "../models/ModuleModel";
-import { isPromoStandType } from "../models/ModuleModel";
+import { isBoothDoorWall, isExhibitionWallType, isPromoStandType } from "../models/ModuleModel";
 import type { FrameConnectionLayout } from "../scene/frameConnections";
 import {
     createBannerFabricSide,
@@ -17,6 +17,15 @@ import {
     getSquareBannerSegmentWidthForLayer,
     getSquareBannerSegments
 } from "./bannerGeometry";
+import {
+    getExhibitionWallSegmentCenterX,
+    getExhibitionWallSegmentCount,
+    getExhibitionWallSegmentWidth
+} from "./exhibitionWallGeometry";
+import {
+    getBoothDoorSplitY,
+    getBoothDoorTopPanelHeight
+} from "./wallLayout";
 
 const FABRIC_INSET = 0.003;
 
@@ -147,6 +156,59 @@ function getWallFaceLayout(
         panelHeight: module.height,
         position: [connectionLayout.fabric.centerOffsetX, 0, zOffset],
         rotation: [0, side === "front" ? Math.PI : 0, 0]
+    };
+}
+
+function getBoothDoorWallFaceLayout(
+    module: StandModule,
+    side: FabricSide
+): FabricFaceLayout | null {
+    const rail = getRailThickness(module);
+    const splitY = getBoothDoorSplitY(module);
+    const topPanelHeight = Math.max(getBoothDoorTopPanelHeight(module) - rail, rail);
+    const topPanelWidth = Math.max(module.width - rail * 2, rail);
+    const topCenterY = splitY + (getBoothDoorTopPanelHeight(module) - rail) / 2;
+    const frontZ = -module.depth / 2 - FABRIC_INSET;
+
+    if (side === "top") {
+        return {
+            panelWidth: topPanelWidth,
+            panelHeight: topPanelHeight,
+            position: [0, topCenterY, frontZ],
+            rotation: [0, Math.PI, 0]
+        };
+    }
+
+    return null;
+}
+
+function getExhibitionWallFaceLayout(
+    module: StandModule,
+    side: FabricSide
+): FabricFaceLayout | null {
+    const parsed = parseBannerFabricSide(side);
+
+    if (!parsed) {
+        return null;
+    }
+
+    const segmentCount = getExhibitionWallSegmentCount(module);
+
+    if (parsed.index >= segmentCount) {
+        return null;
+    }
+
+    const centerX = getExhibitionWallSegmentCenterX(module, parsed.index);
+    const segmentWidth = getExhibitionWallSegmentWidth(module);
+    const zOffset = parsed.layer === "outside"
+        ? -module.depth / 2 - FABRIC_INSET
+        : module.depth / 2 + FABRIC_INSET;
+
+    return {
+        panelWidth: segmentWidth,
+        panelHeight: module.height,
+        position: [centerX, 0, zOffset],
+        rotation: [0, parsed.layer === "outside" ? Math.PI : 0, 0]
     };
 }
 
@@ -282,6 +344,10 @@ export function getFabricFaceLayout(
     side: FabricSide,
     connectionLayout: FrameConnectionLayout
 ): FabricFaceLayout | null {
+    if (isBoothDoorWall(module)) {
+        return getBoothDoorWallFaceLayout(module, side);
+    }
+
     if (module.type === "wall") {
         return getWallFaceLayout(module, side, connectionLayout);
     }
@@ -292,6 +358,10 @@ export function getFabricFaceLayout(
 
     if (isPromoStandType(module.type)) {
         return getPromoStandFaceLayout(module, side);
+    }
+
+    if (isExhibitionWallType(module.type)) {
+        return getExhibitionWallFaceLayout(module, side);
     }
 
     if (module.type === "squareBanner") {

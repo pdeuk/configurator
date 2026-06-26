@@ -41,6 +41,7 @@ function inferComponentName(module: StandModule): string {
 function computeInsertPosition(type: ModuleType, moduleCount: number): StandModule["position"] {
     switch (type) {
         case "wall":
+        case "exhibitionWall":
             return { x: moduleCount * 1.25, y: 0, z: 0 };
         case "cube":
         case "promoStand":
@@ -95,7 +96,7 @@ export function insertCatalogItemIntoProject(
         depth: dimensions.depth,
         position: computeInsertPosition(snapshot.type, moduleCount),
         rotation:
-            snapshot.type === "wall"
+            snapshot.type === "wall" || snapshot.type === "exhibitionWall"
                 ? normalizeWallRotation(snapshot.rotation)
                 : snapshot.rotation,
         snappedTo: null

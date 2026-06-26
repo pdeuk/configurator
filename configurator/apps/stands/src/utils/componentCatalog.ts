@@ -1,20 +1,25 @@
 import type { StandModule } from "../models/ModuleModel";
 import { createDefaultFabrics } from "./fabrics";
 import { DEFAULT_BANNER_SEGMENT_COUNT } from "./bannerGeometry";
+import {
+    DEFAULT_EXHIBITION_WALL_SEGMENT_COUNT
+} from "./exhibitionWallGeometry";
 
 export type ComponentType =
     | "wall"
     | "cube"
     | "promoStand"
     | "circularBanner"
-    | "squareBanner";
+    | "squareBanner"
+    | "exhibitionWall";
 
 export const COMPONENT_OPTIONS: Array<{ id: ComponentType; label: string }> = [
+    { id: "exhibitionWall", label: "Exhibition Wall (100×200 cm)" },
     { id: "wall", label: "Frame (100×200 cm)" },
     { id: "cube", label: "Cube (50×50×50 cm)" },
     { id: "promoStand", label: "Promo stand (100×100×50 cm)" },
-    { id: "circularBanner", label: "Hanging banner (circular)" },
-    { id: "squareBanner", label: "Hanging banner (square)" }
+    { id: "circularBanner", label: "Hanging Stand (Circular)" },
+    { id: "squareBanner", label: "Hanging Stand (Square)" }
 ];
 
 /** Front fabric faces the default camera when a wall is first placed. */
@@ -108,6 +113,25 @@ export function createComponentModule(type: ComponentType, moduleCount: number):
                 fabrics: createDefaultFabrics(
                     "squareBanner",
                     DEFAULT_BANNER_SEGMENT_COUNT
+                )
+            };
+        case "exhibitionWall":
+            return {
+                id: `exhibition-wall-${crypto.randomUUID()}`,
+                type: "exhibitionWall",
+                position: {
+                    x: moduleCount * 1.25,
+                    y: 0,
+                    z: 0
+                },
+                rotation: DEFAULT_WALL_ROTATION,
+                width: 1,
+                height: 2,
+                depth: 0.15,
+                segmentCount: DEFAULT_EXHIBITION_WALL_SEGMENT_COUNT,
+                fabrics: createDefaultFabrics(
+                    "exhibitionWall",
+                    DEFAULT_EXHIBITION_WALL_SEGMENT_COUNT
                 )
             };
     }

@@ -4,10 +4,19 @@ export type ModuleType =
     | "promoStand"
     | "corner"
     | "circularBanner"
-    | "squareBanner";
+    | "squareBanner"
+    | "exhibitionWall";
 
 export function isHangingBannerType(type: ModuleType): boolean {
     return type === "circularBanner" || type === "squareBanner";
+}
+
+export function isExhibitionWallType(type: ModuleType): boolean {
+    return type === "exhibitionWall";
+}
+
+export function usesSegmentedFabricSides(type: ModuleType): boolean {
+    return isHangingBannerType(type) || isExhibitionWallType(type);
 }
 
 export function isPromoStandType(type: ModuleType): boolean {
@@ -86,11 +95,22 @@ export type BannerFabricSide =
     | `outside-${number}`
     | `inside-${number}`;
 
+export type BoothDoorWallFabricSide = "top";
+
 export type FabricSide =
     | FrameFabricSide
     | CubeFabricSide
     | PromoStandFabricSide
-    | BannerFabricSide;
+    | BannerFabricSide
+    | BoothDoorWallFabricSide;
+
+export type WallLayout = "standard" | "boothDoor";
+
+export function isBoothDoorWall(
+    module: Pick<StandModule, "type" | "wallLayout">
+): boolean {
+    return module.type === "wall" && module.wallLayout === "boothDoor";
+}
 
 export interface FabricInfo {
     isBlockout: boolean;
@@ -110,6 +130,7 @@ export interface StandModule {
     depth: number;
     segmentCount?: number;
     hasMelamineTop?: boolean;
+    wallLayout?: WallLayout;
     snappedTo?: string | null;
     fabrics?: ModuleFabrics;
     artwork?: ArtworkInfo | null;

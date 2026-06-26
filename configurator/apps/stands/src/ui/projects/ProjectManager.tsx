@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ProjectDocument } from "../../models/ProjectModel";
+import type { ProjectListItem } from "../../models/ProjectModel";
 import { formatProjectSummary, useProjectSession } from "./projectSession";
 import { PermissionGuard } from "../auth";
 import { isSupabaseConfigured } from "../../services/cloud";
@@ -32,7 +32,7 @@ export function ProjectManager() {
         openTemplateGallery
     } = useProjectSession();
     const { isConfigured } = useCloudSession();
-    const [renameTarget, setRenameTarget] = useState<ProjectDocument | null>(null);
+    const [renameTarget, setRenameTarget] = useState<ProjectListItem | null>(null);
     const [renameValue, setRenameValue] = useState("");
     const [newProjectMenuOpen, setNewProjectMenuOpen] = useState(false);
     const newProjectMenuRef = useRef<HTMLDivElement>(null);
@@ -69,7 +69,7 @@ export function ProjectManager() {
         return null;
     }
 
-    const handleDelete = async (project: ProjectDocument) => {
+    const handleDelete = async (project: ProjectListItem) => {
         const confirmed = window.confirm(
             `Delete "${project.name}"? This cannot be undone.`
         );
@@ -237,10 +237,16 @@ export function ProjectManager() {
 
                                 <div style={styles.metaGrid}>
                                     <span>Updated {formatUpdatedAt(summary.updatedAt)}</span>
-                                    <span>{summary.moduleCount} modules</span>
                                     <span>
-                                        Floor {summary.floorWidthCm} × {summary.floorDepthCm} cm
+                                        {summary.moduleCount === null
+                                            ? "Module count unavailable"
+                                            : `${summary.moduleCount} modules`}
                                     </span>
+                                    {summary.floorWidthCm !== null && summary.floorDepthCm !== null && (
+                                        <span>
+                                            Floor {summary.floorWidthCm} × {summary.floorDepthCm} cm
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         );

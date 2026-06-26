@@ -1,4 +1,4 @@
-import type { ProjectDocument } from "../models/ProjectModel";
+import type { ProjectDocument, ProjectListItem } from "../models/ProjectModel";
 import {
     createEmptyProjectBomSnapshot,
     createEmptyProjectOwnership,
@@ -144,6 +144,10 @@ export class ProjectService {
 
     async listProjects(): Promise<ProjectDocument[]> {
         return this.storage.listProjects();
+    }
+
+    async listProjectSummaries(): Promise<ProjectListItem[]> {
+        return this.storage.listProjectSummaries();
     }
 }
 

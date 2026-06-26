@@ -1,4 +1,4 @@
-import type { ProjectDocument } from "../../models/ProjectModel";
+import type { ProjectDocument, ProjectListItem } from "../../models/ProjectModel";
 import { normalizeProjectDocument } from "../../lib/projectSerialization";
 import type { StorageService } from "../StorageService";
 import type { ProjectRow } from "./cloudTypes";
@@ -115,5 +115,47 @@ export class CloudProjectStorage implements StorageService {
         return (data as ProjectRow[])
             .map(parseProjectRow)
             .filter((document): document is ProjectDocument => document !== null);
+    }
+
+    async listProjectSummaries(): Promise<ProjectListItem[]> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            return [];
+        }
+
+        const { data, error } = await client
+            .from("projects")
+            .select("id,name,created_at,updated_at")
+            .eq("user_id", this.userId)
+            .order("updated_at", { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        return (data ?? []).map(row => ({
+            id: String(row.id),
+            name: String(row.name),
+            createdAt: String(row.created_at),
+            updatedAt: String(row.updated_at),
+            ownership: {
+                userId: this.userId,
+                organizationId: null
+            },
+            quote: {
+                quoteId: null,
+                quoteNumber: null,
+                status: null
+            },
+            bom: {
+                generatedAt: null,
+                revision: null,
+                lines: []
+            },
+            moduleCount: null,
+            floorWidth: null,
+            floorDepth: null
+        }));
     }
 }

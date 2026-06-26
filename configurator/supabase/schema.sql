@@ -72,10 +72,6 @@ create policy "Artwork assets are manageable by owner"
     using (auth.uid() = user_id)
     with check (auth.uid() = user_id);
 
-create policy "Project shares readable by token lookup"
-    on public.project_shares for select
-    using (true);
-
 create policy "Project shares manageable by project owner"
     on public.project_shares for all
     using (

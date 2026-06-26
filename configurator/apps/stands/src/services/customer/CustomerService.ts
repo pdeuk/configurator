@@ -17,6 +17,7 @@ import type {
 import {
     localCustomerStorage,
     mergeAssignProjectInput,
+    verifyPortalPasswordRecord,
     type CustomerStorage
 } from "./CustomerStorage";
 import { SupabaseCustomerStorage } from "./SupabaseCustomerStorage";
@@ -217,9 +218,14 @@ export class CustomerService {
         }
 
         const storedPassword = await localCustomerStorage.getPortalPassword(customer.id);
+        const passwordResult = await verifyPortalPasswordRecord(storedPassword, password);
 
-        if (!storedPassword || storedPassword !== password) {
+        if (passwordResult === "no_match") {
             throw new Error("Invalid customer credentials.");
+        }
+
+        if (passwordResult === "legacy_match") {
+            await localCustomerStorage.setPortalPassword(customer.id, password);
         }
 
         writePortalSession({

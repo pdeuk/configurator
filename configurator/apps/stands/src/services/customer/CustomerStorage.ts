@@ -24,6 +24,14 @@ const CUSTOMER_INDEX_PREFIX = "configurator:customers:index:";
 const CUSTOMER_ITEM_PREFIX = "configurator:customers:item:";
 const ACCESS_INDEX_KEY = "configurator:customers:access-index";
 const PORTAL_PASSWORD_PREFIX = "configurator:customers:portal-password:";
+const PORTAL_PASSWORD_HASH_VERSION = 1;
+
+interface StoredPortalPasswordHash {
+    version: typeof PORTAL_PASSWORD_HASH_VERSION;
+    algorithm: "SHA-256";
+    salt: string;
+    hash: string;
+}
 
 function customerIndexKey(organizationId: string): string {
     return `${CUSTOMER_INDEX_PREFIX}${organizationId}`;
@@ -67,6 +75,83 @@ function readAccessIndex(): CustomerProjectAccess[] {
 
 function writeAccessIndex(entries: CustomerProjectAccess[]): void {
     localStorage.setItem(ACCESS_INDEX_KEY, JSON.stringify(entries));
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+    let binary = "";
+
+    bytes.forEach(byte => {
+        binary += String.fromCharCode(byte);
+    });
+
+    return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+    }
+
+    return bytes;
+}
+
+async function hashPortalPassword(
+    password: string,
+    salt = bytesToBase64(crypto.getRandomValues(new Uint8Array(16)))
+): Promise<StoredPortalPasswordHash> {
+    const saltBytes = base64ToBytes(salt);
+    const passwordBytes = new TextEncoder().encode(password);
+    const payload = new Uint8Array(saltBytes.length + passwordBytes.length);
+    payload.set(saltBytes);
+    payload.set(passwordBytes, saltBytes.length);
+    const digest = await crypto.subtle.digest("SHA-256", payload);
+
+    return {
+        version: PORTAL_PASSWORD_HASH_VERSION,
+        algorithm: "SHA-256",
+        salt,
+        hash: bytesToBase64(new Uint8Array(digest))
+    };
+}
+
+function parsePortalPasswordHash(value: string): StoredPortalPasswordHash | null {
+    try {
+        const parsed = JSON.parse(value) as Partial<StoredPortalPasswordHash>;
+
+        if (
+            parsed.version === PORTAL_PASSWORD_HASH_VERSION &&
+            parsed.algorithm === "SHA-256" &&
+            typeof parsed.salt === "string" &&
+            typeof parsed.hash === "string"
+        ) {
+            return parsed as StoredPortalPasswordHash;
+        }
+    } catch {
+        return null;
+    }
+
+    return null;
+}
+
+export async function verifyPortalPasswordRecord(
+    storedPassword: string | null,
+    password: string
+): Promise<"match" | "legacy_match" | "no_match"> {
+    if (!storedPassword) {
+        return "no_match";
+    }
+
+    const parsed = parsePortalPasswordHash(storedPassword);
+
+    if (!parsed) {
+        return storedPassword === password ? "legacy_match" : "no_match";
+    }
+
+    const hashed = await hashPortalPassword(password, parsed.salt);
+    return hashed.hash === parsed.hash ? "match" : "no_match";
 }
 
 export class LocalCustomerStorage implements CustomerStorage {
@@ -166,7 +251,11 @@ export class LocalCustomerStorage implements CustomerStorage {
     }
 
     async setPortalPassword(customerId: string, password: string): Promise<void> {
-        localStorage.setItem(`${PORTAL_PASSWORD_PREFIX}${customerId}`, password);
+        const hashed = await hashPortalPassword(password);
+        localStorage.setItem(
+            `${PORTAL_PASSWORD_PREFIX}${customerId}`,
+            JSON.stringify(hashed)
+        );
     }
 }
 

@@ -9,8 +9,9 @@ import type {
     RasterArtworkInfo,
     StandModule
 } from "../models/ModuleModel";
-import { isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
+import { isBoothDoorWall, isExhibitionWallType, isHangingBannerType, isPromoStandType } from "../models/ModuleModel";
 import {
+    clampBannerSegmentCount,
     createDefaultBannerFabrics,
     getBannerFabricSides,
     isBannerFabricSide,
@@ -26,6 +27,48 @@ import {
     getSquareBannerSegmentWidth,
     getSquareBannerSegmentWidthForLayer
 } from "./bannerGeometry";
+import {
+    clampExhibitionWallSegmentCount,
+    getExhibitionWallSegmentCount,
+    getExhibitionWallSegmentWidth
+} from "./exhibitionWallGeometry";
+import {
+    createExhibitionWallFabrics,
+    getExhibitionWallFabricSides,
+    resizeExhibitionWallFabrics
+} from "./exhibitionWallFabrics";
+import {
+    getBoothDoorTopPanelHeight
+} from "./wallLayout";
+
+export const BOOTH_DOOR_WALL_FABRIC_SIDES = ["top"] as const;
+
+function getModuleSegmentCount(module: Pick<StandModule, "type" | "segmentCount">) {
+    if (isExhibitionWallType(module.type)) {
+        return getExhibitionWallSegmentCount(module);
+    }
+
+    if (isHangingBannerType(module.type)) {
+        return getBannerSegmentCount(module);
+    }
+
+    return DEFAULT_BANNER_SEGMENT_COUNT;
+}
+
+function clampModuleSegmentCount(
+    module: Pick<StandModule, "type">,
+    segmentCount: number
+) {
+    if (isExhibitionWallType(module.type)) {
+        return clampExhibitionWallSegmentCount(segmentCount);
+    }
+
+    if (isHangingBannerType(module.type)) {
+        return clampBannerSegmentCount(segmentCount);
+    }
+
+    return segmentCount;
+}
 
 export const METERS_PER_INCH = 0.0254;
 export const CENTIMETERS_PER_METER = 100;
@@ -97,7 +140,21 @@ export function getRailThickness(
     );
 }
 
+export function createDefaultBoothDoorWallFabrics(): ModuleFabrics {
+    return Object.fromEntries(
+        BOOTH_DOOR_WALL_FABRIC_SIDES.map(side => [side, createDefaultFabricInfo()])
+    );
+}
+
 export function getFabricSidesForModule(module: StandModule): FabricSide[] {
+    if (isBoothDoorWall(module)) {
+        return [...BOOTH_DOOR_WALL_FABRIC_SIDES];
+    }
+
+    if (isExhibitionWallType(module.type)) {
+        return getExhibitionWallFabricSides(getExhibitionWallSegmentCount(module));
+    }
+
     if (isHangingBannerType(module.type)) {
         return getBannerFabricSides(getBannerSegmentCount(module));
     }
@@ -172,6 +229,10 @@ export function createDefaultFabrics(
         return createDefaultBannerFabrics(segmentCount);
     }
 
+    if (isExhibitionWallType(moduleType)) {
+        return createExhibitionWallFabrics(segmentCount);
+    }
+
     const sides = moduleType === "promoStand"
         ? PROMO_STAND_FABRIC_SIDES
         : moduleType === "cube"
@@ -227,7 +288,7 @@ export function setModuleFabric(
     return {
         ...createDefaultFabrics(
             module.type,
-            getBannerSegmentCount(module)
+            getModuleSegmentCount(module)
         ),
         ...module.fabrics,
         [side]: fabric
@@ -238,6 +299,22 @@ export function getFabricDimensions(
     module: StandModule,
     side: FabricSide
 ): FabricDimensions {
+    if (isBoothDoorWall(module) && side === "top") {
+        const rail = getRailThickness(module);
+
+        return {
+            width: Math.max(module.width - rail * 2, rail),
+            height: Math.max(getBoothDoorTopPanelHeight(module) - rail, rail)
+        };
+    }
+
+    if (isExhibitionWallType(module.type) && isBannerFabricSide(side)) {
+        return {
+            width: getExhibitionWallSegmentWidth(module),
+            height: module.height
+        };
+    }
+
     if (isHangingBannerType(module.type) && isBannerFabricSide(side)) {
         const parsed = parseBannerFabricSide(side);
 
@@ -484,7 +561,13 @@ export function getActiveFabricArtwork(
     members: StandModule[],
     mergedWidth: number
 ): ArtworkInfo | null {
-    if (module.type === "cube" || isPromoStandType(module.type) || isHangingBannerType(module.type)) {
+    if (
+        module.type === "cube" ||
+        isPromoStandType(module.type) ||
+        isBoothDoorWall(module) ||
+        isExhibitionWallType(module.type) ||
+        isHangingBannerType(module.type)
+    ) {
         return getModuleFabricArtwork(module, side);
     }
 
@@ -496,7 +579,13 @@ export function getActiveFabric(
     side: FabricSide,
     members: StandModule[]
 ): FabricInfo {
-    if (module.type === "cube" || isPromoStandType(module.type) || isHangingBannerType(module.type)) {
+    if (
+        module.type === "cube" ||
+        isPromoStandType(module.type) ||
+        isBoothDoorWall(module) ||
+        isExhibitionWallType(module.type) ||
+        isHangingBannerType(module.type)
+    ) {
         return getModuleFabric(module, side);
     }
 
@@ -508,7 +597,13 @@ export function getActiveFabricPrintDimensions(
     side: FabricSide,
     mergedWidth: number
 ): FabricDimensions {
-    if (module.type === "cube" || isPromoStandType(module.type) || isHangingBannerType(module.type)) {
+    if (
+        module.type === "cube" ||
+        isPromoStandType(module.type) ||
+        isBoothDoorWall(module) ||
+        isExhibitionWallType(module.type) ||
+        isHangingBannerType(module.type)
+    ) {
         return getFabricDimensions(module, side);
     }
 
@@ -522,14 +617,25 @@ export function resizeModuleFabricsForSegmentCount(
     module: StandModule,
     segmentCount: number
 ): ModuleFabrics {
-    if (!isHangingBannerType(module.type)) {
-        return module.fabrics ?? createDefaultFabrics(module.type);
+    if (isExhibitionWallType(module.type)) {
+        return resizeExhibitionWallFabrics(module.fabrics, segmentCount);
     }
 
-    return resizeBannerFabrics(module.fabrics, segmentCount);
+    if (isHangingBannerType(module.type)) {
+        return resizeBannerFabrics(module.fabrics, segmentCount);
+    }
+
+    return module.fabrics ?? createDefaultFabrics(module.type);
 }
 
-export { createBannerFabricSide, formatBannerFabricLabel, isBannerFabricSide, parseBannerFabricSide } from "./bannerFabrics";
+export {
+    createBannerFabricSide,
+    formatBannerFabricLabel,
+    isBannerFabricSide,
+    parseBannerFabricSide
+} from "./bannerFabrics";
+export { formatSegmentFabricLabel } from "./exhibitionWallFabrics";
+export { clampModuleSegmentCount, getModuleSegmentCount };
 
 export function buildArtworkInfo(
     base: Omit<
@@ -578,6 +684,31 @@ export function recalculateModuleFabrics(
 
         return Object.fromEntries(
             getBannerFabricSides(segmentCount).map(side => {
+                const fabric = getModuleFabric(module, side);
+                const dimensions = getFabricDimensions(module, side);
+
+                return [
+                    side,
+                    {
+                        ...fabric,
+                        artwork: fabric.artwork
+                            ? recalculateArtworkDpi(
+                                fabric.artwork,
+                                dimensions.width,
+                                dimensions.height
+                            )
+                            : null
+                    }
+                ];
+            })
+        );
+    }
+
+    if (isExhibitionWallType(module.type)) {
+        const segmentCount = getExhibitionWallSegmentCount(module);
+
+        return Object.fromEntries(
+            getExhibitionWallFabricSides(segmentCount).map(side => {
                 const fabric = getModuleFabric(module, side);
                 const dimensions = getFabricDimensions(module, side);
 

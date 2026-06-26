@@ -1,4 +1,5 @@
 import type { StandModule } from "../models/ModuleModel";
+import { FrameMaterial } from "./FrameMaterial";
 import { ignoreRaycast } from "./raycast";
 
 const DEFAULT_FRAME_THICKNESS = 0.14;
@@ -39,25 +40,25 @@ export function WallFrame({
         <>
             <mesh position={[0, module.height / 2 - railThickness / 2, 0]} raycast={ignoreRaycast}>
                 <boxGeometry args={[module.width, railThickness, module.depth]} />
-                <meshStandardMaterial {...materialProps} />
+                <FrameMaterial {...materialProps} />
             </mesh>
 
             <mesh position={[0, -module.height / 2 + railThickness / 2, 0]} raycast={ignoreRaycast}>
                 <boxGeometry args={[module.width, railThickness, module.depth]} />
-                <meshStandardMaterial {...materialProps} />
+                <FrameMaterial {...materialProps} />
             </mesh>
 
             {!hiddenSides?.left && (
                 <mesh position={[-module.width / 2 + railThickness / 2, 0, 0]} raycast={ignoreRaycast}>
                     <boxGeometry args={[railThickness, module.height, module.depth]} />
-                    <meshStandardMaterial {...materialProps} />
+                    <FrameMaterial {...materialProps} />
                 </mesh>
             )}
 
             {!hiddenSides?.right && (
                 <mesh position={[module.width / 2 - railThickness / 2, 0, 0]} raycast={ignoreRaycast}>
                     <boxGeometry args={[railThickness, module.height, module.depth]} />
-                    <meshStandardMaterial {...materialProps} />
+                    <FrameMaterial {...materialProps} />
                 </mesh>
             )}
         </>
