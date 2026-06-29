@@ -12,6 +12,9 @@ import {
 import { localShareStorage, type ShareStorage } from "./ShareStorage";
 import { SupabaseShareStorage } from "./SupabaseShareStorage";
 import { isSupabaseConfigured } from "@configurator/core/cloud";
+import { createShareAssetSignedUrl } from "../cloud";
+
+const MIN_SHARE_ASSET_URL_TTL_SECONDS = 60;
 
 function isShareExpired(expiresAt: string, now = Date.now()): boolean {
     const timestamp = new Date(expiresAt).getTime();
@@ -21,6 +24,56 @@ function isShareExpired(expiresAt: string, now = Date.now()): boolean {
     }
 
     return timestamp <= now;
+}
+
+/**
+ * Bake signed, share-scoped image URLs into the snapshot so anonymous recipients
+ * (or other devices) can load artwork that otherwise only lives in the creator's
+ * browser/owner-scoped cloud storage. URLs expire with the share link.
+ */
+async function enrichSnapshotWithShareAssetUrls(
+    projectDocument: ProjectDocument,
+    expiresAt: string
+): Promise<ProjectDocument> {
+    if (!isSupabaseConfigured() || projectDocument.artworkAssets.length === 0) {
+        return projectDocument;
+    }
+
+    const expiresInSeconds = Math.max(
+        MIN_SHARE_ASSET_URL_TTL_SECONDS,
+        Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
+    );
+
+    if (!Number.isFinite(expiresInSeconds)) {
+        return projectDocument;
+    }
+
+    const artworkAssets = await Promise.all(
+        projectDocument.artworkAssets.map(async asset => {
+            if (asset.storage.publicUrl) {
+                return asset;
+            }
+
+            const signedUrl = await createShareAssetSignedUrl(asset.id, expiresInSeconds);
+
+            if (!signedUrl) {
+                return asset;
+            }
+
+            return {
+                ...asset,
+                storage: {
+                    ...asset.storage,
+                    publicUrl: signedUrl
+                }
+            };
+        })
+    );
+
+    return {
+        ...projectDocument,
+        artworkAssets
+    };
 }
 
 /**
@@ -61,9 +114,13 @@ export class ShareService {
                     ?? DEFAULT_SHARE_PERMISSIONS.duplicate
             }
         };
+        const projectSnapshot = await enrichSnapshotWithShareAssetUrls(
+            projectDocument,
+            shared.expiresAt
+        );
         const record: SharedProjectRecord = {
             shared,
-            projectSnapshot: projectDocument,
+            projectSnapshot,
             disabled: false
         };
 

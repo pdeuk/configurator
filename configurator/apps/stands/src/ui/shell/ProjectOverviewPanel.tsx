@@ -40,7 +40,8 @@ export function ProjectOverviewPanel({
         isBusy,
         statusMessage,
         handleShare,
-        handleExportQuotePdf
+        handleExportQuotePdf,
+        handleDownloadOriginalArtwork
     } = useProjectQuickActions();
 
     const activeProject = projects.find(project => project.id === activeProjectId);
@@ -97,6 +98,17 @@ export function ProjectOverviewPanel({
                             onClick={enterPresentationMode}
                         >
                             Preview Presentation
+                        </button>
+                    </PermissionGuard>
+                    <PermissionGuard action="artwork.download_original">
+                        <button
+                            type="button"
+                            style={styles.button}
+                            disabled={isBusy}
+                            title="Download original uploaded image files"
+                            onClick={() => void handleDownloadOriginalArtwork()}
+                        >
+                            Download Original Artwork
                         </button>
                     </PermissionGuard>
                 </div>

@@ -10,7 +10,8 @@ export const GUEST_PERMISSIONS: Record<PermissionAction, boolean> = {
     "quotes.export": false,
     "manufacturing.view": false,
     "manufacturing.export": false,
-    "settings.edit": false
+    "settings.edit": false,
+    "artwork.download_original": false
 };
 
 export function guestCan(action: PermissionAction): boolean {
