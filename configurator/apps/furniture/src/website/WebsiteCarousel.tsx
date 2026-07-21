@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
 const SLIDES = [
@@ -61,6 +62,11 @@ export function WebsiteCarousel() {
                             >
                                 <span style={styles.placeholderLabel}>{slide.label}</span>
                                 <span style={styles.placeholderHint}>Placeholder image</span>
+                                {slide.id === "living-room" ? (
+                                    <Link to="/app" style={styles.ctaButton}>
+                                        Check Our Configurator
+                                    </Link>
+                                ) : null}
                             </div>
                         </article>
                     ))}
@@ -140,6 +146,21 @@ const styles = {
     placeholderHint: {
         fontSize: 14,
         color: "rgba(17, 24, 39, 0.55)"
+    },
+    ctaButton: {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 16,
+        minWidth: 220,
+        padding: "14px 24px",
+        borderRadius: 999,
+        background: "#111827",
+        color: "#ffffff",
+        fontSize: 15,
+        fontWeight: 700,
+        textDecoration: "none",
+        boxShadow: "0 14px 36px rgba(15, 23, 42, 0.18)"
     },
     navButton: {
         position: "absolute" as const,
