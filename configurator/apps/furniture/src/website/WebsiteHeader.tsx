@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { enableLocalDemoMode } from "../app/localDemoMode";
-import { CartIcon, GlobeIcon, SearchIcon } from "./icons";
+import { CartIcon, GlobeIcon, MenuIcon, SearchIcon } from "./icons";
+import { WebsiteProductsNav } from "./WebsiteProductsNav";
 
 export function WebsiteHeader() {
     const navigate = useNavigate();
+    const [isProductsNavOpen, setIsProductsNavOpen] = useState(false);
 
     const openConfigurator = () => {
         enableLocalDemoMode();
@@ -11,41 +14,57 @@ export function WebsiteHeader() {
     };
 
     return (
-        <header style={styles.header}>
-            <div style={styles.inner}>
-                <div style={styles.logoSlot} aria-label="Logo placeholder">
-                    <span style={styles.logoMark}>LOGO</span>
+        <>
+            <header style={styles.header}>
+                <div style={styles.inner}>
+                    <div style={styles.leftCluster}>
+                        <button
+                            type="button"
+                            style={styles.iconButton}
+                            aria-label="Open products menu"
+                            aria-expanded={isProductsNavOpen}
+                            onClick={() => setIsProductsNavOpen(true)}
+                        >
+                            <MenuIcon style={styles.actionIcon} />
+                        </button>
+
+                        <div style={styles.logoSlot} aria-label="Logo placeholder">
+                            <span style={styles.logoMark}>LOGO</span>
+                        </div>
+                    </div>
+
+                    <label style={styles.searchWrap}>
+                        <SearchIcon style={styles.searchIcon} />
+                        <input
+                            type="search"
+                            placeholder="Search furniture, collections, materials…"
+                            style={styles.searchInput}
+                            aria-label="Search"
+                        />
+                    </label>
+
+                    <div style={styles.actions}>
+                        <button type="button" style={styles.createButton} onClick={openConfigurator}>
+                            Create Furniture
+                        </button>
+
+                        <button type="button" style={styles.iconButton} aria-label="Shopping cart">
+                            <CartIcon style={styles.actionIcon} />
+                        </button>
+
+                        <button type="button" style={styles.signInButton} aria-label="Sign in">
+                            Sign In
+                        </button>
+
+                        <button type="button" style={styles.iconButton} aria-label="Change language">
+                            <GlobeIcon style={styles.actionIcon} />
+                        </button>
+                    </div>
                 </div>
+            </header>
 
-                <label style={styles.searchWrap}>
-                    <SearchIcon style={styles.searchIcon} />
-                    <input
-                        type="search"
-                        placeholder="Search furniture, collections, materials…"
-                        style={styles.searchInput}
-                        aria-label="Search"
-                    />
-                </label>
-
-                <div style={styles.actions}>
-                    <button type="button" style={styles.createButton} onClick={openConfigurator}>
-                        Create Furniture
-                    </button>
-
-                    <button type="button" style={styles.iconButton} aria-label="Shopping cart">
-                        <CartIcon style={styles.actionIcon} />
-                    </button>
-
-                    <button type="button" style={styles.signInButton} aria-label="Sign in">
-                        Sign In
-                    </button>
-
-                    <button type="button" style={styles.iconButton} aria-label="Change language">
-                        <GlobeIcon style={styles.actionIcon} />
-                    </button>
-                </div>
-            </div>
-        </header>
+            <WebsiteProductsNav isOpen={isProductsNavOpen} onClose={() => setIsProductsNavOpen(false)} />
+        </>
     );
 }
 
@@ -60,12 +79,18 @@ const styles = {
     },
     inner: {
         display: "grid",
-        gridTemplateColumns: "140px minmax(0, 1fr) auto",
+        gridTemplateColumns: "auto minmax(0, 1fr) auto",
         alignItems: "center",
         gap: 24,
         maxWidth: 1440,
         margin: "0 auto",
         padding: "16px 28px"
+    },
+    leftCluster: {
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        flexShrink: 0
     },
     logoSlot: {
         display: "flex",
