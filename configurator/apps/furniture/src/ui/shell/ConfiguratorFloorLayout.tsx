@@ -1,6 +1,13 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { clientProfile } from "../../../client.config";
+import { getProductBySlugOnly } from "../../website/productNavData";
 import { FloorControls } from "./FloorControls";
+import {
+    ConfiguratorProductsNav,
+    ConfiguratorSelectedProductNav
+} from "./ConfiguratorProductsNav";
+import { configuratorNavStyles as navStyles } from "./configuratorNavStyles";
 
 const HEADER_HEIGHT = 52;
 const NAV_WIDTH = 280;
@@ -11,7 +18,13 @@ interface ConfiguratorFloorLayoutProps {
 }
 
 export function ConfiguratorFloorLayout({ onExit, children }: ConfiguratorFloorLayoutProps) {
+    const [searchParams] = useSearchParams();
     const [floorOpen, setFloorOpen] = useState(true);
+    const productSlug = searchParams.get("product");
+    const entrySource = searchParams.get("source");
+    const selectedProduct = getProductBySlugOnly(productSlug ?? undefined);
+    const showProductsCatalog = entrySource === "create" && !selectedProduct;
+    const showSelectedProduct = Boolean(selectedProduct);
 
     return (
         <div style={styles.shell}>
@@ -24,20 +37,25 @@ export function ConfiguratorFloorLayout({ onExit, children }: ConfiguratorFloorL
 
             <div style={styles.body}>
                 <nav style={styles.nav} aria-label="Configurator navigation">
-                    <div style={styles.navSection}>
+                    {showProductsCatalog && <ConfiguratorProductsNav />}
+                    {showSelectedProduct && selectedProduct && (
+                        <ConfiguratorSelectedProductNav productName={selectedProduct.product.name} />
+                    )}
+
+                    <div style={navStyles.navSection}>
                         <button
                             type="button"
-                            style={styles.navTrigger}
+                            style={navStyles.navTrigger}
                             onClick={() => setFloorOpen(current => !current)}
                             aria-expanded={floorOpen}
                         >
-                            <span style={styles.navTriggerLabel}>Floor</span>
-                            <span style={styles.navChevron} aria-hidden="true">
+                            <span style={navStyles.navTriggerLabel}>Floor</span>
+                            <span style={navStyles.navChevron} aria-hidden="true">
                                 {floorOpen ? "▾" : "▸"}
                             </span>
                         </button>
                         {floorOpen && (
-                            <div style={styles.navDropdown}>
+                            <div style={navStyles.navDropdown}>
                                 <FloorControls />
                             </div>
                         )}
@@ -108,39 +126,7 @@ const styles = {
         background: "#fafaf9",
         boxSizing: "border-box" as const,
         overflowY: "auto",
-        padding: "12px 0"
-    },
-    navSection: {
-        display: "grid"
-    },
-    navTrigger: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        width: "100%",
-        border: "none",
-        borderBottom: "1px solid #e7e5e4",
-        background: "transparent",
-        color: "#1c1917",
-        padding: "14px 16px",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 14,
-        fontWeight: 600,
-        textAlign: "left" as const
-    },
-    navTriggerLabel: {
-        letterSpacing: "-0.01em"
-    },
-    navChevron: {
-        color: "#78716c",
-        fontSize: 12
-    },
-    navDropdown: {
-        padding: "14px 16px 16px",
-        borderBottom: "1px solid #e7e5e4",
-        background: "#ffffff"
+        padding: "0"
     },
     viewport: {
         flex: 1,

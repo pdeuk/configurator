@@ -11,7 +11,7 @@ export function WebsiteHeader() {
 
     const openConfigurator = () => {
         enableLocalDemoMode();
-        navigate("/app");
+        navigate("/app?source=create");
     };
 
     return (

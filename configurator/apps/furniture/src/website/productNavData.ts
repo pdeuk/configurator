@@ -169,3 +169,21 @@ export function getProductBySlug(categorySlug?: string, subcategorySlug?: string
     const product = result.subcategory.products.find(item => item.slug === productSlug) ?? null;
     return product ? { ...result, product } : null;
 }
+
+export function getProductBySlugOnly(productSlug?: string) {
+    if (!productSlug) {
+        return null;
+    }
+
+    for (const category of PRODUCT_CATEGORIES) {
+        for (const subcategory of category.subcategories) {
+            const product = subcategory.products.find(item => item.slug === productSlug) ?? null;
+
+            if (product) {
+                return { category, subcategory, product };
+            }
+        }
+    }
+
+    return null;
+}
