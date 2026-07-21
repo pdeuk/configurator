@@ -1,5 +1,11 @@
 import { createClientProfile, type ClientProfile } from "@configurator/core/client";
 
+/**
+ * When true, the configurator shows only floor/grid controls and an empty room scene.
+ * Full editor UI remains in the codebase but is not rendered.
+ */
+export const floorOnlyMode = true;
+
 export const clientProfile: ClientProfile = createClientProfile({
     id: "furniture",
     branding: {

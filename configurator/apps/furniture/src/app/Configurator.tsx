@@ -31,7 +31,7 @@ import {
 } from "../ui/presentation/PresentationModeContext";
 import { TemplateGallery } from "../ui/templates";
 import { disableLocalDemoMode } from "./localDemoMode";
-import { clientProfile } from "../../client.config";
+import { clientProfile, floorOnlyMode } from "../../client.config";
 
 function ConfiguratorShell() {
     const { registerViewport } = useComponentRowAlign();
@@ -65,7 +65,8 @@ function ConfiguratorShell() {
     };
 
     const showRightPanel =
-        !isARPreviewOpen
+        !floorOnlyMode
+        && !isARPreviewOpen
         && !isPresentationMode
         && can("projects.view");
 
@@ -73,6 +74,8 @@ function ConfiguratorShell() {
         showRightPanel
         && can("projects.edit")
         && !artworkEditMode;
+
+    const showFloorPanel = floorOnlyMode && can("projects.view");
 
     return (
         <EditorErrorBoundary>
@@ -85,7 +88,11 @@ function ConfiguratorShell() {
                     overflow: "hidden"
                 }}
             >
-                {isPresentationMode && (
+                {showFloorPanel && (
+                    <LeftSidebar floorOnly onExit={handleExitWorkspace} />
+                )}
+
+                {isPresentationMode && !floorOnlyMode && (
                     <div style={styles.presentationBar}>
                         <span style={styles.presentationLabel}>Presentation preview</span>
                         <button
@@ -115,8 +122,10 @@ function ConfiguratorShell() {
                         )}
                     </RightPanelColumn>
                 )}
-                {!isARPreviewOpen && !isPresentationMode && can("projects.view") && <ProjectManager />}
-                {!isARPreviewOpen && !isPresentationMode && (
+                {!floorOnlyMode && !isARPreviewOpen && !isPresentationMode && can("projects.view") && (
+                    <ProjectManager />
+                )}
+                {!floorOnlyMode && !isARPreviewOpen && !isPresentationMode && (
                     <ProjectToolbar
                         onOpenComponentLibrary={() => setLibraryOpen(true)}
                         onOpenMockups={() => setMockupsOpen(true)}
@@ -134,12 +143,12 @@ function ConfiguratorShell() {
                     />
                 )}
                 {!isARPreviewOpen && <StandCanvas />}
-                {showEditorChrome && <SelectionActionBar />}
-                {!isARPreviewOpen && !isPresentationMode && can("projects.edit") && clientProfile.features.artwork && (
+                {!floorOnlyMode && showEditorChrome && <SelectionActionBar />}
+                {!floorOnlyMode && !isARPreviewOpen && !isPresentationMode && can("projects.edit") && clientProfile.features.artwork && (
                     <ArtworkEditor />
                 )}
                 <TemplateGallery
-                    isOpen={isTemplateGalleryOpen}
+                    isOpen={!floorOnlyMode && isTemplateGalleryOpen}
                     onClose={closeTemplateGallery}
                     onUseTemplate={async templateId => {
                         await createProjectFromTemplate(templateId);

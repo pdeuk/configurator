@@ -5,6 +5,7 @@ import { Module } from "./Module";
 import { useEditorStore } from "../store/editorStore";
 import type { StandModule } from "../models/ModuleModel";
 import { GRID_SIZE } from "../utils/floorMaterials";
+import { floorOnlyMode } from "../../client.config";
 
 function isStandModule(module: StandModule | undefined): module is StandModule {
     return module !== undefined;
@@ -81,7 +82,7 @@ export function StandSceneContent({
                 </Suspense>
             )}
 
-            {modules.map(module => (
+            {!floorOnlyMode && modules.map(module => (
                 <Module
                     key={module.id}
                     module={module}

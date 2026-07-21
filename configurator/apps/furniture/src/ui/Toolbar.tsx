@@ -29,7 +29,11 @@ import {
 const MAX_FLOOR_SIZE_CM = GRID_SIZE * 100;
 const MIN_FLOOR_SIZE_CM = MIN_FLOOR_SIZE * 100;
 
-export function Toolbar() {
+interface ToolbarProps {
+    floorOnly?: boolean;
+}
+
+export function Toolbar({ floorOnly = false }: ToolbarProps) {
     const { can } = usePermissions();
     const { registerToolbarPanel } = useComponentRowAlign();
     const addModule = useEditorStore(state => state.addModule);
@@ -74,58 +78,62 @@ export function Toolbar() {
 
     return (
         <div style={styles.panel} ref={registerToolbarPanel}>
-            <h2 style={styles.panelTitle}>Add to stand</h2>
-            <label style={styles.field}>
-                <span style={styles.fieldLabel}>Component</span>
-                <select
-                    style={styles.select}
-                    value={componentSelection}
-                    onChange={handleComponentChange}
-                    disabled={!can("projects.create")}
-                    title="Choose a component to place on the floor"
-                >
-                    <option value="">Choose component…</option>
-                    <optgroup label="Walls">
-                        {COMPONENT_OPTIONS.filter(option => option.id === "wall").map(option => (
-                            <option key={option.id} value={option.id}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </optgroup>
-                    <optgroup label="Furniture">
-                        {COMPONENT_OPTIONS.filter(option =>
-                            option.id === "cube" || option.id === "promoStand"
-                        ).map(option => (
-                            <option key={option.id} value={option.id}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </optgroup>
-                    <optgroup label="Branding">
-                        {COMPONENT_OPTIONS.filter(option =>
-                            option.id === "circularBanner" || option.id === "squareBanner"
-                        ).map(option => (
-                            <option key={option.id} value={option.id}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </optgroup>
-                </select>
-            </label>
+            <h2 style={styles.panelTitle}>{floorOnly ? "Floor" : "Add to stand"}</h2>
+            {!floorOnly && (
+                <>
+                    <label style={styles.field}>
+                        <span style={styles.fieldLabel}>Component</span>
+                        <select
+                            style={styles.select}
+                            value={componentSelection}
+                            onChange={handleComponentChange}
+                            disabled={!can("projects.create")}
+                            title="Choose a component to place on the floor"
+                        >
+                            <option value="">Choose component…</option>
+                            <optgroup label="Walls">
+                                {COMPONENT_OPTIONS.filter(option => option.id === "wall").map(option => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </optgroup>
+                            <optgroup label="Furniture">
+                                {COMPONENT_OPTIONS.filter(option =>
+                                    option.id === "cube" || option.id === "promoStand"
+                                ).map(option => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </optgroup>
+                            <optgroup label="Branding">
+                                {COMPONENT_OPTIONS.filter(option =>
+                                    option.id === "circularBanner" || option.id === "squareBanner"
+                                ).map(option => (
+                                    <option key={option.id} value={option.id}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </optgroup>
+                        </select>
+                    </label>
 
-            <button
-                type="button"
-                style={{
-                    ...styles.button,
-                    opacity: canUndo ? 1 : 0.45,
-                    cursor: canUndo ? "pointer" : "not-allowed"
-                }}
-                disabled={!canUndo || !can("projects.edit")}
-                onClick={undo}
-                title="Undo last change"
-            >
-                Undo
-            </button>
+                    <button
+                        type="button"
+                        style={{
+                            ...styles.button,
+                            opacity: canUndo ? 1 : 0.45,
+                            cursor: canUndo ? "pointer" : "not-allowed"
+                        }}
+                        disabled={!canUndo || !can("projects.edit")}
+                        onClick={undo}
+                        title="Undo last change"
+                    >
+                        Undo
+                    </button>
+                </>
+            )}
 
             <button
                 type="button"

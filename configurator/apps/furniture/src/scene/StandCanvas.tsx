@@ -15,6 +15,7 @@ import { SnapPreview } from "./SnapPreview";
 import { StandSceneContent } from "./StandSceneContent";
 
 import { useEditorStore } from "../store/editorStore";
+import { floorOnlyMode } from "../../client.config";
 
 
 
@@ -25,6 +26,7 @@ export function StandCanvas() {
     const artworkEditMode = useEditorStore(state => state.artworkEditMode);
 
     const readOnly = useEditorStore(state => state.readOnly);
+    const sceneReadOnly = readOnly || floorOnlyMode;
 
     const select = useEditorStore(state => state.select);
 
@@ -54,7 +56,7 @@ export function StandCanvas() {
 
             onPointerMissed={() => {
 
-                if (!readOnly && !artworkEditMode) {
+                if (!sceneReadOnly && !artworkEditMode) {
 
                     select(null);
 
@@ -66,11 +68,11 @@ export function StandCanvas() {
 
             <color attach="background" args={["#525862"]} />
 
-            {!readOnly && <DragController />}
+            {!sceneReadOnly && <DragController />}
 
-            {!readOnly && <SnapPreview />}
+            {!sceneReadOnly && <SnapPreview />}
 
-            {!readOnly && <FaceEditCamera />}
+            {!sceneReadOnly && <FaceEditCamera />}
 
 
 
@@ -84,7 +86,7 @@ export function StandCanvas() {
 
             <ClampedOrbitControls
 
-                enabled={readOnly || (!isDragging && !artworkEditMode)}
+                enabled={sceneReadOnly || (!isDragging && !artworkEditMode)}
 
             />
 
