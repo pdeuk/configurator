@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { PRODUCT_CATEGORIES } from "../../website/productNavData";
 import { configuratorNavStyles as styles } from "./configuratorNavStyles";
 
