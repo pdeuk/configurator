@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDownIcon, CloseIcon } from "./icons";
 import { PRODUCT_CATEGORIES } from "./productNavData";
+import { displayTitleStyle, t } from "./websiteTheme";
 
 interface WebsiteProductsNavProps {
     isOpen: boolean;
@@ -45,8 +46,13 @@ export function WebsiteProductsNav({ isOpen, onClose }: WebsiteProductsNavProps)
             <button type="button" style={styles.backdrop} aria-label="Close products menu" onClick={onClose} />
             <aside style={styles.panel} aria-label="Products navigation">
                 <div style={styles.panelHeader}>
-                    <h2 style={styles.panelTitle}>Products</h2>
-                    <button type="button" style={styles.closeButton} aria-label="Close menu" onClick={onClose}>
+                    <div style={styles.panelHeading}>
+                        <span className="website-eyebrow">Browse</span>
+                        <h2 className="website-heading" style={displayTitleStyle("2rem")}>
+                            Products
+                        </h2>
+                    </div>
+                    <button type="button" className="website-icon-btn" aria-label="Close menu" onClick={onClose}>
                         <CloseIcon style={styles.closeIcon} />
                     </button>
                 </div>
@@ -60,6 +66,7 @@ export function WebsiteProductsNav({ isOpen, onClose }: WebsiteProductsNavProps)
                                 <div style={styles.navRow}>
                                     <Link
                                         to={`/products/${category.slug}`}
+                                        className="website-nav-link"
                                         style={styles.categoryButton}
                                         onClick={onClose}
                                     >
@@ -85,6 +92,7 @@ export function WebsiteProductsNav({ isOpen, onClose }: WebsiteProductsNavProps)
                                             <li key={subcategory.id}>
                                                 <Link
                                                     to={`/products/${category.slug}/${subcategory.slug}`}
+                                                    className="website-subnav-link"
                                                     style={styles.subcategoryButton}
                                                     onClick={onClose}
                                                 >
@@ -113,7 +121,7 @@ const styles = {
         position: "absolute" as const,
         inset: 0,
         border: "none",
-        background: "rgba(15, 23, 42, 0.42)",
+        background: t.colors.overlay,
         cursor: "pointer"
     },
     panel: {
@@ -121,35 +129,22 @@ const styles = {
         zIndex: 1,
         display: "grid",
         gridTemplateRows: "auto minmax(0, 1fr)",
-        width: "min(360px, 88vw)",
+        width: "min(380px, 88vw)",
         height: "100%",
-        background: "#ffffff",
-        boxShadow: "12px 0 40px rgba(15, 23, 42, 0.18)"
+        background: t.colors.bgElevated,
+        boxShadow: t.shadow.lg
     },
     panelHeader: {
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "space-between",
         gap: 12,
-        padding: "20px 20px 16px",
-        borderBottom: "1px solid #e5e7eb"
+        padding: "28px 24px 18px",
+        borderBottom: `1px solid ${t.colors.borderSoft}`
     },
-    panelTitle: {
-        margin: 0,
-        fontSize: 24,
-        fontWeight: 700,
-        color: "#111827"
-    },
-    closeButton: {
+    panelHeading: {
         display: "grid",
-        placeItems: "center",
-        width: 38,
-        height: 38,
-        borderRadius: 999,
-        border: "1px solid #e5e7eb",
-        background: "#ffffff",
-        color: "#111827",
-        cursor: "pointer"
+        gap: 8
     },
     closeIcon: {
         width: 18,
@@ -158,8 +153,8 @@ const styles = {
     navList: {
         display: "grid",
         alignContent: "start",
-        gap: 2,
-        padding: "8px 0 24px",
+        gap: 4,
+        padding: "12px 0 28px",
         overflowY: "auto" as const
     },
     navItem: {
@@ -170,16 +165,17 @@ const styles = {
         gridTemplateColumns: "minmax(0, 1fr) auto",
         alignItems: "center",
         gap: 4,
-        padding: "0 8px 0 12px"
+        padding: "0 10px 0 14px"
     },
     categoryButton: {
         display: "block",
-        color: "#111827",
-        fontFamily: "inherit",
-        fontSize: 16,
+        color: t.colors.ink,
+        fontFamily: t.fonts.display,
+        fontSize: 22,
         fontWeight: 600,
         textAlign: "left" as const,
-        padding: "12px 8px",
+        padding: "12px 10px",
+        borderRadius: 12,
         cursor: "pointer",
         textDecoration: "none"
     },
@@ -191,7 +187,7 @@ const styles = {
         borderRadius: 999,
         border: "none",
         background: "transparent",
-        color: "#64748b",
+        color: t.colors.muted,
         cursor: "pointer",
         transition: "transform 180ms ease"
     },
@@ -205,19 +201,19 @@ const styles = {
     subcategoryList: {
         listStyle: "none",
         margin: 0,
-        padding: "0 0 8px 20px",
+        padding: "0 0 10px 18px",
         display: "grid",
         gap: 2
     },
     subcategoryButton: {
         display: "block",
         width: "100%",
-        color: "#475569",
+        color: t.colors.inkSoft,
         fontFamily: "inherit",
         fontSize: 15,
         textAlign: "left" as const,
         padding: "10px 12px",
-        borderRadius: 8,
+        borderRadius: 10,
         cursor: "pointer",
         textDecoration: "none"
     }

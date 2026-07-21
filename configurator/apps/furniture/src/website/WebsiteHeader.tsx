@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { enableLocalDemoMode } from "../app/localDemoMode";
 import { CartIcon, GlobeIcon, MenuIcon, SearchIcon } from "./icons";
 import { WebsiteProductsNav } from "./WebsiteProductsNav";
+import { t } from "./websiteTheme";
 
 export function WebsiteHeader() {
     const navigate = useNavigate();
@@ -20,7 +21,7 @@ export function WebsiteHeader() {
                     <div style={styles.leftCluster}>
                         <button
                             type="button"
-                            style={styles.iconButton}
+                            className="website-icon-btn"
                             aria-label="Open products menu"
                             aria-expanded={isProductsNavOpen}
                             onClick={() => setIsProductsNavOpen(true)}
@@ -28,35 +29,38 @@ export function WebsiteHeader() {
                             <MenuIcon style={styles.actionIcon} />
                         </button>
 
-                        <div style={styles.logoSlot} aria-label="Logo placeholder">
-                            <span style={styles.logoMark}>LOGO</span>
-                        </div>
+                        <Link to="/" style={styles.logoLink} aria-label="Home">
+                            <span style={styles.logoMark} className="website-heading">
+                                Atelier
+                            </span>
+                            <span style={styles.logoSub}>Furniture</span>
+                        </Link>
                     </div>
 
-                    <label style={styles.searchWrap}>
+                    <label className="website-search" style={styles.searchWrap}>
                         <SearchIcon style={styles.searchIcon} />
                         <input
                             type="search"
-                            placeholder="Search furniture, collections, materials…"
+                            placeholder="Search collections, materials, finishes…"
                             style={styles.searchInput}
                             aria-label="Search"
                         />
                     </label>
 
                     <div style={styles.actions}>
-                        <button type="button" style={styles.createButton} onClick={openConfigurator}>
+                        <button type="button" className="website-btn-primary" onClick={openConfigurator}>
                             Create Furniture
                         </button>
 
-                        <button type="button" style={styles.iconButton} aria-label="Shopping cart">
+                        <button type="button" className="website-icon-btn" aria-label="Shopping cart">
                             <CartIcon style={styles.actionIcon} />
                         </button>
 
-                        <button type="button" style={styles.signInButton} aria-label="Sign in">
+                        <button type="button" className="website-btn-secondary" aria-label="Sign in">
                             Sign In
                         </button>
 
-                        <button type="button" style={styles.iconButton} aria-label="Change language">
+                        <button type="button" className="website-icon-btn" aria-label="Change language">
                             <GlobeIcon style={styles.actionIcon} />
                         </button>
                     </div>
@@ -73,57 +77,61 @@ const styles = {
         position: "sticky" as const,
         top: 0,
         zIndex: 20,
-        background: "#ffffff",
-        borderBottom: "1px solid #e5e7eb",
-        boxShadow: "0 1px 0 rgba(15, 23, 42, 0.04)"
+        background: "rgba(247, 244, 239, 0.88)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        borderBottom: `1px solid ${t.colors.borderSoft}`,
+        boxShadow: t.shadow.header
     },
     inner: {
         display: "grid",
         gridTemplateColumns: "auto minmax(0, 1fr) auto",
         alignItems: "center",
-        gap: 24,
+        gap: 28,
         maxWidth: 1440,
         margin: "0 auto",
-        padding: "16px 28px"
+        padding: "18px 32px"
     },
     leftCluster: {
         display: "flex",
         alignItems: "center",
-        gap: 12,
+        gap: 16,
         flexShrink: 0
     },
-    logoSlot: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 44,
-        borderRadius: 8,
-        border: "1px dashed #cbd5e1",
-        background: "#f8fafc",
-        color: "#64748b",
-        fontSize: 12,
-        fontWeight: 700,
-        letterSpacing: "0.08em"
+    logoLink: {
+        display: "grid",
+        gap: 2,
+        textDecoration: "none",
+        color: "inherit"
     },
     logoMark: {
-        userSelect: "none" as const
+        fontSize: 28,
+        fontWeight: 600,
+        lineHeight: 1,
+        color: t.colors.ink
+    },
+    logoSub: {
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.24em",
+        textTransform: "uppercase" as const,
+        color: t.colors.muted
     },
     searchWrap: {
         display: "flex",
         alignItems: "center",
         gap: 12,
         minWidth: 0,
-        height: 52,
-        padding: "0 18px",
-        borderRadius: 999,
-        border: "1px solid #d1d5db",
-        background: "#f9fafb"
+        height: 54,
+        padding: "0 20px",
+        borderRadius: t.radius.pill,
+        border: `1px solid ${t.colors.border}`,
+        background: "rgba(255, 255, 255, 0.72)"
     },
     searchIcon: {
-        width: 20,
-        height: 20,
-        color: "#6b7280",
+        width: 18,
+        height: 18,
+        color: t.colors.muted,
         flexShrink: 0
     },
     searchInput: {
@@ -132,53 +140,18 @@ const styles = {
         border: "none",
         outline: "none",
         background: "transparent",
-        color: "#111827",
+        color: t.colors.ink,
         font: "inherit",
-        fontSize: 16
+        fontSize: 15
     },
     actions: {
         display: "flex",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
         flexShrink: 0
     },
-    createButton: {
-        border: "none",
-        borderRadius: 999,
-        padding: "12px 18px",
-        background: "#111827",
-        color: "#ffffff",
-        font: "inherit",
-        fontSize: 14,
-        fontWeight: 600,
-        cursor: "pointer",
-        whiteSpace: "nowrap" as const
-    },
-    iconButton: {
-        display: "grid",
-        placeItems: "center",
-        width: 42,
-        height: 42,
-        borderRadius: 999,
-        border: "1px solid #e5e7eb",
-        background: "#ffffff",
-        color: "#111827",
-        cursor: "pointer"
-    },
-    signInButton: {
-        border: "1px solid #d1d5db",
-        borderRadius: 999,
-        padding: "10px 16px",
-        background: "#ffffff",
-        color: "#111827",
-        font: "inherit",
-        fontSize: 14,
-        fontWeight: 600,
-        cursor: "pointer",
-        whiteSpace: "nowrap" as const
-    },
     actionIcon: {
-        width: 20,
-        height: 20
+        width: 18,
+        height: 18
     }
 } satisfies Record<string, import("react").CSSProperties>;

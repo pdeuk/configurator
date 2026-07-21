@@ -5,28 +5,32 @@ import {
     PinIcon,
     YoutubeIcon
 } from "./icons";
+import { t } from "./websiteTheme";
 
 export function WebsiteFooter() {
     return (
         <footer style={styles.footer}>
             <div style={styles.footerTop}>
                 <div style={styles.footerLeft}>
-                    <div style={styles.footerLogoSlot} aria-label="Footer logo placeholder">
-                        <span style={styles.footerLogoText}>LOGO NAME</span>
+                    <div style={styles.footerBrand}>
+                        <span className="website-heading" style={styles.footerLogoText}>
+                            Atelier
+                        </span>
+                        <span style={styles.footerLogoSub}>Furniture</span>
                     </div>
                     <div style={styles.socialBlock}>
                         <h3 style={styles.footerColumnTitle}>Follow Us</h3>
                         <div style={styles.socialLinks}>
-                            <a href="/" style={styles.socialLink} aria-label="LinkedIn">
+                            <a href="/" className="website-icon-btn" style={styles.socialLink} aria-label="LinkedIn">
                                 <LinkedinIcon style={styles.socialIcon} />
                             </a>
-                            <a href="/" style={styles.socialLink} aria-label="YouTube">
+                            <a href="/" className="website-icon-btn" style={styles.socialLink} aria-label="YouTube">
                                 <YoutubeIcon style={styles.socialIcon} />
                             </a>
-                            <a href="/" style={styles.socialLink} aria-label="Facebook">
+                            <a href="/" className="website-icon-btn" style={styles.socialLink} aria-label="Facebook">
                                 <FacebookIcon style={styles.socialIcon} />
                             </a>
-                            <a href="/" style={styles.socialLink} aria-label="Instagram">
+                            <a href="/" className="website-icon-btn" style={styles.socialLink} aria-label="Instagram">
                                 <InstagramIcon style={styles.socialIcon} />
                             </a>
                         </div>
@@ -35,7 +39,7 @@ export function WebsiteFooter() {
                 <div style={styles.footerRight}>
                     <div style={styles.mapPlaceholder} aria-label="Map placeholder">
                         <PinIcon style={styles.mapPin} />
-                        <span style={styles.mapLabel}>Map placeholder with random pin</span>
+                        <span style={styles.mapLabel}>Athens showroom location</span>
                     </div>
                     <div style={styles.footerInfoGrid}>
                         <div style={styles.footerInfoBlock}>
@@ -46,13 +50,13 @@ export function WebsiteFooter() {
                         </div>
                         <div style={styles.footerInfoBlock}>
                             <h3 style={styles.footerColumnTitle}>Legal</h3>
-                            <a href="/" style={styles.footerLegalLink}>
+                            <a href="/" className="website-text-link" style={styles.footerLegalLink}>
                                 Terms &amp; Conditions
                             </a>
-                            <a href="/" style={styles.footerLegalLink}>
+                            <a href="/" className="website-text-link" style={styles.footerLegalLink}>
                                 Privacy Policy
                             </a>
-                            <a href="/" style={styles.footerLegalLink}>
+                            <a href="/" className="website-text-link" style={styles.footerLegalLink}>
                                 Legal Information
                             </a>
                         </div>
@@ -61,7 +65,7 @@ export function WebsiteFooter() {
             </div>
             <div style={styles.footerBottom}>
                 <span style={styles.footerBottomText}>
-                    Trademark 2026 LOGO NAME, 123 Placeholder Avenue, Athens 105 58, Greece
+                    Trademark 2026 Atelier Furniture, 123 Placeholder Avenue, Athens 105 58, Greece
                 </span>
             </div>
         </footer>
@@ -71,46 +75,48 @@ export function WebsiteFooter() {
 const styles = {
     footer: {
         display: "grid",
-        gap: 28,
-        padding: "8px 0 0",
-        borderTop: "1px solid #e5e7eb"
+        gap: 32,
+        padding: "24px 0 0",
+        borderTop: `1px solid ${t.colors.borderSoft}`
     },
     footerTop: {
         display: "grid",
         gridTemplateColumns: "minmax(0, 340px) minmax(0, 1fr)",
-        gap: 40,
-        paddingTop: 16
+        gap: 48,
+        paddingTop: 12
     },
     footerLeft: {
         display: "grid",
-        gap: 28,
+        gap: 32,
         alignContent: "start"
     },
-    footerLogoSlot: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 180,
-        height: 56,
-        borderRadius: 12,
-        border: "1px dashed #cbd5e1",
-        background: "#f8fafc"
+    footerBrand: {
+        display: "grid",
+        gap: 6
     },
     footerLogoText: {
-        fontSize: 14,
-        fontWeight: 700,
-        color: "#64748b",
-        letterSpacing: "0.08em"
+        fontSize: 36,
+        fontWeight: 600,
+        lineHeight: 1,
+        color: t.colors.ink
+    },
+    footerLogoSub: {
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.24em",
+        textTransform: "uppercase" as const,
+        color: t.colors.muted
     },
     socialBlock: {
         display: "grid",
-        gap: 14
+        gap: 16
     },
     footerColumnTitle: {
         margin: 0,
-        fontSize: 18,
-        fontWeight: 700,
-        color: "#111827"
+        fontFamily: t.fonts.display,
+        fontSize: 24,
+        fontWeight: 600,
+        color: t.colors.ink
     },
     socialLinks: {
         display: "flex",
@@ -118,39 +124,32 @@ const styles = {
         flexWrap: "wrap"
     },
     socialLink: {
-        display: "grid",
-        placeItems: "center",
-        width: 42,
-        height: 42,
-        borderRadius: 999,
-        border: "1px solid #e5e7eb",
-        color: "#111827",
-        textDecoration: "none",
-        background: "#ffffff"
+        textDecoration: "none"
     },
     socialIcon: {
-        width: 20,
-        height: 20
+        width: 18,
+        height: 18
     },
     footerRight: {
         display: "grid",
-        gap: 24,
+        gap: 28,
         alignContent: "start"
     },
     mapPlaceholder: {
         position: "relative" as const,
         display: "grid",
         placeItems: "center",
-        minHeight: 220,
-        borderRadius: 20,
-        border: "1px solid #dbe4ee",
+        minHeight: 240,
+        borderRadius: t.radius.lg,
+        border: `1px solid ${t.colors.borderSoft}`,
         background:
-            "linear-gradient(135deg, #eff6ff 0%, #dbeafe 35%, #f8fafc 35%, #f8fafc 100%)"
+            "linear-gradient(135deg, #ebe4da 0%, #d8d0c4 38%, #f7f4ef 38%, #f7f4ef 100%)",
+        boxShadow: t.shadow.sm
     },
     mapPin: {
-        width: 38,
-        height: 38,
-        color: "#dc2626"
+        width: 36,
+        height: 36,
+        color: t.colors.accent
     },
     mapLabel: {
         position: "absolute" as const,
@@ -158,38 +157,37 @@ const styles = {
         left: "50%",
         transform: "translateX(-50%)",
         fontSize: 13,
-        color: "#475569"
+        letterSpacing: "0.06em",
+        textTransform: "uppercase" as const,
+        color: t.colors.muted
     },
     footerInfoGrid: {
         display: "grid",
         gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        gap: 24
+        gap: 28
     },
     footerInfoBlock: {
         display: "grid",
-        gap: 8,
+        gap: 10,
         alignContent: "start"
     },
     footerInfoText: {
         margin: 0,
         fontSize: 15,
-        lineHeight: 1.6,
-        color: "#475569"
+        lineHeight: 1.7,
+        color: t.colors.inkSoft
     },
     footerLegalLink: {
-        color: "#111827",
-        fontSize: 15,
-        lineHeight: 1.6,
-        textDecoration: "none"
+        width: "fit-content"
     },
     footerBottom: {
-        padding: "18px 0 0",
-        borderTop: "1px solid #e5e7eb"
+        padding: "20px 0 0",
+        borderTop: `1px solid ${t.colors.borderSoft}`
     },
     footerBottomText: {
         display: "block",
         fontSize: 13,
-        lineHeight: 1.6,
-        color: "#64748b"
+        lineHeight: 1.7,
+        color: t.colors.muted
     }
 } satisfies Record<string, import("react").CSSProperties>;

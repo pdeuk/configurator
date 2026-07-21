@@ -1,31 +1,36 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
+import { premiumGradients, t } from "./websiteTheme";
 
 const SLIDES = [
     {
         id: "living-room",
         label: "Living room collection",
-        gradient: "linear-gradient(135deg, #e7e5e4 0%, #d6d3d1 45%, #a8a29e 100%)"
+        subtitle: "Refined seating and statement silhouettes",
+        gradient: premiumGradients.livingRoom
     },
     {
         id: "bedroom",
         label: "Bedroom essentials",
-        gradient: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 45%, #93c5fd 100%)"
+        subtitle: "Calm textures and tailored comfort",
+        gradient: premiumGradients.bedroom
     },
     {
         id: "office",
         label: "Home office range",
-        gradient: "linear-gradient(135deg, #fef3c7 0%, #fde68a 45%, #fbbf24 100%)"
+        subtitle: "Workspaces with quiet luxury",
+        gradient: premiumGradients.office
     },
     {
         id: "outdoor",
         label: "Outdoor furniture",
-        gradient: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 45%, #86efac 100%)"
+        subtitle: "Terrace-ready materials and form",
+        gradient: premiumGradients.outdoor
     }
 ] as const;
 
-const AUTO_ADVANCE_MS = 5000;
+const AUTO_ADVANCE_MS = 6000;
 
 export function WebsiteCarousel() {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -60,13 +65,21 @@ export function WebsiteCarousel() {
                                     background: slide.gradient
                                 }}
                             >
-                                <span style={styles.placeholderLabel}>{slide.label}</span>
-                                <span style={styles.placeholderHint}>Placeholder image</span>
-                                {slide.id === "living-room" ? (
-                                    <Link to="/app" style={styles.ctaButton}>
-                                        Check Our Configurator
-                                    </Link>
-                                ) : null}
+                                <div style={styles.placeholderOverlay} />
+                                <div style={styles.placeholderContent}>
+                                    <span className="website-eyebrow" style={styles.slideEyebrow}>
+                                        Featured collection
+                                    </span>
+                                    <h2 className="website-heading" style={styles.placeholderLabel}>
+                                        {slide.label}
+                                    </h2>
+                                    <p style={styles.placeholderHint}>{slide.subtitle}</p>
+                                    {slide.id === "living-room" ? (
+                                        <Link to="/app" className="website-btn-primary" style={styles.ctaButton}>
+                                            Check Our Configurator
+                                        </Link>
+                                    ) : null}
+                                </div>
                             </div>
                         </article>
                     ))}
@@ -74,7 +87,8 @@ export function WebsiteCarousel() {
 
                 <button
                     type="button"
-                    style={{ ...styles.navButton, left: 16 }}
+                    className="website-icon-btn"
+                    style={{ ...styles.navButton, left: 20 }}
                     aria-label="Previous slide"
                     onClick={() => goTo(activeIndex - 1)}
                 >
@@ -83,7 +97,8 @@ export function WebsiteCarousel() {
 
                 <button
                     type="button"
-                    style={{ ...styles.navButton, right: 16 }}
+                    className="website-icon-btn"
+                    style={{ ...styles.navButton, right: 20 }}
                     aria-label="Next slide"
                     onClick={() => goTo(activeIndex + 1)}
                 >
@@ -113,90 +128,93 @@ export function WebsiteCarousel() {
 const styles = {
     section: {
         display: "grid",
-        gap: 16,
-        padding: "24px 28px 40px"
+        gap: 18,
+        padding: "28px 32px 48px"
     },
     viewport: {
         position: "relative" as const,
         overflow: "hidden",
-        borderRadius: 16,
-        border: "1px solid #e5e7eb",
-        background: "#f3f4f6"
+        borderRadius: t.radius.xl,
+        background: t.colors.dark,
+        boxShadow: t.shadow.lg
     },
     track: {
         display: "flex",
         width: "100%",
-        transition: "transform 500ms ease"
+        transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1)"
     },
     slide: {
         minWidth: "100%"
     },
     placeholder: {
+        position: "relative" as const,
         display: "grid",
         placeItems: "center",
-        alignContent: "center",
-        gap: 8,
-        minHeight: "clamp(280px, 42vw, 520px)"
+        minHeight: "clamp(320px, 44vw, 560px)"
+    },
+    placeholderOverlay: {
+        position: "absolute" as const,
+        inset: 0,
+        background:
+            "linear-gradient(180deg, rgba(20, 18, 16, 0.08) 0%, rgba(20, 18, 16, 0.42) 72%, rgba(20, 18, 16, 0.58) 100%)"
+    },
+    placeholderContent: {
+        position: "relative" as const,
+        zIndex: 1,
+        display: "grid",
+        gap: 14,
+        justifyItems: "center",
+        textAlign: "center" as const,
+        padding: "0 24px"
+    },
+    slideEyebrow: {
+        color: "rgba(255, 255, 255, 0.82)"
     },
     placeholderLabel: {
-        fontSize: "clamp(24px, 4vw, 40px)",
-        fontWeight: 700,
-        color: "rgba(17, 24, 39, 0.82)"
+        margin: 0,
+        fontSize: "clamp(2.4rem, 5vw, 4.5rem)",
+        fontWeight: 600,
+        color: "#fff"
     },
     placeholderHint: {
-        fontSize: 14,
-        color: "rgba(17, 24, 39, 0.55)"
+        margin: 0,
+        maxWidth: 520,
+        fontSize: 17,
+        lineHeight: 1.7,
+        color: "rgba(255, 255, 255, 0.84)"
     },
     ctaButton: {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: 16,
-        minWidth: 220,
-        padding: "14px 24px",
-        borderRadius: 999,
-        background: "#111827",
-        color: "#ffffff",
-        fontSize: 15,
-        fontWeight: 700,
-        textDecoration: "none",
-        boxShadow: "0 14px 36px rgba(15, 23, 42, 0.18)"
+        marginTop: 8,
+        background: "rgba(255, 255, 255, 0.96)",
+        color: t.colors.ink
     },
     navButton: {
         position: "absolute" as const,
         top: "50%",
         transform: "translateY(-50%)",
-        display: "grid",
-        placeItems: "center",
-        width: 44,
-        height: 44,
-        borderRadius: 999,
-        border: "1px solid rgba(255, 255, 255, 0.65)",
-        background: "rgba(255, 255, 255, 0.88)",
-        color: "#111827",
-        cursor: "pointer",
-        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.12)"
+        background: "rgba(255, 255, 255, 0.92)"
     },
     navIcon: {
-        width: 22,
-        height: 22
+        width: 20,
+        height: 20
     },
     dots: {
         display: "flex",
         justifyContent: "center",
-        gap: 8
+        gap: 10
     },
     dot: {
-        width: 10,
-        height: 10,
+        width: 8,
+        height: 8,
         borderRadius: 999,
         border: "none",
-        background: "#d1d5db",
+        background: "rgba(28, 25, 23, 0.18)",
         cursor: "pointer",
-        padding: 0
+        padding: 0,
+        transition: "all 220ms ease"
     },
     dotActive: {
-        width: 28,
-        background: "#111827"
+        width: 32,
+        background: t.colors.accent
     }
 } satisfies Record<string, import("react").CSSProperties>;

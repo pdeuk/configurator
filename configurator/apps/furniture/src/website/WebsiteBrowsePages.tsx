@@ -8,6 +8,7 @@ import {
 } from "./productNavData";
 import { WebsiteContactSection } from "./WebsiteContactSection";
 import { WebsiteLayout } from "./WebsiteLayout";
+import { bodyTextStyle, displayTitleStyle, premiumGradients, t } from "./websiteTheme";
 
 export function WebsiteCategoryPage() {
     const { categorySlug } = useParams();
@@ -21,9 +22,11 @@ export function WebsiteCategoryPage() {
         <WebsiteLayout>
             <div style={styles.pageWrap}>
                 <section style={styles.hero}>
-                    <span style={styles.eyebrow}>Browse products</span>
-                    <h1 style={styles.heroTitle}>{category.name}</h1>
-                    <p style={styles.heroText}>{category.description}</p>
+                    <span className="website-eyebrow">Browse products</span>
+                    <h1 className="website-heading" style={displayTitleStyle("clamp(2.4rem, 5vw, 4.2rem)")}>
+                        {category.name}
+                    </h1>
+                    <p style={bodyTextStyle(820)}>{category.description}</p>
                 </section>
 
                 <section style={styles.gridSection}>
@@ -32,15 +35,17 @@ export function WebsiteCategoryPage() {
                             <Link
                                 key={subcategory.id}
                                 to={`/products/${category.slug}/${subcategory.slug}`}
-                                style={styles.collectionCard}
+                                className="website-card-link"
                             >
                                 <div style={styles.collectionImage}>
                                     <span style={styles.collectionImageLabel}>{subcategory.name}</span>
                                 </div>
                                 <div style={styles.collectionContent}>
-                                    <h2 style={styles.cardTitle}>{subcategory.name}</h2>
+                                    <h2 className="website-heading" style={styles.cardTitle}>
+                                        {subcategory.name}
+                                    </h2>
                                     <p style={styles.cardText}>{subcategory.description}</p>
-                                    <span style={styles.cardLink}>View collection</span>
+                                    <span className="website-text-link">View collection</span>
                                 </div>
                             </Link>
                         ))}
@@ -67,9 +72,11 @@ export function WebsiteSubcategoryPage() {
         <WebsiteLayout>
             <div style={styles.pageWrap}>
                 <section style={styles.hero}>
-                    <span style={styles.eyebrow}>{category.name}</span>
-                    <h1 style={styles.heroTitle}>{subcategory.name}</h1>
-                    <p style={styles.heroText}>{subcategory.description}</p>
+                    <span className="website-eyebrow">{category.name}</span>
+                    <h1 className="website-heading" style={displayTitleStyle("clamp(2.4rem, 5vw, 4.2rem)")}>
+                        {subcategory.name}
+                    </h1>
+                    <p style={bodyTextStyle(820)}>{subcategory.description}</p>
                 </section>
 
                 <section style={styles.gridSection}>
@@ -80,18 +87,20 @@ export function WebsiteSubcategoryPage() {
                                     <span style={styles.productImageLabel}>{product.name}</span>
                                 </div>
                                 <div style={styles.collectionContent}>
-                                    <h2 style={styles.cardTitle}>{product.name}</h2>
+                                    <h2 className="website-heading" style={styles.cardTitle}>
+                                        {product.name}
+                                    </h2>
                                     <p style={styles.cardText}>{product.shortDescription}</p>
                                     <div style={styles.cardActions}>
                                         <Link
                                             to={`/products/${category.slug}/${subcategory.slug}/${product.slug}`}
-                                            style={styles.primaryLink}
+                                            className="website-btn-primary"
                                         >
                                             View Product
                                         </Link>
                                         <Link
                                             to={`/products/${category.slug}/${subcategory.slug}/${product.slug}`}
-                                            style={styles.secondaryLink}
+                                            className="website-btn-secondary"
                                         >
                                             Configure
                                         </Link>
@@ -134,11 +143,13 @@ export function WebsiteProductPage() {
                         </div>
                     </div>
                     <div style={styles.productHeroContent}>
-                        <span style={styles.eyebrow}>
+                        <span className="website-eyebrow">
                             {category.name} / {subcategory.name}
                         </span>
-                        <h1 style={styles.heroTitle}>{product.name}</h1>
-                        <p style={styles.heroText}>{product.description}</p>
+                        <h1 className="website-heading" style={displayTitleStyle("clamp(2.4rem, 4.8vw, 4rem)")}>
+                            {product.name}
+                        </h1>
+                        <p style={bodyTextStyle()}>{product.description}</p>
                         <div style={styles.specList}>
                             {product.specs.map(spec => (
                                 <span key={spec} style={styles.specPill}>
@@ -146,7 +157,7 @@ export function WebsiteProductPage() {
                                 </span>
                             ))}
                         </div>
-                        <button type="button" style={styles.configuratorButton} onClick={openConfigurator}>
+                        <button type="button" className="website-btn-primary" onClick={openConfigurator}>
                             Customize This Product
                         </button>
                     </div>
@@ -154,8 +165,10 @@ export function WebsiteProductPage() {
 
                 <section style={styles.gallerySection}>
                     <div style={styles.sectionHeading}>
-                        <h2 style={styles.sectionTitle}>Product gallery</h2>
-                        <p style={styles.sectionText}>
+                        <h2 className="website-heading" style={styles.sectionTitle}>
+                            Product gallery
+                        </h2>
+                        <p style={bodyTextStyle()}>
                             Add additional product images, detail shots, finish variations, and room
                             scenes here before sending users into the configurator.
                         </p>
@@ -171,16 +184,22 @@ export function WebsiteProductPage() {
 
                 <section style={styles.relatedSection}>
                     <div style={styles.sectionHeading}>
-                        <h2 style={styles.sectionTitle}>Explore more collections</h2>
-                        <p style={styles.sectionText}>
-                            Natural next step: browse another family or return to the parent category.
+                        <h2 className="website-heading" style={styles.sectionTitle}>
+                            Explore more collections
+                        </h2>
+                        <p style={bodyTextStyle()}>
+                            Browse another family or return to the parent category before entering the
+                            configurator.
                         </p>
                     </div>
                     <div style={styles.relatedLinks}>
-                        <Link to={`/products/${category.slug}`} style={styles.secondaryLink}>
+                        <Link to={`/products/${category.slug}`} className="website-btn-secondary">
                             Back to {category.name}
                         </Link>
-                        <Link to={`/products/${category.slug}/${subcategory.slug}`} style={styles.primaryLink}>
+                        <Link
+                            to={`/products/${category.slug}/${subcategory.slug}`}
+                            className="website-btn-primary"
+                        >
                             View more {subcategory.name}
                         </Link>
                     </div>
@@ -197,9 +216,11 @@ export function WebsiteProductsHubPage() {
         <WebsiteLayout>
             <div style={styles.pageWrap}>
                 <section style={styles.hero}>
-                    <span style={styles.eyebrow}>All categories</span>
-                    <h1 style={styles.heroTitle}>Products</h1>
-                    <p style={styles.heroText}>
+                    <span className="website-eyebrow">All categories</span>
+                    <h1 className="website-heading" style={displayTitleStyle("clamp(2.4rem, 5vw, 4.2rem)")}>
+                        Products
+                    </h1>
+                    <p style={bodyTextStyle(820)}>
                         Browse categories first, then narrow down to a collection and product before
                         entering the configurator.
                     </p>
@@ -207,14 +228,20 @@ export function WebsiteProductsHubPage() {
                 <section style={styles.gridSection}>
                     <div style={styles.cardGrid}>
                         {PRODUCT_CATEGORIES.map(category => (
-                            <Link key={category.id} to={`/products/${category.slug}`} style={styles.collectionCard}>
+                            <Link
+                                key={category.id}
+                                to={`/products/${category.slug}`}
+                                className="website-card-link"
+                            >
                                 <div style={styles.collectionImage}>
                                     <span style={styles.collectionImageLabel}>{category.name}</span>
                                 </div>
                                 <div style={styles.collectionContent}>
-                                    <h2 style={styles.cardTitle}>{category.name}</h2>
+                                    <h2 className="website-heading" style={styles.cardTitle}>
+                                        {category.name}
+                                    </h2>
                                     <p style={styles.cardText}>{category.description}</p>
-                                    <span style={styles.cardLink}>Browse category</span>
+                                    <span className="website-text-link">Browse category</span>
                                 </div>
                             </Link>
                         ))}
@@ -229,18 +256,18 @@ export function WebsiteProductsHubPage() {
 const styles = {
     pageWrap: {
         display: "grid",
-        gap: 40,
-        padding: "24px 28px 56px"
+        gap: t.spacing.sectionY,
+        padding: `28px ${t.spacing.pageX}px 72px`
     },
     hero: {
         display: "grid",
-        gap: 14,
-        padding: "12px 0"
+        gap: 16,
+        padding: "12px 0 8px"
     },
     productHero: {
         display: "grid",
         gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 0.95fr)",
-        gap: 36,
+        gap: 44,
         alignItems: "center"
     },
     productHeroMedia: {
@@ -249,36 +276,16 @@ const styles = {
     productMainImage: {
         display: "grid",
         placeItems: "center",
-        minHeight: 420,
-        borderRadius: 24,
-        border: "1px dashed #cbd5e1",
-        background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)"
+        minHeight: 460,
+        borderRadius: t.radius.xl,
+        border: `1px solid ${t.colors.borderSoft}`,
+        background: premiumGradients.placeholder,
+        boxShadow: t.shadow.md
     },
     productHeroContent: {
         display: "grid",
-        gap: 18,
+        gap: 20,
         alignContent: "start"
-    },
-    eyebrow: {
-        fontSize: 13,
-        fontWeight: 700,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase" as const,
-        color: "#64748b"
-    },
-    heroTitle: {
-        margin: 0,
-        fontSize: "clamp(34px, 4.8vw, 60px)",
-        lineHeight: 1.04,
-        fontWeight: 700,
-        color: "#111827"
-    },
-    heroText: {
-        margin: 0,
-        maxWidth: 820,
-        fontSize: 17,
-        lineHeight: 1.75,
-        color: "#4b5563"
     },
     gridSection: {
         display: "grid"
@@ -288,103 +295,61 @@ const styles = {
         gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
         gap: 28
     },
-    collectionCard: {
-        display: "grid",
-        gap: 18,
-        padding: 0,
-        borderRadius: 20,
-        textDecoration: "none",
-        color: "inherit",
-        overflow: "hidden",
-        border: "1px solid #e5e7eb",
-        background: "#ffffff",
-        boxShadow: "0 12px 32px rgba(15, 23, 42, 0.06)"
-    },
     productCard: {
         display: "grid",
-        gap: 18,
-        borderRadius: 20,
+        gap: 0,
+        borderRadius: t.radius.lg,
         overflow: "hidden",
-        border: "1px solid #e5e7eb",
-        background: "#ffffff",
-        boxShadow: "0 12px 32px rgba(15, 23, 42, 0.06)"
+        border: `1px solid ${t.colors.borderSoft}`,
+        background: t.colors.bgElevated,
+        boxShadow: t.shadow.sm
     },
     collectionImage: {
         display: "grid",
         placeItems: "center",
-        minHeight: 220,
-        background: "linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%)"
+        minHeight: 240,
+        background: premiumGradients.placeholder
     },
     productImage: {
         display: "grid",
         placeItems: "center",
-        minHeight: 240,
-        background: "linear-gradient(135deg, #e5e7eb 0%, #f8fafc 100%)"
+        minHeight: 260,
+        background: premiumGradients.placeholder
     },
     collectionImageLabel: {
-        fontSize: 22,
-        fontWeight: 700,
-        color: "rgba(17, 24, 39, 0.72)"
+        fontFamily: t.fonts.display,
+        fontSize: 28,
+        fontWeight: 600,
+        color: t.colors.ink
     },
     productImageLabel: {
-        fontSize: 28,
-        fontWeight: 700,
-        color: "rgba(17, 24, 39, 0.7)"
+        fontFamily: t.fonts.display,
+        fontSize: 32,
+        fontWeight: 600,
+        color: t.colors.ink
     },
     collectionContent: {
         display: "grid",
-        gap: 12,
-        padding: "0 20px 22px"
+        gap: 14,
+        padding: "22px 22px 24px"
     },
     cardTitle: {
         margin: 0,
-        fontSize: 24,
-        fontWeight: 700,
-        lineHeight: 1.2,
-        color: "#111827"
+        fontSize: 30,
+        fontWeight: 600,
+        lineHeight: 1.12,
+        color: t.colors.ink
     },
     cardText: {
         margin: 0,
         fontSize: 15,
-        lineHeight: 1.7,
-        color: "#4b5563"
-    },
-    cardLink: {
-        fontSize: 14,
-        fontWeight: 700,
-        color: "#111827"
+        lineHeight: 1.75,
+        color: t.colors.inkSoft
     },
     cardActions: {
         display: "flex",
         gap: 12,
         flexWrap: "wrap" as const
-    },
-    primaryLink: {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: 140,
-        padding: "12px 18px",
-        borderRadius: 999,
-        background: "#111827",
-        color: "#ffffff",
-        textDecoration: "none",
-        fontSize: 14,
-        fontWeight: 700
-    },
-    secondaryLink: {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: 140,
-        padding: "12px 18px",
-        borderRadius: 999,
-        border: "1px solid #d1d5db",
-        background: "#ffffff",
-        color: "#111827",
-        textDecoration: "none",
-        fontSize: 14,
-        fontWeight: 700
     },
     specList: {
         display: "flex",
@@ -394,50 +359,33 @@ const styles = {
     specPill: {
         display: "inline-flex",
         alignItems: "center",
-        padding: "8px 12px",
+        padding: "9px 14px",
         borderRadius: 999,
-        background: "#f1f5f9",
-        color: "#334155",
+        background: t.colors.accentSoft,
+        color: t.colors.accentDark,
         fontSize: 13,
-        fontWeight: 600
-    },
-    configuratorButton: {
-        border: "none",
-        borderRadius: 999,
-        padding: "14px 24px",
-        background: "#111827",
-        color: "#ffffff",
-        font: "inherit",
-        fontSize: 15,
-        fontWeight: 700,
-        cursor: "pointer",
-        width: "fit-content"
+        fontWeight: 600,
+        letterSpacing: "0.02em"
     },
     gallerySection: {
         display: "grid",
-        gap: 22
+        gap: 24
     },
     relatedSection: {
         display: "grid",
-        gap: 18,
+        gap: 20,
         padding: "8px 0"
     },
     sectionHeading: {
         display: "grid",
-        gap: 10
+        gap: 12
     },
     sectionTitle: {
         margin: 0,
-        fontSize: 30,
-        fontWeight: 700,
-        lineHeight: 1.15,
-        color: "#111827"
-    },
-    sectionText: {
-        margin: 0,
-        fontSize: 16,
-        lineHeight: 1.7,
-        color: "#4b5563"
+        fontSize: "clamp(2rem, 3vw, 2.6rem)",
+        fontWeight: 600,
+        lineHeight: 1.12,
+        color: t.colors.ink
     },
     galleryGrid: {
         display: "grid",
@@ -447,15 +395,18 @@ const styles = {
     galleryImage: {
         display: "grid",
         placeItems: "center",
-        minHeight: 180,
-        borderRadius: 18,
-        border: "1px dashed #cbd5e1",
-        background: "#f8fafc"
+        minHeight: 190,
+        borderRadius: t.radius.md,
+        border: `1px solid ${t.colors.borderSoft}`,
+        background: t.colors.surface,
+        boxShadow: t.shadow.sm
     },
     galleryImageLabel: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 600,
-        color: "#64748b"
+        letterSpacing: "0.06em",
+        textTransform: "uppercase" as const,
+        color: t.colors.muted
     },
     relatedLinks: {
         display: "flex",

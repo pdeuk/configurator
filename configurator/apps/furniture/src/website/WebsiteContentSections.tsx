@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { WebsiteContactSection } from "./WebsiteContactSection";
+import { bodyTextStyle, displayTitleStyle, eyebrowStyle, premiumGradients, t } from "./websiteTheme";
 
 type SectionLayout = "text-left" | "text-right";
 type MediaKind = "image" | "model";
@@ -28,8 +29,11 @@ function ContentSection({
 }: ContentSectionProps) {
     const textBlock = (
         <div style={styles.textBlock}>
-            <h2 style={styles.title}>{title}</h2>
-            <p style={styles.paragraph}>{paragraph}</p>
+            <span className="website-eyebrow">Collection story</span>
+            <h2 className="website-heading" style={displayTitleStyle("clamp(2rem, 3.4vw, 3rem)")}>
+                {title}
+            </h2>
+            <p style={bodyTextStyle(520)}>{paragraph}</p>
         </div>
     );
 
@@ -64,26 +68,29 @@ export function WebsiteContentSections() {
         <div style={styles.wrapper}>
             <ContentSection
                 layout="text-left"
-                title="Placeholder title"
-                paragraph="Placeholder paragraph text goes here. Use this area for a short description of a collection, feature, or story that complements the image beside it."
+                title="Crafted for considered spaces"
+                paragraph="Use this editorial block for a collection story, material focus, or brand narrative that feels closer to a luxury lookbook than a generic product page."
                 imageLabel="Featured collection"
             />
             <ContentSection
                 layout="text-right"
-                title="Placeholder title"
-                paragraph="Placeholder paragraph text goes here. Use this area for a second highlight block with supporting copy and a visual on the opposite side."
+                title="Designed to be discovered"
+                paragraph="This section can introduce a seasonal edit, showroom highlight, or inspiration-led product family before visitors move deeper into categories and individual products."
                 imageLabel="Design inspiration"
             />
             <ContentSection
                 layout="text-left"
-                title="Placeholder title"
-                paragraph="Placeholder paragraph text goes here. This empty media area is reserved for a future GLB model that can later be animated and presented beside this text."
+                title="Built for interactive presentation"
+                paragraph="This reserved media area is meant for a future animated GLB showcase that demonstrates how the configurator elevates the product experience."
                 imageLabel="3D model showcase"
                 mediaKind="model"
             />
             <section style={styles.demosSection}>
                 <div style={styles.demosHeading}>
-                    <h2 style={styles.demosTitle}>Demos</h2>
+                    <span className="website-eyebrow">Interactive range</span>
+                    <h2 className="website-heading" style={displayTitleStyle("clamp(2.2rem, 3.8vw, 3.4rem)")}>
+                        Demos
+                    </h2>
                 </div>
                 <div style={styles.demosGrid}>
                     {DEMO_ITEMS.map(item => (
@@ -92,9 +99,11 @@ export function WebsiteContentSections() {
                                 <span style={styles.demoMediaLabel}>3D model placeholder</span>
                             </div>
                             <div style={styles.demoContent}>
-                                <h3 style={styles.demoTitle}>{item.title}</h3>
+                                <h3 className="website-heading" style={styles.demoTitle}>
+                                    {item.title}
+                                </h3>
                                 <p style={styles.demoParagraph}>{item.paragraph}</p>
-                                <Link to="/" style={styles.demoLink}>
+                                <Link to="/" className="website-text-link">
                                     Learn More
                                 </Link>
                             </div>
@@ -105,16 +114,19 @@ export function WebsiteContentSections() {
             <section style={styles.ctaSection}>
                 <div style={styles.ctaBanner}>
                     <div style={styles.ctaCopy}>
-                        <span style={styles.ctaEyebrow}>Interactive preview</span>
-                        <h2 style={styles.ctaTitle}>See how the configurator works</h2>
+                        <span className="website-eyebrow" style={styles.ctaEyebrow}>
+                            Interactive preview
+                        </span>
+                        <h2 className="website-heading" style={styles.ctaTitle}>
+                            See how the configurator works
+                        </h2>
                         <p style={styles.ctaParagraph}>
-                            This full-width area is a placeholder for a future branded visual. The
-                            button below should guide visitors into the live test configurator so they
-                            can explore the experience themselves.
+                            Step from curated product storytelling into a live customization experience
+                            designed to feel intentional, premium, and showroom-ready.
                         </p>
                     </div>
                     <div style={styles.ctaButtonRow}>
-                        <Link to="/app" style={styles.ctaButton}>
+                        <Link to="/app" className="website-btn-primary" style={styles.ctaButton}>
                             Check Our Configurator
                         </Link>
                     </div>
@@ -128,56 +140,46 @@ export function WebsiteContentSections() {
 const styles = {
     wrapper: {
         display: "grid",
-        gap: 48,
-        padding: "8px 28px 56px"
+        gap: t.spacing.sectionY,
+        padding: `12px ${t.spacing.pageX}px 72px`
     },
     section: {
         display: "grid",
         gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-        gap: 40,
+        gap: 48,
         alignItems: "center"
     },
     textBlock: {
         display: "grid",
-        gap: 16,
+        gap: 18,
         padding: "8px 0"
-    },
-    title: {
-        margin: 0,
-        fontSize: "clamp(28px, 3vw, 40px)",
-        fontWeight: 700,
-        lineHeight: 1.15,
-        color: "#111827"
-    },
-    paragraph: {
-        margin: 0,
-        fontSize: 16,
-        lineHeight: 1.7,
-        color: "#4b5563",
-        maxWidth: 520
     },
     imagePlaceholder: {
         display: "grid",
         placeItems: "center",
         alignContent: "center",
-        gap: 8,
-        minHeight: 320,
-        borderRadius: 16,
-        border: "1px dashed #cbd5e1",
-        background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)"
+        gap: 10,
+        minHeight: 360,
+        borderRadius: t.radius.lg,
+        border: `1px solid ${t.colors.borderSoft}`,
+        background: premiumGradients.placeholder,
+        boxShadow: t.shadow.sm
     },
     imageLabel: {
-        fontSize: 18,
+        fontFamily: t.fonts.display,
+        fontSize: 24,
         fontWeight: 600,
-        color: "rgba(17, 24, 39, 0.72)"
+        color: t.colors.ink
     },
     imageHint: {
         fontSize: 13,
-        color: "rgba(17, 24, 39, 0.5)"
+        letterSpacing: "0.08em",
+        textTransform: "uppercase" as const,
+        color: t.colors.muted
     },
     demosSection: {
         display: "grid",
-        gap: 28,
+        gap: 36,
         paddingTop: 12
     },
     ctaSection: {
@@ -186,70 +188,48 @@ const styles = {
         marginRight: "calc(50% - 50vw)"
     },
     ctaBanner: {
-        minHeight: 420,
+        minHeight: 460,
         display: "grid",
         alignItems: "end",
-        gap: 24,
-        padding: "40px 28px 36px",
-        background:
-            "linear-gradient(135deg, #0f172a 0%, #1d4ed8 38%, #7c3aed 72%, #c4b5fd 100%)"
+        gap: 28,
+        padding: "56px 32px 44px",
+        background: premiumGradients.cta
     },
     ctaCopy: {
         display: "grid",
-        gap: 14,
+        gap: 16,
         justifyItems: "center",
         textAlign: "center" as const,
-        color: "#ffffff",
+        color: t.colors.white,
         maxWidth: 760,
         margin: "0 auto"
     },
     ctaEyebrow: {
-        fontSize: 13,
-        fontWeight: 700,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase" as const,
-        color: "rgba(255, 255, 255, 0.76)"
+        ...eyebrowStyle(),
+        color: "rgba(255, 255, 255, 0.72)"
     },
     ctaTitle: {
-        margin: 0,
-        fontSize: "clamp(32px, 4vw, 52px)",
-        lineHeight: 1.05,
-        fontWeight: 700
+        ...displayTitleStyle("clamp(2.4rem, 4.8vw, 4rem)"),
+        color: t.colors.white
     },
     ctaParagraph: {
         margin: 0,
-        fontSize: 16,
-        lineHeight: 1.7,
-        color: "rgba(255, 255, 255, 0.82)"
+        fontSize: 17,
+        lineHeight: 1.8,
+        color: "rgba(255, 255, 255, 0.78)"
     },
     ctaButtonRow: {
         display: "flex",
         justifyContent: "center"
     },
     ctaButton: {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: 220,
-        padding: "14px 24px",
-        borderRadius: 999,
-        background: "#ffffff",
-        color: "#111827",
-        fontSize: 15,
-        fontWeight: 700,
-        textDecoration: "none",
-        boxShadow: "0 14px 36px rgba(15, 23, 42, 0.24)"
+        background: "rgba(255, 255, 255, 0.96)",
+        color: t.colors.ink
     },
     demosHeading: {
-        display: "flex",
-        justifyContent: "center"
-    },
-    demosTitle: {
-        margin: 0,
-        fontSize: "clamp(30px, 3.4vw, 44px)",
-        fontWeight: 700,
-        lineHeight: 1.1,
-        color: "#111827",
+        display: "grid",
+        gap: 12,
+        justifyItems: "center",
         textAlign: "center" as const
     },
     demosGrid: {
@@ -259,43 +239,45 @@ const styles = {
     },
     demoCard: {
         display: "grid",
-        gap: 18,
-        alignContent: "start"
+        gap: 20,
+        alignContent: "start",
+        padding: 18,
+        borderRadius: t.radius.lg,
+        background: t.colors.bgElevated,
+        border: `1px solid ${t.colors.borderSoft}`,
+        boxShadow: t.shadow.sm
     },
     demoMediaPlaceholder: {
         display: "grid",
         placeItems: "center",
         minHeight: 240,
-        borderRadius: 16,
-        border: "1px dashed #cbd5e1",
-        background: "#ffffff"
+        borderRadius: t.radius.md,
+        border: `1px solid ${t.colors.borderSoft}`,
+        background: t.colors.surface
     },
     demoMediaLabel: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: 600,
-        color: "rgba(17, 24, 39, 0.58)"
+        letterSpacing: "0.08em",
+        textTransform: "uppercase" as const,
+        color: t.colors.muted
     },
     demoContent: {
         display: "grid",
-        gap: 10
+        gap: 12,
+        padding: "0 4px 6px"
     },
     demoTitle: {
         margin: 0,
-        fontSize: 20,
+        fontSize: 28,
         fontWeight: 600,
-        lineHeight: 1.3,
-        color: "#111827"
+        lineHeight: 1.15,
+        color: t.colors.ink
     },
     demoParagraph: {
         margin: 0,
         fontSize: 15,
-        lineHeight: 1.65,
-        color: "#4b5563"
-    },
-    demoLink: {
-        color: "#111827",
-        fontSize: 14,
-        fontWeight: 600,
-        textDecoration: "underline"
+        lineHeight: 1.75,
+        color: t.colors.inkSoft
     }
 } satisfies Record<string, import("react").CSSProperties>;

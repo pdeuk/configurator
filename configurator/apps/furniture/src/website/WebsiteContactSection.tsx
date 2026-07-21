@@ -1,14 +1,18 @@
+import { bodyTextStyle, displayTitleStyle, t } from "./websiteTheme";
+
 export function WebsiteContactSection() {
     return (
         <section style={styles.section}>
             <div style={styles.card}>
                 <div style={styles.heading}>
-                    <span style={styles.eyebrow}>Get in touch</span>
-                    <h2 style={styles.title}>Contact Us</h2>
+                    <span className="website-eyebrow">Get in touch</span>
+                    <h2 className="website-heading" style={displayTitleStyle("clamp(2rem, 3.6vw, 3.2rem)")}>
+                        Contact Us
+                    </h2>
                 </div>
-                <p style={styles.paragraph}>
-                    Placeholder contact section for showroom visits, configurator demos, or custom
-                    furniture inquiries. Add your real form or contact details here later.
+                <p style={bodyTextStyle(720)}>
+                    Placeholder contact section for showroom visits, configurator demos, or bespoke
+                    furniture inquiries. This block can later become a refined form or appointment CTA.
                 </p>
             </div>
         </section>
@@ -22,37 +26,17 @@ const styles = {
     },
     card: {
         display: "grid",
-        gap: 16,
+        gap: 18,
         justifyItems: "center",
-        padding: "40px 28px",
-        borderRadius: 24,
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
+        padding: "52px 32px",
+        borderRadius: t.radius.xl,
+        background: t.colors.bgElevated,
+        border: `1px solid ${t.colors.borderSoft}`,
+        boxShadow: t.shadow.sm,
         textAlign: "center" as const
     },
     heading: {
         display: "grid",
-        gap: 10
-    },
-    eyebrow: {
-        fontSize: 13,
-        fontWeight: 700,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase" as const,
-        color: "#64748b"
-    },
-    title: {
-        margin: 0,
-        fontSize: "clamp(30px, 3.5vw, 44px)",
-        lineHeight: 1.1,
-        fontWeight: 700,
-        color: "#111827"
-    },
-    paragraph: {
-        margin: 0,
-        maxWidth: 720,
-        fontSize: 16,
-        lineHeight: 1.7,
-        color: "#4b5563"
+        gap: 12
     }
 } satisfies Record<string, import("react").CSSProperties>;
