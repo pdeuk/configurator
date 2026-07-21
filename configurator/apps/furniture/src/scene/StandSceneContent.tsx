@@ -2,9 +2,9 @@ import { Suspense, useMemo } from "react";
 import { Environment } from "@react-three/drei";
 import { Floor } from "./Floor";
 import { Module } from "./Module";
+import { FloorGrid } from "./FloorGrid";
 import { useEditorStore } from "../store/editorStore";
 import type { StandModule } from "../models/ModuleModel";
-import { GRID_SIZE } from "../utils/floorMaterials";
 import { floorOnlyMode } from "../../client.config";
 
 function isStandModule(module: StandModule | undefined): module is StandModule {
@@ -68,7 +68,7 @@ export function StandSceneContent({
             />
 
             {renderGrid && (
-                <gridHelper args={[GRID_SIZE, GRID_SIZE, "#cbd5e1", "#e5e7eb"]} />
+                <FloorGrid width={floorSize.width} depth={floorSize.depth} />
             )}
 
             {showFloor && (

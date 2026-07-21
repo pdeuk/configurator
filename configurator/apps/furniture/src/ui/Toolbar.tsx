@@ -21,12 +21,12 @@ import {
 } from "../utils/componentCatalog";
 import {
     FLOOR_MATERIALS,
-    GRID_SIZE,
+    MAX_FLOOR_DIMENSION,
     MIN_FLOOR_SIZE,
     type FloorMaterialId
 } from "../utils/floorMaterials";
 
-const MAX_FLOOR_SIZE_CM = GRID_SIZE * 100;
+const MAX_FLOOR_SIZE_CM = MAX_FLOOR_DIMENSION * 100;
 const MIN_FLOOR_SIZE_CM = MIN_FLOOR_SIZE * 100;
 
 interface ToolbarProps {
@@ -194,7 +194,7 @@ export function Toolbar({ floorOnly = false }: ToolbarProps) {
                     />
                 </label>
             </div>
-            <p style={styles.hint}>Max {MAX_FLOOR_SIZE_CM} cm (grid size)</p>
+            <p style={styles.hint}>Max {MAX_FLOOR_SIZE_CM} cm per side</p>
         </div>
     );
 }

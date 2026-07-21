@@ -10,8 +10,10 @@ import {
 import {
     FLOOR_AO_INTENSITY,
     FLOOR_DIFFUSE_TINT,
-    FLOOR_EMISSIVE_INTENSITY,
-    GRID_SIZE,
+    FLOOR_ENV_MAP_INTENSITY,
+    FLOOR_METALNESS,
+    FLOOR_ROUGHNESS,
+    FLOOR_TEXTURE_REFERENCE_SIZE,
     getFloorMaterial,
     type FloorMaterialId
 } from "../utils/floorMaterials";
@@ -56,8 +58,8 @@ export function Floor({ materialId, width, depth }: FloorProps) {
         [aoMap, diffuseMap]
     );
 
-    const textureRepeatX = material.tilesAcrossFloor * (width / GRID_SIZE);
-    const textureRepeatY = material.tilesAcrossFloor * (depth / GRID_SIZE);
+    const textureRepeatX = material.tilesAcrossFloor * (width / FLOOR_TEXTURE_REFERENCE_SIZE);
+    const textureRepeatY = material.tilesAcrossFloor * (depth / FLOOR_TEXTURE_REFERENCE_SIZE);
 
     useLayoutEffect(() => {
         configureFloorTexture(
@@ -93,16 +95,14 @@ export function Floor({ materialId, width, depth }: FloorProps) {
             position={[0, -0.002, 0]}
         >
             <planeGeometry args={[width, depth]} />
-            <meshLambertMaterial
+            <meshStandardMaterial
                 map={maps.diffuseMap}
-                emissiveMap={maps.diffuseMap}
                 color={FLOOR_DIFFUSE_TINT}
-                emissive="#ffffff"
-                emissiveIntensity={FLOOR_EMISSIVE_INTENSITY}
                 aoMap={maps.aoMap}
                 aoMapIntensity={FLOOR_AO_INTENSITY}
-                envMap={null}
-                toneMapped={false}
+                roughness={FLOOR_ROUGHNESS}
+                metalness={FLOOR_METALNESS}
+                envMapIntensity={FLOOR_ENV_MAP_INTENSITY}
             />
         </mesh>
     );

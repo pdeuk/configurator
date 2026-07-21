@@ -1,12 +1,20 @@
-export const GRID_SIZE = 20;
+/** Max floor edge length in meters (2000 cm). */
+export const MAX_FLOOR_DIMENSION = 20;
 export const MIN_FLOOR_SIZE = 0.5;
-export const DEFAULT_FLOOR_SIZE = GRID_SIZE;
-/** Default floor footprint: 1200 cm × 1200 cm (stored in meters). */
-export const DEFAULT_FLOOR_WIDTH = 12;
-export const DEFAULT_FLOOR_DEPTH = 12;
+/** Default floor footprint: 600 cm × 600 cm (stored in meters). */
+export const DEFAULT_FLOOR_WIDTH = 6;
+export const DEFAULT_FLOOR_DEPTH = 6;
+/** Reference size used when scaling repeating floor textures. */
+export const FLOOR_TEXTURE_REFERENCE_SIZE = 20;
+/** Grid cell size in meters (100 cm). */
+export const FLOOR_GRID_CELL_SIZE = 1;
 
-/** @deprecated Use GRID_SIZE */
-export const FLOOR_SIZE = GRID_SIZE;
+/** @deprecated Use FLOOR_TEXTURE_REFERENCE_SIZE */
+export const GRID_SIZE = FLOOR_TEXTURE_REFERENCE_SIZE;
+/** @deprecated Use MAX_FLOOR_DIMENSION */
+export const DEFAULT_FLOOR_SIZE = DEFAULT_FLOOR_WIDTH;
+/** @deprecated Use FLOOR_TEXTURE_REFERENCE_SIZE */
+export const FLOOR_SIZE = FLOOR_TEXTURE_REFERENCE_SIZE;
 
 export interface FloorSize {
     width: number;
@@ -20,16 +28,16 @@ export const DEFAULT_FLOOR_DIMENSIONS: FloorSize = {
 
 export function clampFloorDimension(value: number): number {
     if (!Number.isFinite(value)) {
-        return DEFAULT_FLOOR_SIZE;
+        return DEFAULT_FLOOR_WIDTH;
     }
 
-    return Math.min(GRID_SIZE, Math.max(MIN_FLOOR_SIZE, value));
+    return Math.min(MAX_FLOOR_DIMENSION, Math.max(MIN_FLOOR_SIZE, value));
 }
 
 export function clampFloorSize(size: Partial<FloorSize>): FloorSize {
     return {
-        width: clampFloorDimension(size.width ?? DEFAULT_FLOOR_SIZE),
-        depth: clampFloorDimension(size.depth ?? DEFAULT_FLOOR_SIZE)
+        width: clampFloorDimension(size.width ?? DEFAULT_FLOOR_WIDTH),
+        depth: clampFloorDimension(size.depth ?? DEFAULT_FLOOR_DEPTH)
     };
 }
 
@@ -91,6 +99,11 @@ export const FLOOR_DIFFUSE_TINT = "#ffffff";
 export const FLOOR_AO_INTENSITY = 0.18;
 /** Even surface glow that follows the floor texture colors. */
 export const FLOOR_EMISSIVE_INTENSITY = 0.2;
+
+/** Slight gloss on the floor surface (used with meshStandardMaterial). */
+export const FLOOR_ROUGHNESS = 0.42;
+export const FLOOR_METALNESS = 0;
+export const FLOOR_ENV_MAP_INTENSITY = 0.55;
 
 export function getFloorMaterial(id: FloorMaterialId): FloorMaterialDefinition {
     return FLOOR_MATERIALS.find(material => material.id === id)
