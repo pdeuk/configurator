@@ -17,6 +17,7 @@ import {
     performanceService
 } from "../../services/system";
 import { trackEvent } from "../../services/analytics";
+import { downloadAllProjectArtwork } from "../../services/artwork/projectArtworkDownload";
 import { useSettings } from "../settings";
 import { useCloudSession } from "../cloud";
 import { useProjectSession } from "./projectSession";
@@ -175,6 +176,41 @@ export function useProjectQuickActions() {
         }
     }, [materialCatalog, saveActiveProject]);
 
+    const handleDownloadOriginalArtwork = useCallback(async () => {
+        setStatusMessage(null);
+
+        try {
+            await loadingStateService.run("export", async () => {
+                const document = await saveActiveProject();
+
+                if (document.artworkAssets.length === 0) {
+                    setStatusMessage("No uploaded artwork in this project");
+                    return;
+                }
+
+                const result = await downloadAllProjectArtwork(document);
+
+                if (result.failed.length > 0) {
+                    setStatusMessage(
+                        `Downloaded ${result.downloaded} file(s); ${result.failed.length} unavailable`
+                    );
+                    return;
+                }
+
+                setStatusMessage(
+                    result.downloaded === 1
+                        ? "Original artwork downloaded"
+                        : `Downloaded ${result.downloaded} original artwork files`
+                );
+            });
+        } catch (error) {
+            errorTrackingService.captureError(error, { context: "export.artworkOriginal" });
+            console.error("Artwork download failed.", error);
+            const detail = error instanceof Error ? error.message : "";
+            setStatusMessage(detail ? `Artwork download failed: ${detail}` : "Artwork download failed");
+        }
+    }, [saveActiveProject]);
+
     useEffect(() => {
         if (!statusMessage) {
             return;
@@ -193,6 +229,7 @@ export function useProjectQuickActions() {
         handleShare,
         handleExportQuotePdf,
         handleExportManufacturingPdf,
-        handleExportManufacturingJson
+        handleExportManufacturingJson,
+        handleDownloadOriginalArtwork
     };
 }

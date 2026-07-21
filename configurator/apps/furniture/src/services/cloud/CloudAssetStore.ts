@@ -95,7 +95,6 @@ export class CloudAssetStore {
             .from("artwork_assets")
             .select("*")
             .eq("id", assetId)
-            .eq("user_id", this.userId)
             .maybeSingle();
 
         if (rowError) {
@@ -188,7 +187,6 @@ export class CloudAssetStore {
             .from("artwork_assets")
             .select("storage_path")
             .eq("id", assetId)
-            .eq("user_id", this.userId)
             .maybeSingle();
 
         if (!row?.storage_path) {

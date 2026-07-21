@@ -23,6 +23,9 @@ export interface Permission {
     settings: {
         edit: boolean;
     };
+    artwork: {
+        download_original: boolean;
+    };
 }
 
 export type PermissionAction =
@@ -34,7 +37,8 @@ export type PermissionAction =
     | "quotes.export"
     | "manufacturing.view"
     | "manufacturing.export"
-    | "settings.edit";
+    | "settings.edit"
+    | "artwork.download_original";
 
 export interface OrganizationMember {
     userId: string;
@@ -54,7 +58,8 @@ const FULL_PERMISSIONS: Permission = {
     projects: { create: true, edit: true, delete: true, view: true },
     quotes: { create: true, export: true },
     manufacturing: { view: true, export: true },
-    settings: { edit: true }
+    settings: { edit: true },
+    artwork: { download_original: true }
 };
 
 const ROLE_PERMISSIONS: Record<OrganizationRole, Permission> = {
@@ -64,19 +69,22 @@ const ROLE_PERMISSIONS: Record<OrganizationRole, Permission> = {
         projects: { create: true, edit: true, delete: true, view: true },
         quotes: { create: true, export: true },
         manufacturing: { view: false, export: false },
-        settings: { edit: false }
+        settings: { edit: false },
+        artwork: { download_original: true }
     },
     designer: {
         projects: { create: true, edit: true, delete: true, view: true },
         quotes: { create: false, export: false },
         manufacturing: { view: false, export: false },
-        settings: { edit: false }
+        settings: { edit: false },
+        artwork: { download_original: true }
     },
     production: {
         projects: { create: false, edit: false, delete: false, view: true },
         quotes: { create: false, export: false },
         manufacturing: { view: true, export: true },
-        settings: { edit: false }
+        settings: { edit: false },
+        artwork: { download_original: true }
     }
 };
 

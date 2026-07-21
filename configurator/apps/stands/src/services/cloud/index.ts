@@ -38,6 +38,7 @@ export {
 } from "./HybridProjectStorage";
 export {
     createCloudAssetStoreForUser,
+    createShareAssetSignedUrl,
     getActiveCloudAssetStore,
     resolveCloudAssetUrl,
     setActiveCloudAssetStore,

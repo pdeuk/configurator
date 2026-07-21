@@ -95,7 +95,6 @@ export class CloudAssetStore {
             .from("artwork_assets")
             .select("*")
             .eq("id", assetId)
-            .eq("user_id", this.userId)
             .maybeSingle();
 
         if (rowError) {
@@ -167,6 +166,42 @@ export class CloudAssetStore {
         await indexedDbAssetStore.delete(assetId);
     }
 
+    /**
+     * Create a signed URL for an already-uploaded asset with a caller-defined
+     * lifetime. Used to bake share-scoped URLs into a share snapshot so that
+     * anonymous recipients can load images without owner credentials.
+     */
+    async createSignedUrl(
+        assetId: string,
+        expiresInSeconds: number
+    ): Promise<string | null> {
+        const client = getSupabaseClient();
+
+        if (!client) {
+            return null;
+        }
+
+        const { data: row } = await client
+            .from("artwork_assets")
+            .select("storage_path")
+            .eq("id", assetId)
+            .maybeSingle();
+
+        if (!row?.storage_path) {
+            return null;
+        }
+
+        const { data, error } = await client.storage
+            .from(ARTWORK_STORAGE_BUCKET)
+            .createSignedUrl(row.storage_path, expiresInSeconds);
+
+        if (error || !data?.signedUrl) {
+            return null;
+        }
+
+        return data.signedUrl;
+    }
+
     async resolveUrl(assetId: string): Promise<string | null> {
         const asset = await this.download(assetId);
 
@@ -188,7 +223,6 @@ export class CloudAssetStore {
             .from("artwork_assets")
             .select("storage_path")
             .eq("id", assetId)
-            .eq("user_id", this.userId)
             .maybeSingle();
 
         if (!row?.storage_path) {
