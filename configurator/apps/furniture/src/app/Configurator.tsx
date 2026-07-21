@@ -24,6 +24,7 @@ import { AppShellProvider, ComponentRowAlignProvider, useAppShell } from "../ui/
 import { useComponentRowAlign } from "../ui/shell/ComponentRowAlign";
 import { RightPanelColumn } from "../ui/shell/RightPanelColumn";
 import { WorkspaceChrome } from "../ui/shell/WorkspaceChrome";
+import { ConfiguratorFloorLayout } from "../ui/shell/ConfiguratorFloorLayout";
 import { SelectionActionBar } from "../ui/shell/SelectionActionBar";
 import {
     PresentationModeProvider,
@@ -79,6 +80,11 @@ function ConfiguratorShell() {
 
     return (
         <EditorErrorBoundary>
+            {floorOnlyMode && showFloorPanel ? (
+                <ConfiguratorFloorLayout onExit={handleExitWorkspace}>
+                    {!isARPreviewOpen && <StandCanvas />}
+                </ConfiguratorFloorLayout>
+            ) : (
             <div
                 ref={registerViewport}
                 style={{
@@ -89,11 +95,7 @@ function ConfiguratorShell() {
                     background: "#ffffff"
                 }}
             >
-                {showFloorPanel && (
-                    <LeftSidebar floorOnly onExit={handleExitWorkspace} />
-                )}
-
-                {isPresentationMode && !floorOnlyMode && (
+                {isPresentationMode && (
                     <div style={styles.presentationBar}>
                         <span style={styles.presentationLabel}>Presentation preview</span>
                         <button
@@ -160,6 +162,8 @@ function ConfiguratorShell() {
                 />
                 <LoadingOverlay />
             </div>
+            )}
+            {floorOnlyMode && showFloorPanel && <LoadingOverlay />}
         </EditorErrorBoundary>
     );
 }

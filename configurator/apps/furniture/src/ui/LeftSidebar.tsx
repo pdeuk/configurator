@@ -10,8 +10,6 @@ import {
 } from "./shell/layout";
 
 interface LeftSidebarProps {
-    floorOnly?: boolean;
-    onExit?: () => void;
     libraryOpen?: boolean;
     mockupsOpen?: boolean;
     onLibraryOpenChange?: (open: boolean) => void;
@@ -19,8 +17,6 @@ interface LeftSidebarProps {
 }
 
 export function LeftSidebar({
-    floorOnly = false,
-    onExit,
     libraryOpen: libraryOpenProp,
     mockupsOpen: mockupsOpenProp,
     onLibraryOpenChange,
@@ -48,34 +44,25 @@ export function LeftSidebar({
 
     return (
         <div style={styles.sidebar}>
-            <Toolbar floorOnly={floorOnly} />
-            {!floorOnly && (
-                <>
-                    <button
-                        type="button"
-                        style={styles.toggle}
-                        onClick={() => setLibraryOpen(!libraryOpen)}
-                        aria-expanded={libraryOpen}
-                    >
-                        {libraryOpen ? "Hide component library" : "Component library"}
-                    </button>
-                    {libraryOpen && <ComponentLibraryPanel />}
-                    <button
-                        type="button"
-                        style={styles.toggle}
-                        onClick={() => setMockupsOpen(!mockupsOpen)}
-                        aria-expanded={mockupsOpen}
-                    >
-                        {mockupsOpen ? "Hide mockups" : "Mockups & print preview"}
-                    </button>
-                    {mockupsOpen && <MockupPanel />}
-                </>
-            )}
-            {floorOnly && onExit && (
-                <button type="button" style={styles.exitButton} onClick={onExit}>
-                    Exit
-                </button>
-            )}
+            <Toolbar />
+            <button
+                type="button"
+                style={styles.toggle}
+                onClick={() => setLibraryOpen(!libraryOpen)}
+                aria-expanded={libraryOpen}
+            >
+                {libraryOpen ? "Hide component library" : "Component library"}
+            </button>
+            {libraryOpen && <ComponentLibraryPanel />}
+            <button
+                type="button"
+                style={styles.toggle}
+                onClick={() => setMockupsOpen(!mockupsOpen)}
+                aria-expanded={mockupsOpen}
+            >
+                {mockupsOpen ? "Hide mockups" : "Mockups & print preview"}
+            </button>
+            {mockupsOpen && <MockupPanel />}
         </div>
     );
 }
@@ -107,18 +94,5 @@ const styles = {
         font: "inherit",
         fontSize: 12,
         textAlign: "left"
-    },
-    exitButton: {
-        marginTop: "auto",
-        flexShrink: 0,
-        border: "1px solid #64748b",
-        background: "#334155",
-        color: "#f7f7f2",
-        borderRadius: 8,
-        padding: "10px 12px",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 13,
-        fontWeight: 600
     }
 } satisfies Record<string, CSSProperties>;
