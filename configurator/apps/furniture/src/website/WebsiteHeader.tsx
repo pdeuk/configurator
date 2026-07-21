@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { enableLocalDemoMode } from "../app/localDemoMode";
-import { CartIcon, GlobeIcon, MenuIcon, SearchIcon } from "./icons";
+import { CartIcon, GlobeIcon, MenuIcon } from "./icons";
 import { WebsiteProductsNav } from "./WebsiteProductsNav";
+import { WebsiteProductSearch } from "./WebsiteProductSearch";
 import { t } from "./websiteTheme";
 
 export function WebsiteHeader() {
@@ -37,15 +38,7 @@ export function WebsiteHeader() {
                         </Link>
                     </div>
 
-                    <label className="website-search" style={styles.searchWrap}>
-                        <SearchIcon style={styles.searchIcon} />
-                        <input
-                            type="search"
-                            placeholder="Search collections, materials, finishes…"
-                            style={styles.searchInput}
-                            aria-label="Search"
-                        />
-                    </label>
+                    <WebsiteProductSearch />
 
                     <div style={styles.actions}>
                         <button type="button" className="website-btn-configurator" onClick={openConfigurator}>
@@ -117,33 +110,6 @@ const styles = {
         letterSpacing: "0.18em",
         textTransform: "uppercase" as const,
         color: t.colors.muted
-    },
-    searchWrap: {
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        minWidth: 0,
-        height: 54,
-        padding: "0 20px",
-        borderRadius: t.radius.md,
-        border: `1px solid ${t.colors.border}`,
-        background: t.colors.surface
-    },
-    searchIcon: {
-        width: 18,
-        height: 18,
-        color: t.colors.muted,
-        flexShrink: 0
-    },
-    searchInput: {
-        flex: 1,
-        minWidth: 0,
-        border: "none",
-        outline: "none",
-        background: "transparent",
-        color: t.colors.ink,
-        font: "inherit",
-        fontSize: 15
     },
     actions: {
         display: "flex",

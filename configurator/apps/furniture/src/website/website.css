@@ -206,6 +206,12 @@
     background: rgba(2, 132, 199, 0.06);
 }
 
+.website-search-result:hover,
+.website-search-result:focus-visible {
+    background: rgba(2, 132, 199, 0.06);
+    outline: none;
+}
+
 .website-search:focus-within {
     border-color: rgba(2, 132, 199, 0.35);
     box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.08);
