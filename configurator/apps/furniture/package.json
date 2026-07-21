@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prepare:floors": "node scripts/prepare-floor-assets.mjs"
+    "prepare:floors": "node scripts/prepare-floor-assets.mjs",
+    "generate:assets": "node scripts/generate-asset-folders.mjs"
   },
   "dependencies": {
     "@configurator/core": "*",

@@ -61,10 +61,18 @@ and load the matching GLB from this tree (once wired in code).
 
 ---
 
-## Tips
+## Regenerate empty folders
 
-- Keep GLB files optimized (Draco compression if possible).
-- Use consistent scale (meters) and origin at floor center.
-- Name textures inside the GLB or use embedded materials.
+From the repo root:
 
-When models are ready, ask to **wire 3D previews into the website**.
+```bash
+npm run generate:assets -w @configurator/furniture
+```
+
+Or:
+
+```bash
+node apps/furniture/scripts/generate-asset-folders.mjs
+```
+
+This creates the full `models/products/` tree to match `images/products/` (156 product variant folders).

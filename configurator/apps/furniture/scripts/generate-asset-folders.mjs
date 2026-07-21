@@ -136,4 +136,45 @@ for (const category of CATEGORIES) {
     }
 }
 
+const modelsProductsReadme = join(publicRoot, "models", "products", "README.md");
+if (!existsSync(modelsProductsReadme)) {
+    writeFileSync(
+        modelsProductsReadme,
+        `# Product 3D models
+
+Mirror of \`public/images/products/\` — one folder per product variant.
+
+Drop a GLB file here:
+
+\`\`\`
+models/products/{category}/{subcategory}/{product-slug}/model.glb
+\`\`\`
+
+Product slugs: \`{subcategory-slug}-studio\`, \`-signature\`, or \`-plus\`.
+
+Example:
+
+\`\`\`
+models/products/sofas/modular-sofas/modular-sofas-studio/model.glb
+\`\`\`
+
+Regenerate empty folders:
+
+\`\`\`bash
+node apps/furniture/scripts/generate-asset-folders.mjs
+\`\`\`
+`
+    );
+}
+
+let modelProductFolderCount = 0;
+for (const category of CATEGORIES) {
+    for (const subcategorySlug of category.subcategories) {
+        for (const variant of PRODUCT_VARIANTS) {
+            modelProductFolderCount += 1;
+        }
+    }
+}
+
 console.log("Asset folders created under apps/furniture/public/");
+console.log(`Product model folders: ${modelProductFolderCount} (expect model.glb in each)`);
