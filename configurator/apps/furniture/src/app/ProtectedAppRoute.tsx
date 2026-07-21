@@ -1,12 +1,14 @@
-import { Navigate } from "react-router-dom";
-import { isSupabaseConfigured } from "../services/cloud";
+import { useEffect } from "react";
 import { useCloudSession } from "../ui/cloud";
 import { Configurator } from "./Configurator";
-import { isLocalDemoMode } from "./localDemoMode";
+import { enableLocalDemoMode } from "./localDemoMode";
 
 export function ProtectedAppRoute() {
-    const { user, isSessionReady } = useCloudSession();
-    const supabaseConfigured = isSupabaseConfigured();
+    const { isSessionReady } = useCloudSession();
+
+    useEffect(() => {
+        enableLocalDemoMode();
+    }, []);
 
     if (!isSessionReady) {
         return (
@@ -14,18 +16,6 @@ export function ProtectedAppRoute() {
                 <p style={styles.loadingText}>Loading workspace…</p>
             </div>
         );
-    }
-
-    if (supabaseConfigured) {
-        if (!user) {
-            return <Navigate to="/" replace />;
-        }
-
-        return <Configurator />;
-    }
-
-    if (!isLocalDemoMode()) {
-        return <Navigate to="/" replace />;
     }
 
     return <Configurator />;
