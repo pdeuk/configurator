@@ -1,4 +1,5 @@
 import { WebsiteCarousel } from "../website/WebsiteCarousel";
+import { WebsiteContentSections } from "../website/WebsiteContentSections";
 import { WebsiteHeader } from "../website/WebsiteHeader";
 
 export function LandingPage() {
@@ -7,6 +8,7 @@ export function LandingPage() {
             <WebsiteHeader />
             <main style={styles.main}>
                 <WebsiteCarousel />
+                <WebsiteContentSections />
             </main>
         </div>
     );
