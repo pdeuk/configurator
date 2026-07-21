@@ -1,13 +1,30 @@
+import { Link } from "react-router-dom";
+
 type SectionLayout = "text-left" | "text-right";
+type MediaKind = "image" | "model";
 
 interface ContentSectionProps {
     layout: SectionLayout;
     title: string;
     paragraph: string;
     imageLabel: string;
+    mediaKind?: MediaKind;
 }
 
-function ContentSection({ layout, title, paragraph, imageLabel }: ContentSectionProps) {
+const DEMO_ITEMS = Array.from({ length: 9 }, (_, index) => ({
+    id: `demo-${index + 1}`,
+    title: `Demo title ${index + 1}`,
+    paragraph:
+        "Placeholder paragraph text for this demo card. Add a short description once the 3D model is ready."
+}));
+
+function ContentSection({
+    layout,
+    title,
+    paragraph,
+    imageLabel,
+    mediaKind = "image"
+}: ContentSectionProps) {
     const textBlock = (
         <div style={styles.textBlock}>
             <h2 style={styles.title}>{title}</h2>
@@ -18,7 +35,9 @@ function ContentSection({ layout, title, paragraph, imageLabel }: ContentSection
     const imageBlock = (
         <div style={styles.imagePlaceholder} aria-label={imageLabel}>
             <span style={styles.imageLabel}>{imageLabel}</span>
-            <span style={styles.imageHint}>Placeholder image</span>
+            <span style={styles.imageHint}>
+                {mediaKind === "model" ? "GLB / animated 3D placeholder" : "Placeholder image"}
+            </span>
         </div>
     );
 
@@ -54,6 +73,34 @@ export function WebsiteContentSections() {
                 paragraph="Placeholder paragraph text goes here. Use this area for a second highlight block with supporting copy and a visual on the opposite side."
                 imageLabel="Design inspiration"
             />
+            <ContentSection
+                layout="text-left"
+                title="Placeholder title"
+                paragraph="Placeholder paragraph text goes here. This empty media area is reserved for a future GLB model that can later be animated and presented beside this text."
+                imageLabel="3D model showcase"
+                mediaKind="model"
+            />
+            <section style={styles.demosSection}>
+                <div style={styles.demosHeading}>
+                    <h2 style={styles.demosTitle}>Demos</h2>
+                </div>
+                <div style={styles.demosGrid}>
+                    {DEMO_ITEMS.map(item => (
+                        <article key={item.id} style={styles.demoCard}>
+                            <div style={styles.demoMediaPlaceholder} aria-label={`${item.title} 3D model placeholder`}>
+                                <span style={styles.demoMediaLabel}>3D model placeholder</span>
+                            </div>
+                            <div style={styles.demoContent}>
+                                <h3 style={styles.demoTitle}>{item.title}</h3>
+                                <p style={styles.demoParagraph}>{item.paragraph}</p>
+                                <Link to="/" style={styles.demoLink}>
+                                    Learn More
+                                </Link>
+                            </div>
+                        </article>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }
@@ -107,5 +154,68 @@ const styles = {
     imageHint: {
         fontSize: 13,
         color: "rgba(17, 24, 39, 0.5)"
+    },
+    demosSection: {
+        display: "grid",
+        gap: 28,
+        paddingTop: 12
+    },
+    demosHeading: {
+        display: "flex",
+        justifyContent: "center"
+    },
+    demosTitle: {
+        margin: 0,
+        fontSize: "clamp(30px, 3.4vw, 44px)",
+        fontWeight: 700,
+        lineHeight: 1.1,
+        color: "#111827",
+        textAlign: "center" as const
+    },
+    demosGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+        gap: 28
+    },
+    demoCard: {
+        display: "grid",
+        gap: 18,
+        alignContent: "start"
+    },
+    demoMediaPlaceholder: {
+        display: "grid",
+        placeItems: "center",
+        minHeight: 240,
+        borderRadius: 16,
+        border: "1px dashed #cbd5e1",
+        background: "#ffffff"
+    },
+    demoMediaLabel: {
+        fontSize: 15,
+        fontWeight: 600,
+        color: "rgba(17, 24, 39, 0.58)"
+    },
+    demoContent: {
+        display: "grid",
+        gap: 10
+    },
+    demoTitle: {
+        margin: 0,
+        fontSize: 20,
+        fontWeight: 600,
+        lineHeight: 1.3,
+        color: "#111827"
+    },
+    demoParagraph: {
+        margin: 0,
+        fontSize: 15,
+        lineHeight: 1.65,
+        color: "#4b5563"
+    },
+    demoLink: {
+        color: "#111827",
+        fontSize: 14,
+        fontWeight: 600,
+        textDecoration: "underline"
     }
 } satisfies Record<string, import("react").CSSProperties>;
