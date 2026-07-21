@@ -1,5 +1,11 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { CloudSessionProvider } from "../ui/cloud";
+import {
+    WebsiteCategoryPage,
+    WebsiteProductPage,
+    WebsiteProductsHubPage,
+    WebsiteSubcategoryPage
+} from "../website/WebsiteBrowsePages";
 import { CustomerPortal } from "./CustomerPortal";
 import { InviteSignupPage } from "./InviteSignupPage";
 import { LandingPage } from "./LandingPage";
@@ -12,6 +18,16 @@ export function App() {
             <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
+                    <Route path="/products" element={<WebsiteProductsHubPage />} />
+                    <Route path="/products/:categorySlug" element={<WebsiteCategoryPage />} />
+                    <Route
+                        path="/products/:categorySlug/:subcategorySlug"
+                        element={<WebsiteSubcategoryPage />}
+                    />
+                    <Route
+                        path="/products/:categorySlug/:subcategorySlug/:productSlug"
+                        element={<WebsiteProductPage />}
+                    />
                     <Route path="/join" element={<InviteSignupPage />} />
                     <Route path="/app" element={<ProtectedAppRoute />} />
                     <Route path="/share/:token" element={<SharedProjectViewer />} />

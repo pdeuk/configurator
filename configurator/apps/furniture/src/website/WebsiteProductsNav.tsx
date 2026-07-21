@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ChevronDownIcon, CloseIcon } from "./icons";
 import { PRODUCT_CATEGORIES } from "./productNavData";
 
@@ -57,9 +58,13 @@ export function WebsiteProductsNav({ isOpen, onClose }: WebsiteProductsNavProps)
                         return (
                             <div key={category.id} style={styles.navItem}>
                                 <div style={styles.navRow}>
-                                    <button type="button" style={styles.categoryButton}>
+                                    <Link
+                                        to={`/products/${category.slug}`}
+                                        style={styles.categoryButton}
+                                        onClick={onClose}
+                                    >
                                         {category.name}
-                                    </button>
+                                    </Link>
                                     <button
                                         type="button"
                                         style={{
@@ -77,10 +82,14 @@ export function WebsiteProductsNav({ isOpen, onClose }: WebsiteProductsNavProps)
                                 {isExpanded ? (
                                     <ul style={styles.subcategoryList}>
                                         {category.subcategories.map(subcategory => (
-                                            <li key={subcategory}>
-                                                <button type="button" style={styles.subcategoryButton}>
-                                                    {subcategory}
-                                                </button>
+                                            <li key={subcategory.id}>
+                                                <Link
+                                                    to={`/products/${category.slug}/${subcategory.slug}`}
+                                                    style={styles.subcategoryButton}
+                                                    onClick={onClose}
+                                                >
+                                                    {subcategory.name}
+                                                </Link>
                                             </li>
                                         ))}
                                     </ul>
@@ -164,15 +173,15 @@ const styles = {
         padding: "0 8px 0 12px"
     },
     categoryButton: {
-        border: "none",
-        background: "transparent",
+        display: "block",
         color: "#111827",
-        font: "inherit",
+        fontFamily: "inherit",
         fontSize: 16,
         fontWeight: 600,
         textAlign: "left" as const,
         padding: "12px 8px",
-        cursor: "pointer"
+        cursor: "pointer",
+        textDecoration: "none"
     },
     expandButton: {
         display: "grid",
@@ -201,15 +210,15 @@ const styles = {
         gap: 2
     },
     subcategoryButton: {
+        display: "block",
         width: "100%",
-        border: "none",
-        background: "transparent",
         color: "#475569",
-        font: "inherit",
+        fontFamily: "inherit",
         fontSize: 15,
         textAlign: "left" as const,
         padding: "10px 12px",
         borderRadius: 8,
-        cursor: "pointer"
+        cursor: "pointer",
+        textDecoration: "none"
     }
 } satisfies Record<string, import("react").CSSProperties>;

@@ -1,30 +1,22 @@
 import { WebsiteCarousel } from "../website/WebsiteCarousel";
 import { WebsiteContentSections } from "../website/WebsiteContentSections";
-import { WebsiteHeader } from "../website/WebsiteHeader";
+import { WebsiteLayout } from "../website/WebsiteLayout";
 
 export function LandingPage() {
     return (
-        <div style={styles.page}>
-            <WebsiteHeader />
-            <main style={styles.main}>
+        <WebsiteLayout>
+            <div style={styles.content}>
                 <WebsiteCarousel />
                 <WebsiteContentSections />
-            </main>
-        </div>
+            </div>
+        </WebsiteLayout>
     );
 }
 
 const styles = {
-    page: {
-        position: "fixed" as const,
-        inset: 0,
-        overflowY: "auto" as const,
-        background: "#ffffff",
-        color: "#111827",
-        fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif"
-    },
-    main: {
+    content: {
         maxWidth: 1440,
-        margin: "0 auto"
+        margin: "0 auto",
+        width: "100%"
     }
 } satisfies Record<string, import("react").CSSProperties>;
