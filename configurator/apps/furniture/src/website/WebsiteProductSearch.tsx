@@ -2,6 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { SearchIcon } from "./icons";
 import { searchProducts } from "./productSearch";
+import { WebsiteAssetImage } from "./WebsiteAssetImage";
+import { productHeroPath, productHeroSeed } from "./websiteAssets";
 import { t } from "./websiteTheme";
 
 export function WebsiteProductSearch() {
@@ -79,10 +81,29 @@ export function WebsiteProductSearch() {
                                 role="option"
                                 onClick={handleSelect}
                             >
-                                <span style={styles.resultName}>{result.product.name}</span>
-                                <span style={styles.resultMeta}>
-                                    {result.category.name} · {result.subcategory.name}
-                                </span>
+                                <div style={styles.resultThumb}>
+                                    <WebsiteAssetImage
+                                        localSrc={productHeroPath(
+                                            result.category.slug,
+                                            result.subcategory.slug,
+                                            result.product.slug
+                                        )}
+                                        seed={productHeroSeed(
+                                            result.category.slug,
+                                            result.subcategory.slug,
+                                            result.product.slug
+                                        )}
+                                        alt={result.product.name}
+                                        width={160}
+                                        height={160}
+                                    />
+                                </div>
+                                <div style={styles.resultCopy}>
+                                    <span style={styles.resultName}>{result.product.name}</span>
+                                    <span style={styles.resultMeta}>
+                                        {result.category.name} · {result.subcategory.name}
+                                    </span>
+                                </div>
                             </Link>
                         ))
                     )}
@@ -141,12 +162,27 @@ const styles = {
         overflowY: "auto" as const
     },
     resultLink: {
-        display: "grid",
-        gap: 4,
-        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 12px",
         borderRadius: 10,
         textDecoration: "none",
         color: t.colors.ink
+    },
+    resultThumb: {
+        flexShrink: 0,
+        width: 52,
+        height: 52,
+        borderRadius: 8,
+        overflow: "hidden",
+        border: `1px solid ${t.colors.borderSoft}`,
+        background: t.colors.bg
+    },
+    resultCopy: {
+        display: "grid",
+        gap: 4,
+        minWidth: 0
     },
     resultName: {
         fontSize: 14,
