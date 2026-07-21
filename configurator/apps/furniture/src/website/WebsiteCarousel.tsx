@@ -1,32 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
-import { premiumGradients, t } from "./websiteTheme";
+import { WebsiteAssetImage } from "./WebsiteAssetImage";
+import { carouselSlidePaths, carouselSlideSeed } from "./websiteAssets";
+import { t } from "./websiteTheme";
 
 const SLIDES = [
     {
-        id: "living-room",
+        id: "living-room" as const,
         label: "Living room collection",
-        subtitle: "Refined seating and statement silhouettes",
-        gradient: premiumGradients.livingRoom
+        subtitle: "Refined seating and statement silhouettes"
     },
     {
-        id: "bedroom",
+        id: "bedroom" as const,
         label: "Bedroom essentials",
-        subtitle: "Calm textures and tailored comfort",
-        gradient: premiumGradients.bedroom
+        subtitle: "Calm textures and tailored comfort"
     },
     {
-        id: "office",
+        id: "office" as const,
         label: "Home office range",
-        subtitle: "Workspaces with quiet luxury",
-        gradient: premiumGradients.office
+        subtitle: "Workspaces with quiet luxury"
     },
     {
-        id: "outdoor",
+        id: "outdoor" as const,
         label: "Outdoor furniture",
-        subtitle: "Terrace-ready materials and form",
-        gradient: premiumGradients.outdoor
+        subtitle: "Terrace-ready materials and form"
     }
 ] as const;
 
@@ -59,12 +57,14 @@ export function WebsiteCarousel() {
                 >
                     {SLIDES.map(slide => (
                         <article key={slide.id} style={styles.slide} aria-hidden={slide.id !== SLIDES[activeIndex]?.id}>
-                            <div
-                                style={{
-                                    ...styles.placeholder,
-                                    background: slide.gradient
-                                }}
-                            >
+                            <div style={styles.slideFrame}>
+                                <WebsiteAssetImage
+                                    localSrc={carouselSlidePaths[slide.id]}
+                                    seed={carouselSlideSeed(slide.id)}
+                                    alt={slide.label}
+                                    width={1920}
+                                    height={900}
+                                />
                                 <div style={styles.placeholderOverlay} />
                                 <div style={styles.placeholderContent}>
                                     <span className="website-configurator-badge">3D configurator</span>
@@ -148,11 +148,10 @@ const styles = {
     slide: {
         minWidth: "100%"
     },
-    placeholder: {
+    slideFrame: {
         position: "relative" as const,
-        display: "grid",
-        placeItems: "center",
-        minHeight: "clamp(320px, 44vw, 560px)"
+        minHeight: "clamp(320px, 44vw, 560px)",
+        overflow: "hidden"
     },
     placeholderOverlay: {
         position: "absolute" as const,
@@ -161,10 +160,12 @@ const styles = {
             "linear-gradient(180deg, rgba(9, 9, 11, 0.12) 0%, rgba(9, 9, 11, 0.55) 78%, rgba(9, 9, 11, 0.72) 100%)"
     },
     placeholderContent: {
-        position: "relative" as const,
+        position: "absolute" as const,
+        inset: 0,
         zIndex: 1,
         display: "grid",
         gap: 16,
+        placeContent: "center",
         justifyItems: "center",
         textAlign: "center" as const,
         padding: "0 24px"

@@ -6,9 +6,20 @@ import {
     getSubcategoryBySlug,
     PRODUCT_CATEGORIES
 } from "./productNavData";
+import { WebsiteAssetImage } from "./WebsiteAssetImage";
 import { WebsiteContactSection } from "./WebsiteContactSection";
 import { WebsiteLayout } from "./WebsiteLayout";
-import { bodyTextStyle, displayTitleStyle, premiumGradients, t } from "./websiteTheme";
+import {
+    categoryHeroPath,
+    categoryHeroSeed,
+    productGalleryPath,
+    productGallerySeed,
+    productHeroPath,
+    productHeroSeed,
+    subcategoryCollectionPath,
+    subcategoryCollectionSeed
+} from "./websiteAssets";
+import { bodyTextStyle, displayTitleStyle, t } from "./websiteTheme";
 
 export function WebsiteCategoryPage() {
     const { categorySlug } = useParams();
@@ -38,7 +49,13 @@ export function WebsiteCategoryPage() {
                                 className="website-card-link"
                             >
                                 <div style={styles.collectionImage}>
-                                    <span style={styles.collectionImageLabel}>{subcategory.name}</span>
+                                    <WebsiteAssetImage
+                                        localSrc={subcategoryCollectionPath(category.slug, subcategory.slug)}
+                                        seed={subcategoryCollectionSeed(category.slug, subcategory.slug)}
+                                        alt={subcategory.name}
+                                        width={800}
+                                        height={600}
+                                    />
                                 </div>
                                 <div style={styles.collectionContent}>
                                     <h2 className="website-heading" style={styles.cardTitle}>
@@ -84,7 +101,13 @@ export function WebsiteSubcategoryPage() {
                         {subcategory.products.map(product => (
                             <article key={product.id} style={styles.productCard}>
                                 <div style={styles.productImage}>
-                                    <span style={styles.productImageLabel}>{product.name}</span>
+                                    <WebsiteAssetImage
+                                        localSrc={productHeroPath(category.slug, subcategory.slug, product.slug)}
+                                        seed={productHeroSeed(category.slug, subcategory.slug, product.slug)}
+                                        alt={product.name}
+                                        width={800}
+                                        height={800}
+                                    />
                                 </div>
                                 <div style={styles.collectionContent}>
                                     <h2 className="website-heading" style={styles.cardTitle}>
@@ -139,7 +162,13 @@ export function WebsiteProductPage() {
                 <section style={styles.productHero}>
                     <div style={styles.productHeroMedia}>
                         <div style={styles.productMainImage}>
-                            <span style={styles.productImageLabel}>{product.name}</span>
+                            <WebsiteAssetImage
+                                localSrc={productHeroPath(category.slug, subcategory.slug, product.slug)}
+                                seed={productHeroSeed(category.slug, subcategory.slug, product.slug)}
+                                alt={product.name}
+                                width={1200}
+                                height={1200}
+                            />
                         </div>
                     </div>
                     <div style={styles.productHeroContent}>
@@ -170,14 +199,30 @@ export function WebsiteProductPage() {
                             Product gallery
                         </h2>
                         <p style={bodyTextStyle()}>
-                            Add additional product images, detail shots, finish variations, and room
-                            scenes here before sending users into the configurator.
+                            Gallery images load automatically until you add your own files to the product gallery
+                            folder.
                         </p>
                     </div>
                     <div style={styles.galleryGrid}>
                         {Array.from({ length: 4 }, (_, index) => (
                             <div key={index} style={styles.galleryImage}>
-                                <span style={styles.galleryImageLabel}>Gallery image {index + 1}</span>
+                                <WebsiteAssetImage
+                                    localSrc={productGalleryPath(
+                                        category.slug,
+                                        subcategory.slug,
+                                        product.slug,
+                                        index + 1
+                                    )}
+                                    seed={productGallerySeed(
+                                        category.slug,
+                                        subcategory.slug,
+                                        product.slug,
+                                        index + 1
+                                    )}
+                                    alt={`${product.name} gallery ${index + 1}`}
+                                    width={800}
+                                    height={800}
+                                />
                             </div>
                         ))}
                     </div>
@@ -235,7 +280,13 @@ export function WebsiteProductsHubPage() {
                                 className="website-card-link"
                             >
                                 <div style={styles.collectionImage}>
-                                    <span style={styles.collectionImageLabel}>{category.name}</span>
+                                    <WebsiteAssetImage
+                                        localSrc={categoryHeroPath(category.slug)}
+                                        seed={categoryHeroSeed(category.slug)}
+                                        alt={category.name}
+                                        width={800}
+                                        height={600}
+                                    />
                                 </div>
                                 <div style={styles.collectionContent}>
                                     <h2 className="website-heading" style={styles.cardTitle}>
@@ -275,12 +326,10 @@ const styles = {
         display: "grid"
     },
     productMainImage: {
-        display: "grid",
-        placeItems: "center",
         minHeight: 460,
-        borderRadius: t.radius.xl,
+        borderRadius: t.radius.lg,
+        overflow: "hidden",
         border: `1px solid ${t.colors.borderSoft}`,
-        background: premiumGradients.placeholder,
         boxShadow: t.shadow.md
     },
     productHeroContent: {
@@ -306,28 +355,12 @@ const styles = {
         boxShadow: t.shadow.sm
     },
     collectionImage: {
-        display: "grid",
-        placeItems: "center",
         minHeight: 240,
-        background: premiumGradients.placeholder
+        overflow: "hidden"
     },
     productImage: {
-        display: "grid",
-        placeItems: "center",
         minHeight: 260,
-        background: premiumGradients.placeholder
-    },
-    collectionImageLabel: {
-        fontSize: 22,
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        color: t.colors.ink
-    },
-    productImageLabel: {
-        fontSize: 26,
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        color: t.colors.ink
+        overflow: "hidden"
     },
     collectionContent: {
         display: "grid",
@@ -396,20 +429,11 @@ const styles = {
         gap: 20
     },
     galleryImage: {
-        display: "grid",
-        placeItems: "center",
         minHeight: 190,
         borderRadius: t.radius.md,
+        overflow: "hidden",
         border: `1px solid ${t.colors.borderSoft}`,
-        background: t.colors.surface,
         boxShadow: t.shadow.sm
-    },
-    galleryImageLabel: {
-        fontSize: 14,
-        fontWeight: 600,
-        letterSpacing: "0.06em",
-        textTransform: "uppercase" as const,
-        color: t.colors.muted
     },
     relatedLinks: {
         display: "flex",

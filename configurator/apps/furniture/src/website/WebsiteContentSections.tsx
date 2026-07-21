@@ -1,32 +1,36 @@
 import { Link } from "react-router-dom";
+import { WebsiteAssetImage } from "./WebsiteAssetImage";
 import { WebsiteContactSection } from "./WebsiteContactSection";
-import { bodyTextStyle, displayTitleStyle, eyebrowStyle, premiumGradients, t } from "./websiteTheme";
+import {
+    demoPreviewPath,
+    demoPreviewSeed,
+    homepageSectionPaths,
+    homepageSectionSeed
+} from "./websiteAssets";
+import { bodyTextStyle, displayTitleStyle, eyebrowStyle, t } from "./websiteTheme";
 
 type SectionLayout = "text-left" | "text-right";
-type MediaKind = "image" | "model";
 
 interface ContentSectionProps {
     layout: SectionLayout;
     title: string;
     paragraph: string;
-    imageLabel: string;
-    mediaKind?: MediaKind;
+    localSrc: string;
+    seed: string;
+    alt: string;
 }
 
-const DEMO_ITEMS = Array.from({ length: 9 }, (_, index) => ({
-    id: `demo-${index + 1}`,
-    title: `Demo title ${index + 1}`,
-    paragraph:
-        "Placeholder paragraph text for this demo card. Add a short description once the 3D model is ready."
-}));
+const DEMO_ITEMS = Array.from({ length: 9 }, (_, index) => {
+    const id = `demo-${String(index + 1).padStart(2, "0")}`;
+    return {
+        id,
+        title: `Demo title ${index + 1}`,
+        paragraph:
+            "Explore this configurable product family with automatic preview imagery until your own assets are added."
+    };
+});
 
-function ContentSection({
-    layout,
-    title,
-    paragraph,
-    imageLabel,
-    mediaKind = "image"
-}: ContentSectionProps) {
+function ContentSection({ layout, title, paragraph, localSrc, seed, alt }: ContentSectionProps) {
     const textBlock = (
         <div style={styles.textBlock}>
             <span className="website-eyebrow">Collection story</span>
@@ -38,11 +42,8 @@ function ContentSection({
     );
 
     const imageBlock = (
-        <div style={styles.imagePlaceholder} aria-label={imageLabel}>
-            <span style={styles.imageLabel}>{imageLabel}</span>
-            <span style={styles.imageHint}>
-                {mediaKind === "model" ? "3D model preview area" : "Image placeholder"}
-            </span>
+        <div style={styles.imageFrame}>
+            <WebsiteAssetImage localSrc={localSrc} seed={seed} alt={alt} width={1200} height={900} />
         </div>
     );
 
@@ -69,21 +70,26 @@ export function WebsiteContentSections() {
             <ContentSection
                 layout="text-left"
                 title="Crafted for considered spaces"
-                paragraph="Use this editorial block for a collection story, material focus, or brand narrative that feels closer to a luxury lookbook than a generic product page."
-                imageLabel="Featured collection"
+                paragraph="Editorial imagery loads automatically for now. Drop your own file into the matching folder anytime to override it."
+                localSrc={homepageSectionPaths.featuredCollection}
+                seed={homepageSectionSeed("featuredCollection")}
+                alt="Featured collection"
             />
             <ContentSection
                 layout="text-right"
                 title="Designed to be discovered"
-                paragraph="This section can introduce a seasonal edit, showroom highlight, or inspiration-led product family before visitors move deeper into categories and individual products."
-                imageLabel="Design inspiration"
+                paragraph="Each block uses a unique placeholder image based on its section name, so the homepage feels alive without sourcing hundreds of photos."
+                localSrc={homepageSectionPaths.designInspiration}
+                seed={homepageSectionSeed("designInspiration")}
+                alt="Design inspiration"
             />
             <ContentSection
                 layout="text-left"
                 title="Configure before you buy"
-                paragraph="This area is reserved for a live 3D product preview. It should feel like part of the shopping experience, not a separate tool bolted onto the website."
-                imageLabel="3D model showcase"
-                mediaKind="model"
+                paragraph="This area is reserved for a live 3D preview. For now it shows a poster image until a GLB model is added to the models folder."
+                localSrc={homepageSectionPaths.modelShowcasePoster}
+                seed={homepageSectionSeed("modelShowcasePoster")}
+                alt="3D model showcase"
             />
             <section style={styles.demosSection}>
                 <div style={styles.demosHeading}>
@@ -95,8 +101,14 @@ export function WebsiteContentSections() {
                 <div style={styles.demosGrid}>
                     {DEMO_ITEMS.map(item => (
                         <article key={item.id} style={styles.demoCard}>
-                            <div style={styles.demoMediaPlaceholder} aria-label={`${item.title} 3D model placeholder`}>
-                                <span style={styles.demoMediaLabel}>3D model placeholder</span>
+                            <div style={styles.demoMediaFrame}>
+                                <WebsiteAssetImage
+                                    localSrc={demoPreviewPath(item.id)}
+                                    seed={demoPreviewSeed(item.id)}
+                                    alt={item.title}
+                                    width={600}
+                                    height={600}
+                                />
                             </div>
                             <div style={styles.demoContent}>
                                 <h3 className="website-heading" style={styles.demoTitle}>
@@ -113,6 +125,16 @@ export function WebsiteContentSections() {
             </section>
             <section style={styles.ctaSection}>
                 <div style={styles.ctaBanner}>
+                    <div style={styles.ctaBackgroundWrap}>
+                        <WebsiteAssetImage
+                            localSrc={homepageSectionPaths.ctaBanner}
+                            seed={homepageSectionSeed("ctaBanner")}
+                            alt="Configurator preview"
+                            width={1920}
+                            height={700}
+                        />
+                    </div>
+                    <div style={styles.ctaOverlay} />
                     <div style={styles.ctaCopy}>
                         <span className="website-eyebrow" style={styles.ctaEyebrow}>
                             Interactive preview
@@ -154,29 +176,12 @@ const styles = {
         gap: 18,
         padding: "8px 0"
     },
-    imagePlaceholder: {
-        display: "grid",
-        placeItems: "center",
-        alignContent: "center",
-        gap: 10,
+    imageFrame: {
         minHeight: 360,
         borderRadius: t.radius.lg,
+        overflow: "hidden",
         border: `1px solid ${t.colors.borderSoft}`,
-        background: premiumGradients.placeholder,
         boxShadow: t.shadow.sm
-    },
-    imageLabel: {
-        fontSize: 20,
-        fontWeight: 700,
-        letterSpacing: "-0.02em",
-        color: t.colors.ink
-    },
-    imageHint: {
-        fontSize: 12,
-        fontWeight: 600,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase" as const,
-        color: t.colors.muted
     },
     demosSection: {
         display: "grid",
@@ -189,16 +194,28 @@ const styles = {
         marginRight: "calc(50% - 50vw)"
     },
     ctaBanner: {
+        position: "relative" as const,
         minHeight: 440,
         display: "grid",
         alignItems: "end",
         gap: 28,
         padding: "56px 32px 44px",
-        background: premiumGradients.cta,
-        borderTop: `1px solid ${t.colors.borderSoft}`,
-        borderBottom: `1px solid ${t.colors.borderSoft}`
+        overflow: "hidden",
+        background: t.colors.dark
+    },
+    ctaBackgroundWrap: {
+        position: "absolute" as const,
+        inset: 0
+    },
+    ctaOverlay: {
+        position: "absolute" as const,
+        inset: 0,
+        background:
+            "linear-gradient(180deg, rgba(9, 9, 11, 0.35) 0%, rgba(9, 9, 11, 0.78) 72%, rgba(9, 9, 11, 0.92) 100%)"
     },
     ctaCopy: {
+        position: "relative" as const,
+        zIndex: 1,
         display: "grid",
         gap: 16,
         justifyItems: "center",
@@ -222,6 +239,8 @@ const styles = {
         color: "rgba(255, 255, 255, 0.78)"
     },
     ctaButtonRow: {
+        position: "relative" as const,
+        zIndex: 1,
         display: "flex",
         justifyContent: "center"
     },
@@ -249,20 +268,11 @@ const styles = {
         border: `1px solid ${t.colors.borderSoft}`,
         boxShadow: t.shadow.sm
     },
-    demoMediaPlaceholder: {
-        display: "grid",
-        placeItems: "center",
+    demoMediaFrame: {
         minHeight: 240,
         borderRadius: t.radius.md,
-        border: `1px solid ${t.colors.borderSoft}`,
-        background: t.colors.surface
-    },
-    demoMediaLabel: {
-        fontSize: 14,
-        fontWeight: 600,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase" as const,
-        color: t.colors.muted
+        overflow: "hidden",
+        border: `1px solid ${t.colors.borderSoft}`
     },
     demoContent: {
         display: "grid",
