@@ -95,15 +95,16 @@ const styles = {
         gap: 6
     },
     footerLogoText: {
-        fontSize: 36,
-        fontWeight: 600,
+        fontSize: 28,
+        fontWeight: 700,
         lineHeight: 1,
+        letterSpacing: "-0.04em",
         color: t.colors.ink
     },
     footerLogoSub: {
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.24em",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.18em",
         textTransform: "uppercase" as const,
         color: t.colors.muted
     },
@@ -113,9 +114,9 @@ const styles = {
     },
     footerColumnTitle: {
         margin: 0,
-        fontFamily: t.fonts.display,
-        fontSize: 24,
-        fontWeight: 600,
+        fontSize: 18,
+        fontWeight: 700,
+        letterSpacing: "-0.02em",
         color: t.colors.ink
     },
     socialLinks: {
@@ -143,7 +144,7 @@ const styles = {
         borderRadius: t.radius.lg,
         border: `1px solid ${t.colors.borderSoft}`,
         background:
-            "linear-gradient(135deg, #ebe4da 0%, #d8d0c4 38%, #f7f4ef 38%, #f7f4ef 100%)",
+            "linear-gradient(135deg, #eef2ff 0%, #dbeafe 36%, #f4f4f5 36%, #f4f4f5 100%)",
         boxShadow: t.shadow.sm
     },
     mapPin: {

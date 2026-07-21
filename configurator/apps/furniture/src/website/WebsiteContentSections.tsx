@@ -41,7 +41,7 @@ function ContentSection({
         <div style={styles.imagePlaceholder} aria-label={imageLabel}>
             <span style={styles.imageLabel}>{imageLabel}</span>
             <span style={styles.imageHint}>
-                {mediaKind === "model" ? "GLB / animated 3D placeholder" : "Placeholder image"}
+                {mediaKind === "model" ? "3D model preview area" : "Image placeholder"}
             </span>
         </div>
     );
@@ -80,8 +80,8 @@ export function WebsiteContentSections() {
             />
             <ContentSection
                 layout="text-left"
-                title="Built for interactive presentation"
-                paragraph="This reserved media area is meant for a future animated GLB showcase that demonstrates how the configurator elevates the product experience."
+                title="Configure before you buy"
+                paragraph="This area is reserved for a live 3D product preview. It should feel like part of the shopping experience, not a separate tool bolted onto the website."
                 imageLabel="3D model showcase"
                 mediaKind="model"
             />
@@ -126,7 +126,7 @@ export function WebsiteContentSections() {
                         </p>
                     </div>
                     <div style={styles.ctaButtonRow}>
-                        <Link to="/app" className="website-btn-primary" style={styles.ctaButton}>
+                        <Link to="/app" className="website-btn-configurator" style={styles.ctaButton}>
                             Check Our Configurator
                         </Link>
                     </div>
@@ -166,13 +166,14 @@ const styles = {
         boxShadow: t.shadow.sm
     },
     imageLabel: {
-        fontFamily: t.fonts.display,
-        fontSize: 24,
-        fontWeight: 600,
+        fontSize: 20,
+        fontWeight: 700,
+        letterSpacing: "-0.02em",
         color: t.colors.ink
     },
     imageHint: {
-        fontSize: 13,
+        fontSize: 12,
+        fontWeight: 600,
         letterSpacing: "0.08em",
         textTransform: "uppercase" as const,
         color: t.colors.muted
@@ -188,12 +189,14 @@ const styles = {
         marginRight: "calc(50% - 50vw)"
     },
     ctaBanner: {
-        minHeight: 460,
+        minHeight: 440,
         display: "grid",
         alignItems: "end",
         gap: 28,
         padding: "56px 32px 44px",
-        background: premiumGradients.cta
+        background: premiumGradients.cta,
+        borderTop: `1px solid ${t.colors.borderSoft}`,
+        borderBottom: `1px solid ${t.colors.borderSoft}`
     },
     ctaCopy: {
         display: "grid",
@@ -206,7 +209,7 @@ const styles = {
     },
     ctaEyebrow: {
         ...eyebrowStyle(),
-        color: "rgba(255, 255, 255, 0.72)"
+        color: "rgba(255, 255, 255, 0.58)"
     },
     ctaTitle: {
         ...displayTitleStyle("clamp(2.4rem, 4.8vw, 4rem)"),
@@ -223,8 +226,7 @@ const styles = {
         justifyContent: "center"
     },
     ctaButton: {
-        background: "rgba(255, 255, 255, 0.96)",
-        color: t.colors.ink
+        marginTop: 4
     },
     demosHeading: {
         display: "grid",
@@ -269,9 +271,10 @@ const styles = {
     },
     demoTitle: {
         margin: 0,
-        fontSize: 28,
-        fontWeight: 600,
-        lineHeight: 1.15,
+        fontSize: 22,
+        fontWeight: 700,
+        lineHeight: 1.2,
+        letterSpacing: "-0.02em",
         color: t.colors.ink
     },
     demoParagraph: {

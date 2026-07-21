@@ -48,7 +48,7 @@ export function WebsiteHeader() {
                     </label>
 
                     <div style={styles.actions}>
-                        <button type="button" className="website-btn-primary" onClick={openConfigurator}>
+                        <button type="button" className="website-btn-configurator" onClick={openConfigurator}>
                             Create Furniture
                         </button>
 
@@ -77,9 +77,9 @@ const styles = {
         position: "sticky" as const,
         top: 0,
         zIndex: 20,
-        background: "rgba(247, 244, 239, 0.88)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
+        background: "rgba(255, 255, 255, 0.9)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
         borderBottom: `1px solid ${t.colors.borderSoft}`,
         boxShadow: t.shadow.header
     },
@@ -105,15 +105,16 @@ const styles = {
         color: "inherit"
     },
     logoMark: {
-        fontSize: 28,
-        fontWeight: 600,
+        fontSize: 22,
+        fontWeight: 700,
         lineHeight: 1,
+        letterSpacing: "-0.04em",
         color: t.colors.ink
     },
     logoSub: {
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.24em",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.18em",
         textTransform: "uppercase" as const,
         color: t.colors.muted
     },
@@ -124,9 +125,9 @@ const styles = {
         minWidth: 0,
         height: 54,
         padding: "0 20px",
-        borderRadius: t.radius.pill,
+        borderRadius: t.radius.md,
         border: `1px solid ${t.colors.border}`,
-        background: "rgba(255, 255, 255, 0.72)"
+        background: t.colors.surface
     },
     searchIcon: {
         width: 18,

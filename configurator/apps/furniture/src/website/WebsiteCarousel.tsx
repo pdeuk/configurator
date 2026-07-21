@@ -67,6 +67,7 @@ export function WebsiteCarousel() {
                             >
                                 <div style={styles.placeholderOverlay} />
                                 <div style={styles.placeholderContent}>
+                                    <span className="website-configurator-badge">3D configurator</span>
                                     <span className="website-eyebrow" style={styles.slideEyebrow}>
                                         Featured collection
                                     </span>
@@ -75,7 +76,7 @@ export function WebsiteCarousel() {
                                     </h2>
                                     <p style={styles.placeholderHint}>{slide.subtitle}</p>
                                     {slide.id === "living-room" ? (
-                                        <Link to="/app" className="website-btn-primary" style={styles.ctaButton}>
+                                        <Link to="/app" className="website-btn-configurator" style={styles.ctaButton}>
                                             Check Our Configurator
                                         </Link>
                                     ) : null}
@@ -134,9 +135,10 @@ const styles = {
     viewport: {
         position: "relative" as const,
         overflow: "hidden",
-        borderRadius: t.radius.xl,
+        borderRadius: t.radius.lg,
         background: t.colors.dark,
-        boxShadow: t.shadow.lg
+        border: `1px solid ${t.colors.borderSoft}`,
+        boxShadow: t.shadow.md
     },
     track: {
         display: "flex",
@@ -156,37 +158,35 @@ const styles = {
         position: "absolute" as const,
         inset: 0,
         background:
-            "linear-gradient(180deg, rgba(20, 18, 16, 0.08) 0%, rgba(20, 18, 16, 0.42) 72%, rgba(20, 18, 16, 0.58) 100%)"
+            "linear-gradient(180deg, rgba(9, 9, 11, 0.12) 0%, rgba(9, 9, 11, 0.55) 78%, rgba(9, 9, 11, 0.72) 100%)"
     },
     placeholderContent: {
         position: "relative" as const,
         zIndex: 1,
         display: "grid",
-        gap: 14,
+        gap: 16,
         justifyItems: "center",
         textAlign: "center" as const,
         padding: "0 24px"
     },
     slideEyebrow: {
-        color: "rgba(255, 255, 255, 0.82)"
+        color: "rgba(255, 255, 255, 0.72)"
     },
     placeholderLabel: {
         margin: 0,
-        fontSize: "clamp(2.4rem, 5vw, 4.5rem)",
-        fontWeight: 600,
+        fontSize: "clamp(2rem, 4.8vw, 3.75rem)",
+        fontWeight: 700,
         color: "#fff"
     },
     placeholderHint: {
         margin: 0,
         maxWidth: 520,
-        fontSize: 17,
+        fontSize: 16,
         lineHeight: 1.7,
-        color: "rgba(255, 255, 255, 0.84)"
+        color: "rgba(255, 255, 255, 0.78)"
     },
     ctaButton: {
-        marginTop: 8,
-        background: "rgba(255, 255, 255, 0.96)",
-        color: t.colors.ink
+        marginTop: 4
     },
     navButton: {
         position: "absolute" as const,
@@ -214,7 +214,7 @@ const styles = {
         transition: "all 220ms ease"
     },
     dotActive: {
-        width: 32,
+        width: 28,
         background: t.colors.accent
     }
 } satisfies Record<string, import("react").CSSProperties>;

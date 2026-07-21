@@ -143,6 +143,7 @@ export function WebsiteProductPage() {
                         </div>
                     </div>
                     <div style={styles.productHeroContent}>
+                        <span className="website-configurator-badge">3D configurator ready</span>
                         <span className="website-eyebrow">
                             {category.name} / {subcategory.name}
                         </span>
@@ -157,7 +158,7 @@ export function WebsiteProductPage() {
                                 </span>
                             ))}
                         </div>
-                        <button type="button" className="website-btn-primary" onClick={openConfigurator}>
+                        <button type="button" className="website-btn-configurator" onClick={openConfigurator}>
                             Customize This Product
                         </button>
                     </div>
@@ -317,15 +318,15 @@ const styles = {
         background: premiumGradients.placeholder
     },
     collectionImageLabel: {
-        fontFamily: t.fonts.display,
-        fontSize: 28,
-        fontWeight: 600,
+        fontSize: 22,
+        fontWeight: 700,
+        letterSpacing: "-0.02em",
         color: t.colors.ink
     },
     productImageLabel: {
-        fontFamily: t.fonts.display,
-        fontSize: 32,
-        fontWeight: 600,
+        fontSize: 26,
+        fontWeight: 700,
+        letterSpacing: "-0.02em",
         color: t.colors.ink
     },
     collectionContent: {
@@ -335,9 +336,10 @@ const styles = {
     },
     cardTitle: {
         margin: 0,
-        fontSize: 30,
-        fontWeight: 600,
-        lineHeight: 1.12,
+        fontSize: 24,
+        fontWeight: 700,
+        lineHeight: 1.15,
+        letterSpacing: "-0.02em",
         color: t.colors.ink
     },
     cardText: {
@@ -382,9 +384,10 @@ const styles = {
     },
     sectionTitle: {
         margin: 0,
-        fontSize: "clamp(2rem, 3vw, 2.6rem)",
-        fontWeight: 600,
+        fontSize: "clamp(1.75rem, 2.8vw, 2.25rem)",
+        fontWeight: 700,
         lineHeight: 1.12,
+        letterSpacing: "-0.03em",
         color: t.colors.ink
     },
     galleryGrid: {

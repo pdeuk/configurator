@@ -170,12 +170,13 @@ const styles = {
     categoryButton: {
         display: "block",
         color: t.colors.ink,
-        fontFamily: t.fonts.display,
-        fontSize: 22,
-        fontWeight: 600,
+        fontFamily: t.fonts.heading,
+        fontSize: 18,
+        fontWeight: 700,
+        letterSpacing: "-0.02em",
         textAlign: "left" as const,
         padding: "12px 10px",
-        borderRadius: 12,
+        borderRadius: t.radius.sm,
         cursor: "pointer",
         textDecoration: "none"
     },
