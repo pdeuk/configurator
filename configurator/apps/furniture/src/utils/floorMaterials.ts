@@ -101,9 +101,9 @@ export const FLOOR_AO_INTENSITY = 0.18;
 export const FLOOR_EMISSIVE_INTENSITY = 0.2;
 
 /** Slight gloss on the floor surface (used with meshStandardMaterial). */
-export const FLOOR_ROUGHNESS = 0.42;
+export const FLOOR_ROUGHNESS = 0.93;
 export const FLOOR_METALNESS = 0;
-export const FLOOR_ENV_MAP_INTENSITY = 0.55;
+export const FLOOR_ENV_MAP_INTENSITY = 0.08;
 
 export function getFloorMaterial(id: FloorMaterialId): FloorMaterialDefinition {
     return FLOOR_MATERIALS.find(material => material.id === id)
