@@ -68,7 +68,7 @@ export function StandSceneContent({
             />
 
             {renderGrid && (
-                <gridHelper args={[GRID_SIZE, GRID_SIZE, "#4a5568", "#252b36"]} />
+                <gridHelper args={[GRID_SIZE, GRID_SIZE, "#cbd5e1", "#e5e7eb"]} />
             )}
 
             {showFloor && (

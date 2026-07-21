@@ -66,7 +66,7 @@ export function StandCanvas() {
 
         >
 
-            <color attach="background" args={["#525862"]} />
+            <color attach="background" args={["#ffffff"]} />
 
             {!sceneReadOnly && <DragController />}
 

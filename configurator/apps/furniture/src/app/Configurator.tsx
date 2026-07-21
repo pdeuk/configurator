@@ -85,7 +85,8 @@ function ConfiguratorShell() {
                     width: "100vw",
                     height: "100vh",
                     position: "relative",
-                    overflow: "hidden"
+                    overflow: "hidden",
+                    background: "#ffffff"
                 }}
             >
                 {showFloorPanel && (
