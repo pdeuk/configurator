@@ -101,6 +101,24 @@ export function WebsiteContentSections() {
                     ))}
                 </div>
             </section>
+            <section style={styles.ctaSection}>
+                <div style={styles.ctaBanner}>
+                    <div style={styles.ctaCopy}>
+                        <span style={styles.ctaEyebrow}>Interactive preview</span>
+                        <h2 style={styles.ctaTitle}>See how the configurator works</h2>
+                        <p style={styles.ctaParagraph}>
+                            This full-width area is a placeholder for a future branded visual. The
+                            button below should guide visitors into the live test configurator so they
+                            can explore the experience themselves.
+                        </p>
+                    </div>
+                    <div style={styles.ctaButtonRow}>
+                        <Link to="/app" style={styles.ctaButton}>
+                            Check Our Configurator
+                        </Link>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }
@@ -159,6 +177,66 @@ const styles = {
         display: "grid",
         gap: 28,
         paddingTop: 12
+    },
+    ctaSection: {
+        width: "100vw",
+        marginLeft: "calc(50% - 50vw)",
+        marginRight: "calc(50% - 50vw)"
+    },
+    ctaBanner: {
+        minHeight: 420,
+        display: "grid",
+        alignItems: "end",
+        gap: 24,
+        padding: "40px 28px 36px",
+        background:
+            "linear-gradient(135deg, #0f172a 0%, #1d4ed8 38%, #7c3aed 72%, #c4b5fd 100%)"
+    },
+    ctaCopy: {
+        display: "grid",
+        gap: 14,
+        justifyItems: "center",
+        textAlign: "center" as const,
+        color: "#ffffff",
+        maxWidth: 760,
+        margin: "0 auto"
+    },
+    ctaEyebrow: {
+        fontSize: 13,
+        fontWeight: 700,
+        letterSpacing: "0.14em",
+        textTransform: "uppercase" as const,
+        color: "rgba(255, 255, 255, 0.76)"
+    },
+    ctaTitle: {
+        margin: 0,
+        fontSize: "clamp(32px, 4vw, 52px)",
+        lineHeight: 1.05,
+        fontWeight: 700
+    },
+    ctaParagraph: {
+        margin: 0,
+        fontSize: 16,
+        lineHeight: 1.7,
+        color: "rgba(255, 255, 255, 0.82)"
+    },
+    ctaButtonRow: {
+        display: "flex",
+        justifyContent: "center"
+    },
+    ctaButton: {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: 220,
+        padding: "14px 24px",
+        borderRadius: 999,
+        background: "#ffffff",
+        color: "#111827",
+        fontSize: 15,
+        fontWeight: 700,
+        textDecoration: "none",
+        boxShadow: "0 14px 36px rgba(15, 23, 42, 0.24)"
     },
     demosHeading: {
         display: "flex",
