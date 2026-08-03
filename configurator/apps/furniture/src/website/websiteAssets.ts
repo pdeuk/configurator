@@ -7,6 +7,41 @@ export function localModelPath(...segments: string[]): string {
     return `/models/${segments.join("/")}`;
 }
 
+function imageCandidates(basePath: string): string[] {
+    return [".jpg", ".png", ".webp"].map(extension => `${basePath}${extension}`);
+}
+
+function galleryCandidatesForProduct(
+    categorySlug: string,
+    subcategorySlug: string,
+    productSlug: string,
+    index: number
+): string[] {
+    const slot = String(index).padStart(2, "0");
+    const genericCandidates = imageCandidates(
+        localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", slot)
+    );
+
+    if (
+        categorySlug === "chairs"
+        && subcategorySlug === "office-chairs"
+        && productSlug === "office-chairs-signature"
+    ) {
+        const specificCandidates = [
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "front_white.png"),
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "front_dark_blue.png"),
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "front_beige.png"),
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "30_degrees_white.png"),
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "30_degrees_dark_blue.png"),
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "30_degrees_beige.png")
+        ];
+
+        return [...specificCandidates, ...genericCandidates];
+    }
+
+    return genericCandidates;
+}
+
 /** Deterministic remote placeholder — no manual image hunt required. */
 export function placeholderImageUrl(seed: string, width = 1200, height = 900): string {
     const safeSeed = encodeURIComponent(seed.replace(/\s+/g, "-").toLowerCase());
@@ -63,8 +98,24 @@ export function productHeroPath(
     categorySlug: string,
     subcategorySlug: string,
     productSlug: string
-): string {
-    return localImagePath("products", categorySlug, subcategorySlug, productSlug, "hero.jpg");
+): string[] {
+    const basePath = localImagePath("products", categorySlug, subcategorySlug, productSlug, "hero");
+    const genericCandidates = imageCandidates(basePath);
+
+    if (
+        categorySlug === "chairs"
+        && subcategorySlug === "office-chairs"
+        && productSlug === "office-chairs-signature"
+    ) {
+        return [
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "front_white.png"),
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "front_dark_blue.png"),
+            localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "front_beige.png"),
+            ...genericCandidates
+        ];
+    }
+
+    return genericCandidates;
 }
 
 export function productHeroSeed(
@@ -80,9 +131,8 @@ export function productGalleryPath(
     subcategorySlug: string,
     productSlug: string,
     index: number
-): string {
-    const slot = String(index).padStart(2, "0");
-    return localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", `${slot}.jpg`);
+): string[] {
+    return galleryCandidatesForProduct(categorySlug, subcategorySlug, productSlug, index);
 }
 
 export function productGallerySeed(
@@ -99,7 +149,17 @@ export function productModelPath(
     subcategorySlug: string,
     productSlug: string
 ): string {
-    return localModelPath("products", categorySlug, subcategorySlug, productSlug, "model.glb");
+    const basePath = localModelPath("products", categorySlug, subcategorySlug, productSlug);
+
+    if (
+        categorySlug === "chairs"
+        && subcategorySlug === "office-chairs"
+        && productSlug === "office-chairs-signature"
+    ) {
+        return `${basePath}/office_chair.glb`;
+    }
+
+    return `${basePath}/model.glb`;
 }
 
 export function demoModelPath(demoId: string): string {
