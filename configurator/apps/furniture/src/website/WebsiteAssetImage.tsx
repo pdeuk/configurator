@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { placeholderImageUrl } from "./websiteAssets";
 
 interface WebsiteAssetImageProps {
-    localSrc: string | string[];
+    localSrc: string;
     seed: string;
     alt: string;
     width?: number;
@@ -20,35 +20,21 @@ export function WebsiteAssetImage({
     style,
     className
 }: WebsiteAssetImageProps) {
-    const sources = Array.isArray(localSrc) ? localSrc : [localSrc];
-    const [candidateIndex, setCandidateIndex] = useState(0);
+    const [src, setSrc] = useState(localSrc);
     const [usedFallback, setUsedFallback] = useState(false);
-
-    useEffect(() => {
-        setCandidateIndex(0);
-        setUsedFallback(false);
-    }, [localSrc]);
 
     const handleError = () => {
         if (usedFallback) {
             return;
         }
 
-        if (candidateIndex < sources.length - 1) {
-            setCandidateIndex(current => current + 1);
-            return;
-        }
-
         setUsedFallback(true);
+        setSrc(placeholderImageUrl(seed, width, height));
     };
-
-    const resolvedSrc = usedFallback
-        ? placeholderImageUrl(seed, width, height)
-        : sources[candidateIndex] ?? placeholderImageUrl(seed, width, height);
 
     return (
         <img
-            src={resolvedSrc}
+            src={src}
             alt={alt}
             className={className}
             onError={handleError}
