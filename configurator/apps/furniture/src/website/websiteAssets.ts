@@ -36,7 +36,8 @@ function galleryCandidatesForProduct(
             localImagePath("products", categorySlug, subcategorySlug, productSlug, "gallery", "30_degrees_beige.png")
         ];
 
-        return [...specificCandidates, ...genericCandidates];
+        const selectedImage = specificCandidates[index - 1] ?? specificCandidates[0] ?? genericCandidates[0] ?? "/images/products/chairs/office-chairs/office-chairs-signature/gallery/front_white.png";
+        return [selectedImage, ...genericCandidates];
     }
 
     return genericCandidates;

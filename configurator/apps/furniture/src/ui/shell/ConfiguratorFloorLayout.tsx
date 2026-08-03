@@ -7,7 +7,6 @@ import {
     ConfiguratorProductsNav,
     ConfiguratorSelectedProductNav
 } from "./ConfiguratorProductsNav";
-import { ProductModelPreview } from "./ProductModelPreview";
 import { configuratorNavStyles as navStyles } from "./configuratorNavStyles";
 
 const HEADER_HEIGHT = 52;
@@ -64,10 +63,7 @@ export function ConfiguratorFloorLayout({ onExit, children }: ConfiguratorFloorL
                 </nav>
 
                 <main style={styles.viewport}>
-                    <div style={styles.canvasHost}>
-                        {children}
-                        <ProductModelPreview />
-                    </div>
+                    <div style={styles.canvasHost}>{children}</div>
                     <button type="button" style={styles.exitButton} onClick={onExit}>
                         Exit
                     </button>
